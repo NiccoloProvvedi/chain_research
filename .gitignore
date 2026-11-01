@@ -1,0 +1,15 @@
+# Ambiente e programmi (si ricreano: vedi README)
+venv/
+python/
+browser/
+app/node_modules/
+__pycache__/
+*.pyc
+.pytest_cache/
+# Dati dell'utente: indagini, registri, impostazioni e segreti (mai in git)
+indagini/
+log/
+risultati/
+config/impostazioni.json
+config/segreti.json
+*.tmp

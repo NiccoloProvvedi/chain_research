@@ -1,0 +1,322 @@
+<title>Program-Led Chains</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: single reading column like a preprint, figures and tables may break out to a wider measure. */
+:root {
+  --bg: #fbfcfd; --fg: #1b2129; --muted: #5b6673; --rule: #d5dbe2; --panel: #eef2f6;
+  --accent: #1d5b7a; --llm: #b4572e; --prog: #1d5b7a; --ok: #2f7a4b; --ko: #a33a3a;
+  --serif: "Source Serif 4", "Source Serif Pro", Georgia, "Times New Roman", serif;
+  --sans: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12161b; --fg: #dde3ea; --muted: #97a3b0; --rule: #2c343e; --panel: #1a2028;
+  --accent: #7fb6d3; --llm: #e3916a; --prog: #7fb6d3; --ok: #74c08f; --ko: #e08080; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12161b; --fg: #dde3ea; --muted: #97a3b0; --rule: #2c343e; --panel: #1a2028;
+  --accent: #7fb6d3; --llm: #e3916a; --prog: #7fb6d3; --ok: #74c08f; --ko: #e08080; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font: 17px/1.6 var(--serif); }
+.pagina { max-width: 46rem; margin: 0 auto; padding-block: 3rem 5rem;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-family: var(--sans); font-weight: 600; text-wrap: balance; line-height: 1.2; }
+h1 { font-size: 2rem; margin: 0 0 .6rem; letter-spacing: -.01em; }
+h2 { font-size: 1.3rem; margin: 2.6rem 0 .6rem; padding-top: .8rem; border-top: 1px solid var(--rule); }
+h3 { font-size: 1.05rem; margin: 1.8rem 0 .4rem; }
+h2 .n, h3 .n { color: var(--accent); margin-right: .45em; font-variant-numeric: tabular-nums; }
+p { margin: .7rem 0; } a { color: var(--accent); }
+.sopra { font: 500 .78rem/1.4 var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 1rem; }
+.autori { color: var(--muted); font-size: .95rem; margin-bottom: 2rem; }
+.sommario { background: var(--panel); padding: 1.1rem 1.3rem; border-radius: 4px; font-size: .96rem; }
+.sommario h2 { border: 0; margin: 0 0 .3rem; padding: 0; font-size: .9rem; letter-spacing: .08em; text-transform: uppercase; }
+code, .mono { font-family: var(--mono); font-size: .86em; }
+pre { font: .8rem/1.5 var(--mono); background: var(--panel); padding: .9rem 1rem; overflow-x: auto; border-radius: 4px; }
+.tabella { overflow-x: auto; margin: 1rem 0; }
+table { border-collapse: collapse; font: .86rem/1.45 var(--sans); font-weight: 400; width: 100%; font-variant-numeric: tabular-nums; }
+th { font-weight: 600; text-align: left; border-bottom: 1.5px solid var(--fg); padding: .35rem .5rem; vertical-align: bottom; }
+td { border-bottom: 1px solid var(--rule); padding: .3rem .5rem; vertical-align: top; }
+td.num, th.num { text-align: right; }
+caption, figcaption { caption-side: bottom; text-align: left; font: .85rem/1.45 var(--serif); color: var(--muted); padding-top: .5rem; }
+figure { margin: 1.4rem 0; } figure svg { width: 100%; height: auto; display: block; }
+.figura { overflow-x: auto; }
+.ok { color: var(--ok); font-weight: 600; } .ko { color: var(--ko); }
+.llm { color: var(--llm); font-weight: 600; } .prog { color: var(--prog); font-weight: 600; }
+ol.rif { font-size: .9rem; padding-left: 1.6rem; } ol.rif li { margin: .25rem 0; }
+.algo { font: .82rem/1.55 var(--mono); background: var(--panel); padding: 1rem 1.1rem; border-left: 3px solid var(--accent); overflow-x: auto; white-space: pre; }
+.nota { font-size: .9rem; color: var(--muted); }
+ul, ol { padding-left: 1.4rem; } li { margin: .2rem 0; }
+@media (max-width: 480px) { body { font-size: 16px; } h1 { font-size: 1.6rem; } }
+@media print { :root { --bg: #fff; --panel: #f2f5f8; } body { font-size: 11pt; } pre, .algo { white-space: pre-wrap; } .pagina { max-width: none; padding: 0; } h2 { break-after: avoid; } figure, table, .algo { break-inside: avoid; } }
+</style>
+
+<div class="pagina">
+<div class="sopra">Technical report · ai-locale project · November 2026</div>
+<h1>Program-Led Chains: Verifiable Multi-Hop Web Question Answering with a Small Language Model as a Bounded Reader</h1>
+<div class="autori">The ai-locale project. Code, prompts, benchmark and run logs are in the project repository (<span class="mono">navigatore/catena.py</span>, <span class="mono">banco_prova/</span>).</div>
+
+<section class="sommario">
+<h2>Abstract</h2>
+<p>Multi-hop questions require following a chain of facts across several sources, each hop guarded by distractors such as homonyms and look-alike candidates. Deep-search agents usually give a large language model (LLM) control of the loop: it decides what to search, what to read and when to stop. We study the opposite division of labour. A deterministic program owns the search: it treats Wikipedia as a graph, reads the open web through a real browser, keeps a global priority frontier over all possible actions, scores candidates and writes the answer line. The LLM (Claude Haiku 5.5, the cheapest model in its family) is used only as a <em>bounded reader</em> for small, closed tasks over numbered rows: propose a plan, name the candidates a row mentions, judge a clue as yes / partly / no / unknown with an exact quotation, extract a typed value. Every model output is checked mechanically (the cited row exists, belongs to the candidate, contains the quoted words, the value has the requested type and range) before it can affect the search.</p>
+<p>On a 40-question Italian benchmark of obfuscated 2–4-hop questions synthesised from Wikidata paths (Wikidata itself forbidden at test time), the method answers <strong>36/40 in each of two consecutive full runs (72/80, 90.0%, 95% CI 81.5–94.8%)</strong>, at a median of 8.6 minutes, 3 web pages and USD 0.11 (API-equivalent) per question. The same model answering from memory scores 9/40 (22.5%); Sonnet 5.5 and Opus 5.5 from memory score 18/40 and 24/40. Over twelve days the accuracy grew from 62.5% (a local-model pipeline) and 70–72% (first chain versions) to 90% almost entirely through program changes, each measured on recorded runs, oracles that need no model calls, or targeted live replays before it was kept. Error analysis shows that most failures were caused by what the program gave the model to read, not by the model's reading. We report the method, the measurements, the rejected interventions and the threats to validity, chief among them that the benchmark was also the development set.</p>
+</section>
+
+<h2><span class="n">1</span>Introduction</h2>
+<p>Consider this benchmark question (translated from Italian): <em>“What is the date of birth (day, month and year) of the Brazilian programmer, born in the 1970s, who designed Freedo, the mascot derived from Tux, the penguin of the well-known open-source kernel created in the 1990s?”</em> No page contains the question. The answer requires three hops — Tux → Freedo → its designer → date of birth — and each hop has traps: “Freedo” is also a Swedish music producer, the designer of Tux is an American, and the clues “Brazilian” and “born in the 1970s” are the only things that separate the right person from the wrong ones.</p>
+<p>Recent deep-search systems [4, 3, 2, 7] answer such questions by letting an LLM drive a loop of search and reading. This works well with strong models but couples accuracy, cost and safety to the model's judgement at every step: when the model reads too much text it loses the relevant passage [19], when it agrees too easily it accepts the wrong candidate [5], and when it controls the loop a single wrong turn wastes the budget. Our setting adds two constraints. First, the system is a personal assistant whose private documents must never reach a cloud model; for public web research a cloud model is allowed, but it is always called <em>without tools</em> and web text is treated as data, never as instructions. Second, the target is the cheapest model available, so the design must not depend on a strong model's judgement.</p>
+<p>We therefore move the logic of the search into the program and keep the model on short, checkable reading tasks. We call this design <strong>program-led chains</strong>. Our contributions are:</p>
+<ol>
+<li>A search architecture in which the program owns planning execution, navigation, scoring and the final answer, and the LLM performs six closed tasks over numbered evidence rows (§3).</li>
+<li>A row representation of Wikipedia articles and web pages that keeps the links of every row, so that candidates, verification and values are all tied to a citable row and checked mechanically (§3.3–3.6).</li>
+<li>A four-valued, weighted verification with mechanical quotation checks, inspired by [5], and a global best-first frontier over Wikipedia expansions, web expansions and value look-ups across alternative plans, inspired by [6, 1] (§3.6–3.8).</li>
+<li>An evaluation on an obfuscated multi-hop benchmark, including closed-book baselines, cost and latency profiles, run-to-run stability and a list of interventions that were measured and rejected (§4–5).</li>
+<li>An error analysis showing that, once the model reads few, relevant rows, most remaining errors are attributable to the program and can be fixed without additional model calls (§6).</li>
+</ol>
+
+<h2><span class="n">2</span>Related work</h2>
+<p><strong>Multi-hop QA over Wikipedia.</strong> Benchmarks such as HotpotQA [23] and MuSiQue [24] established multi-hop question answering; retrieval methods follow hyperlinks as a graph [17] or iterate dense retrieval [18]. We adopt the graph view of Wikipedia from [17] but navigate it with a program-controlled frontier rather than a learned retriever, and we leave Wikipedia for the open web whenever an entity has no article.</p>
+<p><strong>LLM reasoning on graphs.</strong> Think-on-Graph [1] lets an LLM walk a knowledge graph by beam search over numbered candidate relations and entities. We keep the numbered-candidate interface but move the walk and the pruning into the program, and our “graph” is built on the fly from Wikipedia and web pages instead of a curated knowledge base [20, 21].</p>
+<p><strong>Deep-search agents.</strong> Open Deep Search [4] couples a reasoning agent with a search tool and self-consistency; ManuSearch [3] splits planning, searching and reading among agents and plans each step with keywords and descriptions; HierSearch [2] combines local and web search hierarchically and uses adjacent passages; DeepDive [7] synthesises hard questions from knowledge graphs and trains agents with multi-turn RL; DeepSearch [6] integrates tree search into RL training with a global frontier and depth bonus. We borrow the per-step keywords and descriptions from [3], adjacent passages from [2], alternative plans from [4], KG-based question synthesis from [7] and the global frontier with depth bonus from [6]. Unlike these systems we do no training and never let the model choose the next action.</p>
+<p><strong>Claim verification.</strong> FEVER [16] framed verification as supported / refuted / not-enough-info against retrieved evidence. WisPaper [5] uses weighted criteria judged as yes / partly / no / unknown with a mandatory quotation and reports that general models answer “yes” too readily. Our verification uses the same four values and weights, but every non-“unknown” judgement must cite a row and an exact quotation that the program checks.</p>
+<p><strong>Entity linking.</strong> Mapping a name in a row to the right Wikipedia article is entity linking [10, 11, 12, 13, 14, 15]. We use simple, explainable rules (links present in the row, name-in-title, surname fallback, homonym signals such as a name written without a link in a row that links other entities) and measure them with oracles that need no model.</p>
+<p><strong>Targeted reading and funnels.</strong> Long contexts dilute attention on the relevant passage [19]. DS4A [8] selects target sentences by the type of information sought before reading; the materials-discovery funnel of [9] applies cheap filters before expensive tools. Both ideas shape our row selection (rows containing a value of the requested type are promoted) and our cost ordering (Wikipedia before the web, value look-ups before expansions).</p>
+
+<h2><span class="n">3</span>Method</h2>
+<h3><span class="n">3.1</span>Division of labour</h3>
+<p>Table 1 lists what each side does. The model never navigates, never chooses the next action and never writes the final answer line.</p>
+<div class="tabella"><table>
+<thead><tr><th>LLM (bounded reader)</th><th>Program</th></tr></thead>
+<tbody>
+<tr><td>Interprets the question: paraphrases, clues, sub-questions</td><td>Keeps the budget (pages, minutes, USD) and stops</td></tr>
+<tr><td>Proposes a chain plan (start entity, hops, clues with weights, answer type and range); a second, alternative plan</td><td>Adds a third plan that skips unnamed objects; runs all plans in one frontier</td></tr>
+<tr><td>Writes 2–3 short web queries for one hop</td><td>Adds the hop's clues and a hypothesised name; ranks results by the hop's purpose</td></tr>
+<tr><td>Names candidates in numbered rows, citing the row number</td><td>Builds rows from Wikipedia and web pages; selects few, rare-term rows; checks the cited row and the name</td></tr>
+<tr><td>Judges each clue for each candidate: yes / partly / no / unknown, with row and exact quotation</td><td>Checks the row belongs to the candidate and contains the quotation; computes weighted quality</td></tr>
+<tr><td>Extracts the requested value and its row</td><td>Checks type and range; checks the row is about the entity</td></tr>
+<tr><td>Breaks near-ties between linked candidates (never on the asked value)</td><td>Decides when a tie-break is needed and applies it</td></tr>
+<tr><td>Writes a short explanation from the cited rows</td><td>Writes the <em>Answer</em> line from the value it accepted</td></tr>
+</tbody>
+<caption>Table 1. Division of labour. Every LLM output is a JSON object validated against a schema; free text never controls the program.</caption>
+</table></div>
+
+<figure class="figura">
+<svg viewBox="0 -30 760 390" role="img" aria-label="Pipeline: question interpretation and plans feed a global frontier; four actions; bounded LLM reading tasks checked by the program; new nodes return to the frontier; tie-break and answer line">
+<style>
+.b { fill: var(--panel); stroke: var(--prog); stroke-width: 1.3; }
+.bl { fill: var(--panel); stroke: var(--llm); stroke-width: 1.3; stroke-dasharray: 4 3; }
+.t { font: 600 12.5px var(--sans); fill: var(--fg); }
+.s { font: 11px var(--sans); fill: var(--muted); }
+.f { stroke: var(--muted); stroke-width: 1.2; fill: none; marker-end: url(#freccia); }
+.l { stroke: var(--muted); stroke-width: 1.2; fill: none; }
+</style>
+<defs><marker id="freccia" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="var(--muted)"/></marker></defs>
+<rect class="bl" x="10" y="20" width="130" height="54" rx="4"/><text class="t" x="22" y="42">Interpret</text><text class="s" x="22" y="60">clues, paraphrases</text>
+<rect class="bl" x="10" y="100" width="130" height="70" rx="4"/><text class="t" x="22" y="122">Plans A, B</text><text class="s" x="22" y="140">start, hops, clues,</text><text class="s" x="22" y="155">answer type + range</text>
+<rect class="b" x="10" y="196" width="130" height="54" rx="4"/><text class="t" x="22" y="218">Plan C (program)</text><text class="s" x="22" y="236">skip unnamed objects</text>
+<path class="f" d="M75 74 V98"/><path class="f" d="M140 135 H186"/><path class="f" d="M140 223 H165 V190 H186"/>
+<rect class="b" x="188" y="96" width="170" height="130" rx="4"/><text class="t" x="200" y="118">Global frontier</text>
+<text class="s" x="200" y="138">all plans, all hops</text><text class="s" x="200" y="155">priority = path quality</text><text class="s" x="200" y="170">+ depth bonus − action cost</text><text class="s" x="200" y="185">− 0.4 × failures</text><text class="s" x="200" y="210">pop the best action</text>
+<rect class="b" x="398" y="20" width="160" height="40" rx="4"/><text class="t" x="410" y="45">Expand on Wikipedia</text>
+<rect class="b" x="398" y="70" width="160" height="40" rx="4"/><text class="t" x="410" y="95">Expand on the web</text>
+<rect class="b" x="398" y="134" width="160" height="40" rx="4"/><text class="t" x="410" y="159">Value on Wikipedia</text>
+<rect class="b" x="398" y="184" width="160" height="40" rx="4"/><text class="t" x="410" y="209">Value on the web</text>
+<path class="l" d="M358 160 H378"/><path class="l" d="M378 40 V204"/>
+<path class="f" d="M378 40 H396"/><path class="f" d="M378 90 H396"/><path class="f" d="M378 154 H396"/><path class="f" d="M378 204 H396"/>
+<rect class="bl" x="598" y="20" width="150" height="40" rx="4"/><text class="t" x="610" y="45">Name candidates</text>
+<rect class="bl" x="598" y="70" width="150" height="54" rx="4"/><text class="t" x="610" y="92">Verify clues</text><text class="s" x="610" y="110">yes / partly / no / unknown</text>
+<rect class="b" x="598" y="134" width="150" height="40" rx="4"/><text class="t" x="610" y="159">Check + score</text>
+<rect class="bl" x="598" y="184" width="150" height="40" rx="4"/><text class="t" x="610" y="209">Extract value</text>
+<path class="l" d="M558 40 H578 M558 90 H578 M578 40 V90"/><path class="f" d="M578 40 H596"/>
+<path class="l" d="M558 154 H578 M558 204 H578 M578 154 V204"/><path class="f" d="M578 204 H596"/>
+<path class="f" d="M673 60 V68"/><path class="f" d="M673 124 V132"/>
+<path class="f" d="M748 154 H756 V-12 H273 V94"/><text class="s" x="420" y="-17">scored nodes return to the frontier</text>
+<rect class="bl" x="398" y="262" width="160" height="54" rx="4"/><text class="t" x="410" y="284">Tie-break</text><text class="s" x="410" y="302">near-equal linked answers</text>
+<rect class="b" x="598" y="262" width="150" height="54" rx="4"/><text class="t" x="610" y="284">Answer line</text><text class="s" x="610" y="302">+ LLM explanation</text>
+<path class="f" d="M673 224 V260"/><path class="f" d="M273 226 V289 H396"/><path class="f" d="M558 289 H596"/>
+<rect class="b" x="10" y="334" width="16" height="12" rx="2"/><text class="s" x="32" y="344">program step</text>
+<rect class="bl" x="120" y="334" width="16" height="12" rx="2"/><text class="s" x="142" y="344">LLM task, output checked by the program</text>
+</svg>
+<figcaption>Figure 1. Pipeline. Dashed boxes are the six bounded LLM tasks; solid boxes are deterministic program steps. Every action popped from the frontier produces scored nodes that return to the frontier.</figcaption>
+</figure>
+
+<h3><span class="n">3.2</span>Interpretation and plans</h3>
+<p>The model first restates the question as three paraphrases and extracts its clues, each referred to the entity it describes. It then proposes a <em>chain plan</em> (JSON with schema): a <em>start</em> entity that the question names with certainty; a list of <em>hops</em>, each with a relation, the type of the target, keywords with which the relation appears in text (in several languages), up to four descriptions to search for the target without knowing its name, and up to six <em>clues</em> with a weight from 1 to 3 (3 = identifies the target almost alone); optional <em>anchors</em>, other named entities from which a later hop can be reached directly; the <em>answer</em> (what is sought, its value type, an optional numeric or year range, and whether the answer is an entity rather than a value); and the search language. A second plan is requested as an alternative to the first. The program adds a third plan when the question mentions an unnamed object (a statue, a painting): the hop through the object is skipped because objects rarely have their own article. All plans share one frontier, so the plan that works advances.</p>
+
+<h3><span class="n">3.3</span>Evidence as rows</h3>
+<p>Wikipedia articles are fetched through the MediaWiki <span class="mono">parse</span> API in the question's language, in English and in the language of the related country, and are split into <em>rows</em>: an infobox line becomes <span class="mono">Label: value</span>, a table row becomes cells separated by bars, a paragraph becomes one row per sentence (with care for abbreviations, initials and ordinals), a list item becomes a row. Each row keeps its text, the articles it links to, its kind and its section; references, navigation boxes and sections without facts are removed. Web pages are opened in a headless browser, cleaned and split into blocks; search-result snippets are kept as rows too (§3.4). For a hop, the program sends the model few rows: those containing the hop's keywords, ranked by the rarity of their terms (local TF-IDF), excluding the entity's own name and generic roots, plus rows from <em>adjacent</em> articles that mention the entity [2]. For the value, rows containing a value of the requested type (a full date, a number with a unit, a postal code), and in the requested range, are promoted [8].</p>
+<pre>[13] [Galileo Galilei (en)] Notable students: Benedetto Castelli; Mario Guiducci; Vincenzo Viviani
+     ⟶ links: Benedetto Castelli; Mario Guiducci; Vincenzo Viviani</pre>
+
+<h3><span class="n">3.4</span>Web expansion</h3>
+<p>When an entity has no article, or Wikipedia yields no candidate, the program expands on the open web. The model writes two or three short queries for the hop; the program passes it the hop's clues and allows one query with a hypothesised name. Results are ranked by the hop's purpose (its relation and target type), not by the whole question, and only the best two to six pages are opened. Search-result snippets that mention the entity enter the evidence at zero page cost, which often suffices to name a candidate or confirm a value. Queries about a candidate always carry a context word from the entity it was found from, to avoid homonyms, and a one-word person name is expanded to the full name found in the evidence (for example <em>Kaia</em> → <em>Kaia Dekker</em>). Value searches try the name with the value's words, the name with context, and the name alone, stopping at the first accepted value. The Arduino question of the benchmark is answered entirely through this path: Arduino → Keyboardio (a keyboard maker inspired by it) → its founder Kaia Dekker (no Wikipedia article) → her spouse Jesse Vincent → 21 June 1976.</p>
+
+<h3><span class="n">3.5</span>Candidates</h3>
+<p>For each hop the model receives the selected rows and returns candidates, each with the number of the row that names it. The program discards a candidate whose row does not exist, does not contain the name, or names it without a link in a row that links other entities (a strong homonym signal). Variants of the same name are merged, company suffixes (Ltd, S.p.A., Inc, AG) are ignored, and the article of each candidate is resolved from the row's links before any search, so that “Napoli” in a historical row is not mistaken for the city when the row links the Kingdom of Naples.</p>
+
+<h3><span class="n">3.6</span>Four-valued verification with mechanical checks</h3>
+<p>Each candidate is checked against the hop's clues. The model receives the candidates, each with its own block of rows, and the clues with codes, and answers for each pair one of <em>yes</em> (a row states it about this candidate), <em>partly</em> (only part of it, or indirectly), <em>no</em> (a row contradicts it), <em>unknown</em> (the rows do not say). Every judgement other than <em>unknown</em> must cite a row number and an exact quotation of 3–12 words. The program then checks that (i) the row belongs to that candidate's block, (ii) the row is about the candidate (its article, or its name appears in the row), (iii) the quoted words occur in the row, and (iv) a year required by the clue occurs in the quotation. A failed check turns the judgement into <em>unknown</em>. With Haiku the verification is read twice and a <em>yes</em> survives only if both readings give it.</p>
+<p>The quality of a candidate is the weighted mean of its outcomes, with yes = 1, partly = 0.5, unknown = 0 and no = −1. A candidate is <em>strong</em> when its quality exceeds 0.5, its link to the previous entity is proven, and no weight-3 clue lacks evidence; it is <em>refuted</em> when “no” outcomes weigh at least as much as “yes” outcomes on identifying clues; otherwise it is <em>weak</em> and kept in reserve. Links that the program itself recorded in earlier steps are never used as evidence, and a clue that merely repeats the link is not counted twice.</p>
+
+<h3><span class="n">3.7</span>Global frontier</h3>
+<p>The program keeps one list of all possible actions, across hops and plans: expand a node on Wikipedia, expand it on the web, look up the value of a final node on Wikipedia, or on the web. It repeatedly pops the action with the highest priority. A chain is worth as much as its weakest link, so the path term mixes the minimum and the mean; the depth bonus favours finishing chains; value look-ups have negative cost because they take one call and also act as a check.</p>
+<div class="algo">priority(a, action) = 0.5 · min(q_path) + 0.5 · mean(q_path)
+                   + 0.1 · sqrt(depth(a) / hops)
+                   − cost(action) − 0.4 · failures(a) + preference(a)
+
+q_path   quality of each node on the path; −0.15 if weak; −0.25 if its link
+         is unproven (−0.05 if it only co-occurs with the previous entity);
+         a root counts 0.7 until expanded
+cost     Wikipedia 0 · web 0.35 (0.1 for a node with no article)
+         value on Wikipedia −0.45 · value on the web −0.1</div>
+<p>Failed branches lose priority, so the search returns by itself to a reserve candidate of an earlier hop; anchors start closer to the answer and are explored early; plans compete in the same list. The same expansion is never repeated (identical entity, hop and, on Wikipedia, relation), children are reused across plans when the hop is identical, and at most three web value searches are made per parent. A solution's priority is its path quality without the value-search bonus, so a found value does not stop better paths from being finished.</p>
+
+<h3><span class="n">3.8</span>Value, answer and tie-break</h3>
+<p>For a final node the model returns the value and its row; the program accepts it only if it has the requested type, lies in the requested range and the row is about the entity (the altitude of a neighbouring village does not count). When the answer is an entity (the plan says so), it is accepted only with a proven link of quality ≥ 0.5. When several linked candidates without any “no” are within 0.4 of the best quality, the model is asked to break the tie from their evidence, with the explicit rule never to decide on the asked value itself; the chosen candidate is lifted just above the best. Finally the model writes a short explanation from the cited rows, but the <em>Answer</em> line is written by the program from the accepted value and its source, so the explanation cannot change the answer.</p>
+
+<h3><span class="n">3.9</span>Safety and privacy</h3>
+<p>The model is invoked through the Claude command-line interface with all tools disabled (<span class="mono">claude -p --tools ""</span>) and a JSON schema for every task, so it cannot browse, read files or run commands. Web text is cleaned of sentences addressed to an AI system and wrapped in explicit data delimiters. Wikipedia is queried with an identifying User-Agent within Wikimedia's rate limits. Private documents are handled by a separate, local-only path and never reach the cloud model; the chain search operates on public pages only.</p>
+
+<h2><span class="n">4</span>Experimental setup</h2>
+<h3><span class="n">4.1</span>Benchmark</h3>
+<p>Following the knowledge-graph synthesis idea of [7], questions were generated automatically from Wikidata: starting from a well-known <em>seed</em> entity (Linux, Galileo Galilei, the Peace of Lodi, …), a path of 2–4 statements is followed and a precise attribute of the last entity is asked (a date, a number with a unit, a name, a postal code). A model writes the question in Italian <em>describing</em> the intermediate entities without naming them. Candidates were then filtered, keeping questions that the local models used by the project (a 4B and a 27B model) answered wrongly from memory, and reviewed. The final set has <strong>40 questions, 10 per theme</strong> (computing, history, science, geography and culture). Three questions have more than one valid answer in reality (e.g. a ski resort twinned with two Ligurian villages), so a perfect score is not attainable for a system that picks one.</p>
+<p>Example (seed “Monte Bianco”): <em>A reserve of glacial environments protects part of the highest massif of the Alps; the Aosta Valley municipality in which it lies borders a ski resort on the French border, to the south-west. This resort is twinned with a Ligurian seaside village in the province of Savona. What is the postal code of that village?</em> Path: Mont Blanc → Glacial Environments of Mont Blanc → Courmayeur → La Thuile → Laigueglia → <strong>17053</strong>.</p>
+
+<h3><span class="n">4.2</span>Protocol and judging</h3>
+<ul>
+<li>Every run uses the real web and live Wikipedia; nothing is cached between runs. Wikidata is blocked at test time because the questions come from it.</li>
+<li>Per-question budget: 30 web pages, 35 minutes and USD 0.50; three questions run in parallel with separate browser profiles.</li>
+<li>All model tasks use Claude Haiku 5.5 unless stated. Costs are the API-equivalent costs reported by the Claude CLI.</li>
+<li>A judge (Claude Haiku, no tools) extracts the single value given as the answer from the <em>Answer</em> line; it is compared with the expected value by normalised string and number matching, and by an LLM equivalence judgement only when matching is inconclusive.</li>
+<li>Closed-book baselines (§5.2) ask the same question with the instruction to answer from memory with one value and always give the most likely answer; they are judged identically.</li>
+</ul>
+
+<h2><span class="n">5</span>Results</h2>
+<h3><span class="n">5.1</span>Accuracy over development</h3>
+<figure class="figura"><svg viewBox="0 0 760 298" role="img" aria-label="Accuracy by version with 95% intervals"><style>.e{font:12px var(--sans);fill:var(--fg)}.m{font:11px var(--sans);fill:var(--muted)}.g{stroke:var(--rule);stroke-width:1}.bar{fill:var(--accent);opacity:.85}.ci{stroke:var(--fg);stroke-width:1.4}</style><line class="g" x1="170.0" y1="20" x2="170.0" y2="268"/><text class="m" x="170.0" y="284" text-anchor="middle">0%</text><line class="g" x1="276.0" y1="20" x2="276.0" y2="268"/><text class="m" x="276.0" y="284" text-anchor="middle">20%</text><line class="g" x1="382.0" y1="20" x2="382.0" y2="268"/><text class="m" x="382.0" y="284" text-anchor="middle">40%</text><line class="g" x1="488.0" y1="20" x2="488.0" y2="268"/><text class="m" x="488.0" y="284" text-anchor="middle">60%</text><line class="g" x1="594.0" y1="20" x2="594.0" y2="268"/><text class="m" x="594.0" y="284" text-anchor="middle">80%</text><line class="g" x1="700.0" y1="20" x2="700.0" y2="268"/><text class="m" x="700.0" y="284" text-anchor="middle">100%</text><text class="e" x="160" y="43" text-anchor="end">Local pipeline (14 Oct)</text><rect class="bar" x="170" y="32" width="331.2" height="16" rx="2"/><line class="ci" x1="419.3" y1="40" x2="571.6" y2="40"/><line class="ci" x1="419.3" y1="35" x2="419.3" y2="45"/><line class="ci" x1="571.6" y1="35" x2="571.6" y2="45"/><text class="e" x="579.6" y="44">25/40</text><text class="e" x="160" y="73" text-anchor="end">Concept map v6</text><rect class="bar" x="170" y="62" width="371.0" height="16" rx="2"/><line class="ci" x1="459.2" y1="70" x2="604.2" y2="70"/><line class="ci" x1="459.2" y1="65" x2="459.2" y2="75"/><line class="ci" x1="604.2" y1="65" x2="604.2" y2="75"/><text class="e" x="612.2" y="74">28/40</text><text class="e" x="160" y="103" text-anchor="end">Chain v9</text><rect class="bar" x="170" y="92" width="384.2" height="16" rx="2"/><line class="ci" x1="473.0" y1="100" x2="614.6" y2="100"/><line class="ci" x1="473.0" y1="95" x2="473.0" y2="105"/><line class="ci" x1="614.6" y1="95" x2="614.6" y2="105"/><text class="e" x="622.6" y="104">29/40</text><text class="e" x="160" y="133" text-anchor="end">Chain v10</text><rect class="bar" x="170" y="122" width="371.0" height="16" rx="2"/><line class="ci" x1="459.2" y1="130" x2="604.2" y2="130"/><line class="ci" x1="459.2" y1="125" x2="459.2" y2="135"/><line class="ci" x1="604.2" y1="125" x2="604.2" y2="135"/><text class="e" x="612.2" y="134">28/40</text><text class="e" x="160" y="163" text-anchor="end">Chain v11b</text><rect class="bar" x="170" y="152" width="371.0" height="16" rx="2"/><line class="ci" x1="459.2" y1="160" x2="604.2" y2="160"/><line class="ci" x1="459.2" y1="155" x2="459.2" y2="165"/><line class="ci" x1="604.2" y1="155" x2="604.2" y2="165"/><text class="e" x="612.2" y="164">28/40</text><text class="e" x="160" y="193" text-anchor="end">Chain v12</text><rect class="bar" x="170" y="182" width="410.8" height="16" rx="2"/><line class="ci" x1="501.2" y1="190" x2="634.7" y2="190"/><line class="ci" x1="501.2" y1="185" x2="501.2" y2="195"/><line class="ci" x1="634.7" y1="185" x2="634.7" y2="195"/><text class="e" x="642.7" y="194">31/40</text><text class="e" x="160" y="223" text-anchor="end">Chain v13</text><rect class="bar" x="170" y="212" width="477.0" height="16" rx="2"/><line class="ci" x1="577.8" y1="220" x2="679.0" y2="220"/><line class="ci" x1="577.8" y1="215" x2="577.8" y2="225"/><line class="ci" x1="679.0" y1="215" x2="679.0" y2="225"/><text class="e" x="687.0" y="224">36/40</text><text class="e" x="160" y="253" text-anchor="end">Chain v14</text><rect class="bar" x="170" y="242" width="477.0" height="16" rx="2"/><line class="ci" x1="577.8" y1="250" x2="679.0" y2="250"/><line class="ci" x1="577.8" y1="245" x2="577.8" y2="255"/><line class="ci" x1="679.0" y1="245" x2="679.0" y2="255"/><text class="e" x="687.0" y="254">36/40</text></svg><figcaption>Figure 2. Correct answers per full run of the 40 questions, with Wilson 95% intervals. From v9 the reader is always Claude Haiku.</figcaption></figure>
+
+<div class="tabella"><table>
+<thead><tr><th>Date (2026)</th><th>Version</th><th>Main change</th><th class="num">Correct /40</th></tr></thead>
+<tbody>
+<tr><td>14 Oct</td><td>Local pipeline</td><td>Local 4B model reads pages, local 27B writes, Claude plans; Wikidata allowed</td><td class="num">25</td></tr>
+<tr><td>15 Oct</td><td>Concept map (v6)</td><td>Haiku reads pages and extracts concepts into a graph; Haiku links concepts and asks new searches</td><td class="num">28</td></tr>
+<tr><td>17–18 Oct</td><td>Chain v9</td><td>Program-led chain; four-valued weighted verification; value checked by program; global frontier</td><td class="num">29</td></tr>
+<tr><td>18 Oct</td><td>Chain v10</td><td>Anchors, two plans in parallel, decisive rows</td><td class="num">28</td></tr>
+<tr><td>22 Oct</td><td>Chain v11b</td><td>More languages for values, adjacent articles, penalty for unproven links</td><td class="num">28</td></tr>
+<tr><td>25 Oct</td><td>Chain v12</td><td>Web: clues in queries, purpose ranking, snippets as evidence, full names; entity answers; skip plan; tie-break</td><td class="num">31</td></tr>
+<tr><td>29 Oct</td><td>Chain v13</td><td>Wider tie-break (0.4) never on the asked value; value from snippets; company suffixes; re-expansion with new clues</td><td class="num">36</td></tr>
+<tr><td>30 Oct</td><td>Chain v14</td><td>Same code as v13, repeated run</td><td class="num">36</td></tr>
+</tbody>
+<caption>Table 2. Full 40-question runs. From v9 on, the model is always Claude Haiku and Wikidata is blocked. Between v11b and v13 the model, the benchmark and the judge were unchanged; the program changed, four prompts were edited and one (the tie-break) was added.</caption>
+</table></div>
+
+<p>The final code was run twice: <strong>36/40 and 36/40</strong>, i.e. 72/80 = 90.0% (Wilson 95% CI 81.5–94.8%). Of the 40 questions, 34 were correct in both runs, 4 in exactly one (Blender, Wikipedia, Duomo di Milano, Cappella Sistina) and 2 in neither (Congresso di Vienna, Divina Commedia); 38 were solved at least once. For comparison, v9–v11b solved 35 questions at least once in three runs, but each run scored only 28–29: the program changes mostly reduced run-to-run variance rather than unlocking new questions.</p>
+
+<h3><span class="n">5.2</span>Closed-book baselines</h3>
+<div class="tabella"><table>
+<thead><tr><th>System</th><th class="num">Correct</th><th class="num">Accuracy</th><th class="num">95% CI</th></tr></thead>
+<tbody><tr><td>Claude Haiku 5.5, from memory</td><td class="num">9/40</td><td class="num">22.5%</td><td class="num">12.3–37.5%</td></tr><tr><td>Claude Sonnet 5.5, from memory</td><td class="num">18/40</td><td class="num">45.0%</td><td class="num">30.7–60.2%</td></tr><tr><td>Claude Opus 5.5, from memory</td><td class="num">24/40</td><td class="num">60.0%</td><td class="num">44.6–73.7%</td></tr><tr><td>Claude Haiku 5.5, program-led chain (v13 + v14)</td><td class="num">72/80</td><td class="num">90.0%</td><td class="num">81.5–94.8%</td></tr></tbody>
+<caption>Table 3. Closed-book baselines on the same 40 questions, same judge, no tools and no search (one run each, 1 November 2026). Haiku gave no usable value on 6 questions, Sonnet on 1, Opus on 2.</caption>
+</table></div>
+<p>From memory, Haiku answers 9 of 40 questions; the chain raises the same model to 36. The strongest model of the family, Opus 5.5, answers 24 from memory: the benchmark was filtered only against small local models, so many final facts are known to large models, yet none of the three reaches the cheapest model with the chain. Twelve questions were solved by the chain (in at least one of the two runs) and by none of the closed-book models; they are mostly questions whose last hop is a little-known entity, such as a village's surface or postal code, a programmer's birth date or the spouse of the founder of a small company. Every question answered by some closed-book model was also answered by the chain at least once; Opus from memory did answer Cappella Sistina and Duomo di Milano, two of the four questions on which the chain is unstable.</p>
+
+<h3><span class="n">5.3</span>Cost and latency</h3>
+<div class="tabella"><table>
+<thead><tr><th>Runs v13 + v14 (80 question runs)</th><th class="num">All</th><th class="num">Correct (72)</th><th class="num">Wrong (8)</th></tr></thead>
+<tbody>
+<tr><td>Minutes, mean / median</td><td class="num">11.5 / 8.6</td><td class="num">9.7 / 7.6</td><td class="num">28.0 / 27.6</td></tr>
+<tr><td>USD (API-equivalent), mean / median</td><td class="num">0.14 / 0.11</td><td class="num">0.12 / 0.09</td><td class="num">0.34 / 0.36</td></tr>
+<tr><td>Web pages read, mean / median</td><td class="num">5.4 / 3</td><td class="num">4.6 / 2</td><td class="num">12.4 / 11</td></tr>
+<tr><td>Model calls, mean / median</td><td class="num">84 / 64</td><td class="num">71 / 57</td><td class="num">204 / 210</td></tr>
+<tr><td>Characters of evidence read, median</td><td class="num">14,481</td><td class="num">9,277</td><td class="num">65,766</td></tr>
+</tbody>
+<caption>Table 4. Cost profile of the final code. 54 of 80 runs opened at least one web page; the rest were solved from Wikipedia alone. A full 40-question run costs about USD 5.5–6.</caption>
+</table></div>
+<p>Wrong answers are three times as slow and expensive as right ones: they are the runs in which no branch reaches a well-verified value and the frontier explores until the page or time budget ends. This asymmetry makes the budget a useful confidence signal in practice.</p>
+
+<h3><span class="n">5.4</span>Changing the reader</h3>
+<p>Because the program owns the search, the reader can be swapped without touching it. On the six questions that Haiku had failed in v11b, Claude Sonnet 5.5 solved four (five counting a valid alternative answer), with a stable plan and stricter verification, at about USD 0.74 and 6 minutes per question (2–10 minutes). A local 24B mixture-of-experts model (about 2B active parameters), run through LM Studio with the reasoning block pre-closed and grammar-constrained decoding, produced plans that mixed clues and hops and verifications that accepted almost every candidate (0.92 quality for the American designer of Tux as “Brazilian programmer”); its final answer was wrong with high stated confidence. The bounded-reader design does not rescue a reader that cannot read; it does make a cheap reader that can read sufficient.</p>
+
+<h2><span class="n">6</span>Analysis</h2>
+<h3><span class="n">6.1</span>Where errors come from</h3>
+<p>We traced every failure of the earlier runs to the step where the right entity was lost. A representative case is the Galileo question (Galileo → Giuseppe Biancani → Niccolò Zucchi → 6 December 1586). In v11b the plan was right and Haiku's readings were right (“unknown” on “Bolognese Jesuit” for candidates whose rows did not say it), yet the run failed because of the program: a clue that repeated the link was counted twice, so two wrong students became <em>strong</em>; the right one, found by description, stayed <em>weak</em> because no row said “student of Galileo” and was never expanded; two names were linked to the wrong articles through one shared word; the budget ran out on wrong branches. All four causes were fixed in the program (no double counting, strong only with identifying clues proven, title matching through row links, priorities), and Galileo was answered correctly in both final runs.</p>
+<p>Across the analysed failures the pattern repeated: when the model received <em>few, relevant</em> rows it usually read them correctly; its errors grew with long, noisy inputs. The fixes that moved the score (Table 2) were therefore almost all program changes: what rows to send, how to link names to articles, how to count evidence, which action to take next and how to search the web for an entity without an article.</p>
+
+<h3><span class="n">6.2</span>Measuring program changes without the model</h3>
+<p>Live runs are slow, noisy and cost money, so most changes were first measured offline:</p>
+<ul>
+<li><strong>Oracles without model calls.</strong> An entity oracle checks, for names recorded in past runs, whether the program resolves them to the expected article; a row oracle checks whether the gold row of a hop is among the rows the program would send. A change to linking or row selection is kept only if these oracles do not regress.</li>
+<li><strong>Replays of single model calls.</strong> The exact prompt of a past decision is replayed with a changed rule or prompt to see whether the decision changes, at a fraction of a cent.</li>
+<li><strong>Search-engine probes.</strong> The queries a hop would issue are sent to the real search engine and the position of the gold page is recorded, to compare query-building rules.</li>
+<li><strong>Targeted live replays.</strong> Only then is the changed question run live, usually two to five times.</li>
+</ul>
+<p>The test suite (568 offline tests with a fake model) guards each rule with the case that motivated it.</p>
+
+<h3><span class="n">6.3</span>Interventions that were measured and rejected</h3>
+<div class="tabella"><table>
+<thead><tr><th>Intervention</th><th>Measurement</th><th>Outcome</th></tr></thead>
+<tbody>
+<tr><td>Verification rule: a clue matched only in its generic part is “unknown”</td><td>Constructed cases: a correct “no” on a hard case fell from 4 of 17 readings to 0 of 14</td><td>Rejected</td></tr>
+<tr><td>Homonym rule: “no” if a row lacks the entity's context</td><td>On recorded runs it would block 33 useful judgements to avoid 2 harmful ones</td><td>Rejected</td></tr>
+<tr><td>Prefer answers reached by several paths; cross-plan priority</td><td>Recorded runs with several solutions: +1 / −1</td><td>Rejected</td></tr>
+<tr><td>Final consistency check on the answer entity</td><td>Analysis of final entities: no wrong answer it would have fixed</td><td>Rejected</td></tr>
+<tr><td>Tie-break window 0.25</td><td>Broke a correct question by choosing on the asked value</td><td>Replaced by window 0.4 with “never decide on the asked value” (live: 4/4 on the affected questions)</td></tr>
+</tbody>
+<caption>Table 5. Negative results. Each was implemented, measured and removed; none is in the final code.</caption>
+</table></div>
+
+<h2><span class="n">7</span>Limitations and threats to validity</h2>
+<ul>
+<li><strong>The benchmark is also the development set.</strong> Every rule was motivated by a failure on these 40 questions. Although rules are written to be general, and prompt examples were replaced with unrelated domains after one leaked a benchmark entity, the 90% figure is an optimistic estimate of accuracy on new questions. A held-out set synthesised the same way is the most important next step.</li>
+<li><strong>Small sample.</strong> With 80 question runs the 95% interval is 81.5–94.8%; differences of a few questions between versions are within noise, which is why each final configuration was run twice.</li>
+<li><strong>Synthetic questions.</strong> The questions come from Wikidata paths and are mostly answerable through Wikipedia; real questions about recent or niche topics depend more on the web path, which is exercised by fewer questions (Arduino is the clearest case).</li>
+<li><strong>LLM judge.</strong> A model extracts the answer; one earlier error of the judge (“NOT FOUND” recorded as an answer) was found and fixed. Expected values with several valid answers are judged against one.</li>
+<li><strong>Non-determinism and drift.</strong> Haiku's plans vary between runs; Wikipedia and search results change over time; runs depend on a subscription quota (one run was interrupted and resumed after a usage limit).</li>
+<li><strong>Language.</strong> All questions are in Italian; the method searches in several languages but was tuned on this set.</li>
+</ul>
+
+<h2><span class="n">8</span>Deployment</h2>
+<p>The method is integrated in the project's desktop application. Every web research that is not marked as private now runs with Claude Haiku as the only model: questions classified as a quick fact go to the chain described here; broader research goes to a concept-map strategy in which Haiku extracts concepts from pages and writes a cited report; when the user leaves the choice to the system, the plan decides between the two. No local model is loaded for web research; local models remain only for private documents and for questions explicitly marked as private, which never reach the cloud model.</p>
+<p>Two live checks through the application code on 1 November 2026 (not part of the benchmark statistics): with the mode left to the system, the Arduino question was classified as a quick fact, sent to the chain and answered correctly (21 June 1976; 16.4 minutes, USD 0.22, after a detour through a wrong first candidate company that the frontier abandoned); a broad request on the history of Arduino and the trademark dispute between Arduino LLC and Arduino Srl ran the concept-map strategy for 21.8 minutes and USD 0.54, read 41 sources and produced a cited report in Italian covering the founding at Ivrea, the trademark registrations, the 2015 lawsuits, the 2016 settlement and the 2017 acquisition by the founders' company, flagging where sources disagree.</p>
+
+<h2><span class="n">9</span>Conclusion</h2>
+<p>A cheap language model can answer obfuscated multi-hop questions reliably when it is asked to read rather than to search. Giving the program the search — rows with links, mechanical checks of every quotation, a global frontier and the final answer line — raised accuracy from 70% to 90% with the same model, made each answer traceable to cited rows, and allowed most improvements to be measured without calling the model. The main open question is generalisation: the next step is a held-out benchmark, including questions whose chains live mostly outside Wikipedia.</p>
+
+<h2>References</h2>
+<ol class="rif">
+<li>J. Sun et al. Think-on-Graph: Deep and Responsible Reasoning of Large Language Model on Knowledge Graph. ICLR 2024.</li>
+<li>J. Tan, Z. Dou, Y. Yu, J. Cheng, L. Liu, J. Xie, J.-R. Wen. HierSearch: A Hierarchical Enterprise Deep Search Framework Integrating Local and Web Searches. AAAI 2026.</li>
+<li>L. Huang, Y. Liu, J. Jiang et al. ManuSearch: Democratizing Deep Search in Large Language Models with a Transparent and Open Multi-Agent Framework. Findings of EMNLP 2025.</li>
+<li>S. Alzubi et al. Open Deep Search: Democratizing Search with Open-source Reasoning Agents. arXiv:2503.20201, 2025.</li>
+<li>L. Ju, J. Zhao et al. WisPaper: Your AI Scholar Search Engine. arXiv:2512.06879, 2025.</li>
+<li>F. Wu, W. Xuan, H. Qi et al. DeepSearch: Overcome the Bottleneck of Reinforcement Learning with Verifiable Rewards via Tree-Based Search. ICLR 2026 (arXiv:2509.25454).</li>
+<li>R. Lu, Z. Hou, Z. Wang et al. DeepDive: Advancing Deep Search Agents with Knowledge Graphs and Multi-Turn RL. arXiv:2509.10446, 2025.</li>
+<li>I. Safder, S.-U. Hassan. DS4A: Deep Search System for Algorithms from Full-text Scholarly Big Data. ICDM Workshops 2018.</li>
+<li>E. O. Pyzer-Knapp et al. Accelerating materials discovery using artificial intelligence, high performance computing and robotics. npj Computational Materials 8, 2022.</li>
+<li>P. Ferragina, U. Scaiella. TAGME: On-the-fly Annotation of Short Text Fragments (by Wikipedia Entities). CIKM 2010 (arXiv:1006.3498).</li>
+<li>D. Milne, I. H. Witten. Learning to Link with Wikipedia. CIKM 2008.</li>
+<li>L. Ratinov, D. Roth, D. Downey, M. Anderson. Local and Global Algorithms for Disambiguation to Wikipedia. ACL 2011.</li>
+<li>L. Wu, F. Petroni, M. Josifoski, S. Riedel, L. Zettlemoyer. Scalable Zero-shot Entity Linking with Dense Entity Retrieval (BLINK). EMNLP 2020.</li>
+<li>N. De Cao, G. Izacard, S. Riedel, F. Petroni. Autoregressive Entity Retrieval (GENRE). ICLR 2021.</li>
+<li>J. M. van Hulst, F. Hasibi, K. Dercksen, K. Balog, A. P. de Vries. REL: An Entity Linker Standing on the Shoulders of Giants. SIGIR 2020.</li>
+<li>J. Thorne, A. Vlachos, C. Christodoulopoulos, A. Mittal. FEVER: a Large-scale Dataset for Fact Extraction and VERification. NAACL 2018.</li>
+<li>A. Asai, K. Hashimoto, H. Hajishirzi, R. Socher, C. Xiong. Learning to Retrieve Reasoning Paths over Wikipedia Graph for Question Answering. ICLR 2020.</li>
+<li>W. Xiong et al. Answering Complex Open-Domain Questions with Multi-Hop Dense Retrieval. ICLR 2021.</li>
+<li>N. F. Liu et al. Lost in the Middle: How Language Models Use Long Contexts. TACL 2024 (arXiv 2023).</li>
+<li>S. Auer et al. DBpedia: A Nucleus for a Web of Open Data. ISWC 2007.</li>
+<li>F. M. Suchanek, G. Kasneci, G. Weikum. YAGO: A Core of Semantic Knowledge. WWW 2007.</li>
+<li>P.-L. Huguet Cabot, R. Navigli. REBEL: Relation Extraction By End-to-end Language generation. Findings of EMNLP 2021.</li>
+<li>Z. Yang et al. HotpotQA: A Dataset for Diverse, Explainable Multi-hop Question Answering. EMNLP 2018.</li>
+<li>H. Trivedi, N. Balasubramanian, T. Khot, A. Sabharwal. MuSiQue: Multihop Questions via Single-hop Question Composition. TACL 2022.</li>
+</ol>
+
+<h2>Appendix A. Reproducing the runs</h2>
+<pre>cd ai-locale
+# one benchmark question with the final configuration
+venv/bin/python -u test/prova_banco.py --modalita fatto_veloce --nome prova --etichetta catena --budget 6 \
+  --semi "informatica/Linux kernel" \
+  --opzioni '{"lettore": "claude", "modello_claude": "haiku", "senza_wikidata": true, "strategia": "catena"}'
+# closed-book baseline (same judge): haiku, sonnet or opus
+venv/bin/python test/prova_a_memoria.py haiku
+# offline tests (fake model, no network)
+venv/bin/python -m pytest -q -m "not llm and not rete and not gpu and not claude" test</pre>
+<p class="nota">Main files: <span class="mono">navigatore/catena.py</span> (plans, frontier, candidates, verification, scoring, value, tie-break), <span class="mono">navigatore/fonti/wikipedia_grafo.py</span> (Wikipedia as a graph of rows), <span class="mono">navigatore/ricerca.py</span> (web search and reading), <span class="mono">orchestratore/prompt/</span> (the six task prompts), <span class="mono">banco_prova/</span> (questions and the log of every run).</p>
+</div>

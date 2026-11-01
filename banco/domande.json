@@ -1,0 +1,2805 @@
+{
+ "generato_il": "2026-10-14T04:07:01+02:00",
+ "modelli_del_filtro": {
+  "spark": "spark-x2.5-4b",
+  "qwen": "qwen3.8-27b"
+ },
+ "domande": [
+  {
+   "tema": "informatica",
+   "seme": "Linux kernel",
+   "domanda": "Qual è la data di nascita (giorno, mese e anno) del programmatore brasiliano, nato negli anni '70, che ha progettato Freedo, la mascotte derivata dal pinguino Tux, simbolo del celebre kernel open source creato negli anni '90?",
+   "risposta": "24 luglio 1973",
+   "attributo": {
+    "relazione": "data di nascita",
+    "id_relazione": "P569",
+    "id_oggetto": null,
+    "tipo_oggetto": "data",
+    "url_citabile": "https://www.wikidata.org/wiki/Q4117651#P569"
+   },
+   "percorso": [
+    {
+     "qid": "Q388",
+     "nome": "Linux",
+     "relazione": null
+    },
+    {
+     "qid": "Q131200",
+     "nome": "Tux",
+     "relazione": "mascotte"
+    },
+    {
+     "qid": "Q19844590",
+     "nome": "Freedo",
+     "relazione": "opera derivata"
+    },
+    {
+     "qid": "Q4117651",
+     "nome": "Alexandre Oliva",
+     "relazione": "progettista"
+    }
+   ],
+   "motivo_unicita": "Freedo, derivata da Tux, ha un solo progettista (Alexandre Oliva), e la sua data di nascita è un valore unico e preciso.",
+   "generata_il": "2026-10-13T13:11:07+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "24 giugno 1975",
+     "12 luglio 1975"
+    ],
+    "qwen": "1975",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "24 giugno 1975"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "12 luglio 1975"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "1975"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "informatica",
+   "seme": "Git",
+   "domanda": "Il sistema di controllo di versione distribuito creato da Linus Torvalds a metà anni 2000 ha dato origine a una piattaforma di hosting leggera e autogestibile, scritta in Go, chiamata Gitea. Gitea si ispira a un servizio web con sede a San Francisco, la cui mascotte è un gatto-polpo. In quale giorno preciso della primavera del 2008 quel servizio è stato aperto ufficialmente al pubblico?",
+   "risposta": "10 aprile 2008",
+   "attributo": {
+    "relazione": "data di apertura ufficiale",
+    "id_relazione": "P1619",
+    "id_oggetto": null,
+    "tipo_oggetto": "data",
+    "url_citabile": "https://www.wikidata.org/wiki/Q364#P1619"
+   },
+   "percorso": [
+    {
+     "qid": "Q186055",
+     "nome": "Git",
+     "relazione": null
+    },
+    {
+     "qid": "Q28714270",
+     "nome": "Gitea",
+     "relazione": "opera derivata"
+    },
+    {
+     "qid": "Q364",
+     "nome": "GitHub",
+     "relazione": "ispirato dall'opera"
+    }
+   ],
+   "motivo_unicita": "Il servizio ispiratore di Gitea è uno solo (GitHub) e la sua data di apertura ufficiale, il 10 aprile 2008, è un'unica data precisa.",
+   "generata_il": "2026-10-13T13:11:22+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "15 aprile",
+     "16 marzo"
+    ],
+    "qwen": "10 aprile",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "15 aprile"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "16 marzo"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "10 aprile"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "informatica",
+   "seme": "Debian",
+   "domanda": "Una distribuzione Linux indiana derivata da Debian è stata sviluppata da un ente governativo di ricerca sul calcolo avanzato, che aderisce al consorzio internazionale che stabilisce gli standard del World Wide Web. Qual è la data (giorno, mese e anno) di fondazione di questo consorzio, creato a metà anni Novanta?",
+   "risposta": "1 ottobre 1994",
+   "attributo": {
+    "relazione": "data di fondazione o creazione",
+    "id_relazione": "P571",
+    "id_oggetto": null,
+    "tipo_oggetto": "data",
+    "url_citabile": "https://www.wikidata.org/wiki/Q37033#P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q7715973",
+     "nome": "Debian",
+     "relazione": null
+    },
+    {
+     "qid": "Q3519867",
+     "nome": "Bharat Linux",
+     "relazione": "opera derivata"
+    },
+    {
+     "qid": "Q3519908",
+     "nome": "Centre for Development of Advanced Computing",
+     "relazione": "sviluppatore"
+    },
+    {
+     "qid": "Q37033",
+     "nome": "World Wide Web Consortium",
+     "relazione": "membro di"
+    }
+   ],
+   "motivo_unicita": "La catena porta a un solo consorzio per gli standard web (il W3C), che ha un'unica data di fondazione: 1 ottobre 1994.",
+   "generata_il": "2026-10-13T13:11:46+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "15-03-1996",
+     "15 giugno 1994"
+    ],
+    "qwen": "18 febbraio 1994",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "15-03-1996"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "15 giugno 1994"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "18 febbraio 1994"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "informatica",
+   "seme": "Mozilla Firefox",
+   "domanda": "Il browser libero della fondazione con il logo di una volpe di fuoco usa come libreria per il controllo ortografico un software nato nei primi anni Duemila, disponibile anche sotto una licenza della fondazione in versione 1.1, successiva alla 1.0 e precedente alla 2.0. Chi è la persona indicata come autrice di quel testo di licenza, nota come guida della fondazione stessa?",
+   "risposta": "Mitchell Baker",
+   "attributo": {
+    "relazione": "autore",
+    "id_relazione": "P50",
+    "id_oggetto": "Q445250",
+    "tipo_oggetto": "entita",
+    "url_citabile": "https://www.wikidata.org/wiki/Q26737735#P50"
+   },
+   "percorso": [
+    {
+     "qid": "Q698",
+     "nome": "Mozilla Firefox",
+     "relazione": null
+    },
+    {
+     "qid": "Q176291",
+     "nome": "Hunspell",
+     "relazione": "dipende da"
+    },
+    {
+     "qid": "Q26737735",
+     "nome": "MPL 1.1",
+     "relazione": "licenza"
+    }
+   ],
+   "motivo_unicita": "Il percorso porta a una sola licenza (MPL 1.1) e il suo unico autore indicato è Mitchell Baker.",
+   "generata_il": "2026-10-13T13:12:39+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "Mario Brun",
+     "Miguel de Icaza"
+    ],
+    "qwen": "Mozzarella",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "Mario Brun"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "Miguel de Icaza"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "Mozzarella"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "informatica",
+   "seme": "Raspberry Pi",
+   "domanda": "Un celebre microcomputer economico delle dimensioni di una carta di credito, nato per scopi didattici nel Regno Unito, viene prodotto anche da un distributore britannico di componenti elettronici (marchio element14). La società che controlla tale distributore è quotata nella principale borsa londinese, il cui gruppo operatore possiede una filiale statunitense di gestione patrimoniale e indici finanziari con sede a Seattle. In che anno fu fondata quella filiale?",
+   "risposta": "1936",
+   "attributo": {
+    "relazione": "data di fondazione o creazione",
+    "id_relazione": "P571",
+    "id_oggetto": null,
+    "tipo_oggetto": "data",
+    "url_citabile": "https://www.wikidata.org/wiki/Q743733#P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q245",
+     "nome": "Raspberry Pi",
+     "relazione": null
+    },
+    {
+     "qid": "Q16975735",
+     "nome": "Farnell element14",
+     "relazione": "fabbricante"
+    },
+    {
+     "qid": "Q171240",
+     "nome": "London Stock Exchange",
+     "relazione": "borsa valori"
+    },
+    {
+     "qid": "Q5573225",
+     "nome": "London Stock Exchange group",
+     "relazione": "operatore"
+    },
+    {
+     "qid": "Q743733",
+     "nome": "Russell Investments",
+     "relazione": "filiali"
+    }
+   ],
+   "motivo_unicita": "La catena porta a Russell Investments, filiale del London Stock Exchange Group con sede a Seattle, la cui data di fondazione è un unico anno (1936).",
+   "generata_il": "2026-10-13T13:13:15+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "2001",
+     "1983"
+    ],
+    "qwen": "2008",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "2001"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "1983"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "2008"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "informatica",
+   "seme": "Blender",
+   "domanda": "Un noto programma open source di modellazione e animazione 3D è stato portato anche su un piccolo sistema operativo per PC, nato negli anni '90 e portato avanti da un unico sviluppatore austriaco. Chi è l'attuale sindaco della città dell'Alta Austria, sul fiume Traun, in cui è nato quello sviluppatore?",
+   "risposta": "Andreas Rabl",
+   "attributo": {
+    "relazione": "capo del governo",
+    "id_relazione": "P6",
+    "id_oggetto": "Q26206121",
+    "tipo_oggetto": "entita",
+    "url_citabile": "https://www.wikidata.org/wiki/Q178582#P6"
+   },
+   "percorso": [
+    {
+     "qid": "Q173136",
+     "nome": "Blender",
+     "relazione": null
+    },
+    {
+     "qid": "Q726395",
+     "nome": "SkyOS",
+     "relazione": "sistema operativo"
+    },
+    {
+     "qid": "Q3938435",
+     "nome": "Robert Szeleney",
+     "relazione": "sviluppatore"
+    },
+    {
+     "qid": "Q178582",
+     "nome": "Wels",
+     "relazione": "luogo di nascita"
+    }
+   ],
+   "motivo_unicita": "Il sistema operativo ha un solo sviluppatore, nato in una sola città, che ha un solo sindaco in carica.",
+   "generata_il": "2026-10-13T13:17:37+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "Michael Hainl",
+     "Peter Wende"
+    ],
+    "qwen": "Gerald Ebner",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "Michael Hainl"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "Peter Wende"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "Gerald Ebner"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "informatica",
+   "seme": "LibreOffice",
+   "domanda": "Una celebre suite per ufficio libera, nata come fork all'inizio degli anni 2010, è disponibile anche su un sistema operativo open source che si presenta come erede di un sistema commerciale multimediale nato a metà degli anni '90 per una piattaforma con processori AT&T Hobbit e poi per PowerPC. In quale data precisa (giorno, mese e anno) fu ufficialmente interrotto quel sistema commerciale originario?",
+   "risposta": "15 novembre 2001",
+   "attributo": {
+    "relazione": "data di interruzione",
+    "id_relazione": "P2669",
+    "id_oggetto": null,
+    "tipo_oggetto": "data",
+    "url_citabile": "https://www.wikidata.org/wiki/Q62563#P2669"
+   },
+   "percorso": [
+    {
+     "qid": "Q10135",
+     "nome": "LibreOffice",
+     "relazione": null
+    },
+    {
+     "qid": "Q215448",
+     "nome": "Haiku",
+     "relazione": "sistema operativo"
+    },
+    {
+     "qid": "Q62563",
+     "nome": "BeOS",
+     "relazione": "ha sostituito"
+    }
+   ],
+   "motivo_unicita": "Il percorso porta univocamente a BeOS (sostituito da Haiku), la cui data di interruzione è una sola: 15 novembre 2001.",
+   "generata_il": "2026-10-13T13:18:22+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "26 giugno 1998",
+     "13/04/2001"
+    ],
+    "qwen": "17 aprile 2009",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "26 giugno 1998"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "13/04/2001"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "17 aprile 2009"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "geografia_cultura",
+   "seme": "TeX",
+   "domanda": "Nella serie a fumetti western italiana del ranger texano con la camicia gialla, compare un antagonista soprannominato \"il Moresco\" (in spagnolo), la cui prima apparizione è in un episodio il cui titolo parla di un tesoro custodito in un tempio. Qual è la data completa (giorno, mese e anno) di nascita dello sceneggiatore di quell'episodio, che fu anche il co-creatore del personaggio principale della serie?",
+   "risposta": "22 dicembre 1908",
+   "attributo": {
+    "relazione": "data di nascita",
+    "id_relazione": "P569",
+    "id_oggetto": null,
+    "tipo_oggetto": "data",
+    "url_citabile": "https://www.wikidata.org/wiki/Q12085#P569"
+   },
+   "percorso": [
+    {
+     "qid": "Q14556957",
+     "nome": "Tex",
+     "relazione": null
+    },
+    {
+     "qid": "Q3720949",
+     "nome": "El Morisco",
+     "relazione": "personaggi"
+    },
+    {
+     "qid": "Q47505090",
+     "nome": "Il tesoro del tempio",
+     "relazione": "prima apparizione"
+    },
+    {
+     "qid": "Q12085",
+     "nome": "Giovanni Luigi Bonelli",
+     "relazione": "sceneggiatore"
+    }
+   ],
+   "motivo_unicita": "L'episodio d'esordio di El Morisco ha un solo sceneggiatore, Giovanni Luigi Bonelli, che ha un'unica data di nascita, il 22 dicembre 1908.",
+   "generata_il": "2026-10-14T01:03:15+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "tema_originale": "informatica",
+   "filtro": {
+    "spark": [
+     "1943",
+     "1935"
+    ],
+    "qwen": "1930",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "1943"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "1935"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "1930"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "informatica",
+   "seme": "Emacs",
+   "domanda": "Qual è la data di nascita (giorno, mese e anno) dell'informatico statunitense, scomparso a metà degli anni 2010, che contribuì a programmare il sistema operativo a tempo condiviso su cui si basò il TOPS-20 di DEC, cioè uno dei sistemi su cui girava il celebre editor di testo nato al MIT a metà degli anni '70, e che nel 2009 ricevette un importante premio spagnolo per la ricerca tecnica e scientifica?",
+   "risposta": "23 aprile 1941",
+   "attributo": {
+    "relazione": "data di nascita",
+    "id_relazione": "P569",
+    "id_oggetto": null,
+    "tipo_oggetto": "data",
+    "url_citabile": "https://www.wikidata.org/wiki/Q92631#P569"
+   },
+   "percorso": [
+    {
+     "qid": "Q189722",
+     "nome": "Emacs",
+     "relazione": null
+    },
+    {
+     "qid": "Q1481861",
+     "nome": "TOPS-20",
+     "relazione": "sistema operativo"
+    },
+    {
+     "qid": "Q2992529",
+     "nome": "TENEX",
+     "relazione": "basato su"
+    },
+    {
+     "qid": "Q92631",
+     "nome": "Ray Tomlinson",
+     "relazione": "programmatore"
+    }
+   ],
+   "motivo_unicita": "Il programmatore di TENEX insignito del premio Principe/Principessa delle Asturie per la ricerca tecnica e scientifica nel 2009 e morto nel 2016 è solo Ray Tomlinson, con una sola data di nascita.",
+   "generata_il": "2026-10-14T01:07:18+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "21-04-1956",
+     "13 marzo 1958"
+    ],
+    "qwen": "15 luglio 1934",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "21-04-1956"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "13 marzo 1958"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "15 luglio 1934"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "informatica",
+   "seme": "Wikipedia",
+   "domanda": "Qual è la data di nascita (giorno, mese e anno) del tedesco, nato nell'ultimo scorcio degli anni '50 del Novecento e laureatosi a Halle nella prima metà degli anni '80, che presiede l'associazione proprietaria della guida di viaggio collaborativa i cui server sono gestiti, come quelli della più grande enciclopedia online, dal team tecnico di affidabilità dei sistemi della fondazione Wikimedia?",
+   "risposta": "16 luglio 1959",
+   "attributo": {
+    "relazione": "data di nascita",
+    "id_relazione": "P569",
+    "id_oggetto": null,
+    "tipo_oggetto": "data",
+    "url_citabile": "https://www.wikidata.org/wiki/Q18707558#P569"
+   },
+   "percorso": [
+    {
+     "qid": "Q52",
+     "nome": "Wikipedia",
+     "relazione": null
+    },
+    {
+     "qid": "Q27983259",
+     "nome": "Wikimedia Site Reliability Engineering",
+     "relazione": "operatore"
+    },
+    {
+     "qid": "Q373",
+     "nome": "Wikivoyage",
+     "relazione": "elemento operato"
+    },
+    {
+     "qid": "Q17229339",
+     "nome": "Wikivoyage association",
+     "relazione": "proprietario"
+    },
+    {
+     "qid": "Q18707558",
+     "nome": "Roland Unger",
+     "relazione": "presidente"
+    }
+   ],
+   "motivo_unicita": "La catena porta a una sola persona, il presidente dell'associazione proprietaria di Wikivoyage, e la sua data di nascita è un dato univoco.",
+   "generata_il": "2026-10-14T01:10:06+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "25 aprile 1958",
+     "25 marzo 1958"
+    ],
+    "qwen": "1958",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "25 aprile 1958"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "25 marzo 1958"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "1958"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "storia",
+   "seme": "Pace di Vestfalia",
+   "domanda": "Una delle grandi potenze monarchiche che sottoscrissero i trattati che nel 1648 chiusero la guerra dei Trent'anni aveva come inno una marcia dedicata a un suo sovrano della dinastia borbonica, vissuto tra Cinque e Seicento. Qual è la data di nascita completa (giorno, mese e anno) dell'autore parigino del testo di quella marcia, drammaturgo e canzoniere del Settecento?",
+   "risposta": "14 aprile 1709",
+   "attributo": {
+    "relazione": "data di nascita",
+    "id_relazione": "P569",
+    "id_oggetto": null,
+    "tipo_oggetto": "data",
+    "url_citabile": "https://www.wikidata.org/wiki/Q2404425#P569"
+   },
+   "percorso": [
+    {
+     "qid": "Q150995",
+     "nome": "pace di Vestfalia",
+     "relazione": null
+    },
+    {
+     "qid": "Q70972",
+     "nome": "Regno di Francia",
+     "relazione": "firmatario"
+    },
+    {
+     "qid": "Q1136397",
+     "nome": "Marcia di Enrico IV",
+     "relazione": "inno"
+    },
+    {
+     "qid": "Q2404425",
+     "nome": "Charles Collé",
+     "relazione": "autore del testo"
+    }
+   ],
+   "motivo_unicita": "Il regno firmatario ha un solo inno ufficiale legato a Enrico IV, il cui testo ha un unico autore (Charles Collé), con una sola data di nascita: 14 aprile 1709.",
+   "generata_il": "2026-10-14T01:11:17+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "10 giugno 1736",
+     "1803"
+    ],
+    "qwen": "1739",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "10 giugno 1736"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "1803"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "1739"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "storia",
+   "seme": "Battaglia di Lepanto",
+   "domanda": "Una repubblica marinara italiana prese parte alla grande battaglia navale contro i Turchi nel Mediterraneo orientale, nella seconda metà del Cinquecento. Dopo l'età napoleonica fu sostituita da una repubblica \"sorella\" con nome regionale, a sua volta sostituita da uno stato guidato da un imperatore. Qual è la data completa (giorno, mese e anno) in cui quello stato imperiale ebbe inizio?",
+   "risposta": "18 maggio 1804",
+   "attributo": {
+    "relazione": "data di fondazione o creazione",
+    "id_relazione": "P571",
+    "id_oggetto": null,
+    "tipo_oggetto": "data",
+    "url_citabile": "https://www.wikidata.org/wiki/Q71084#P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q165425",
+     "nome": "battaglia di Lepanto",
+     "relazione": null
+    },
+    {
+     "qid": "Q174306",
+     "nome": "Repubblica di Genova",
+     "relazione": "partecipante"
+    },
+    {
+     "qid": "Q659312",
+     "nome": "Repubblica Ligure",
+     "relazione": "sostituito da"
+    },
+    {
+     "qid": "Q71084",
+     "nome": "Primo Impero francese",
+     "relazione": "sostituito da"
+    }
+   ],
+   "motivo_unicita": "La catena porta in modo univoco a un solo stato (Primo Impero francese), la cui data di fondazione, 18 maggio 1804, è una sola.",
+   "generata_il": "2026-10-14T01:13:20+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "10 giugno 1797",
+     "1797"
+    ],
+    "qwen": "25 marzo 1806",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "10 giugno 1797"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "1797"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "25 marzo 1806"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "storia",
+   "seme": "Congresso di Vienna",
+   "domanda": "In che anno morì, in una città della Riviera francese, la donna nata a Berlino nei primi anni dell'Ottocento, figlia di un diplomatico russo di famiglia baltica che prese parte al congresso che ridisegnò l'Europa dopo Napoleone, e che nell'estate del 1830 sposò un barone di nome Meyendorff?",
+   "risposta": "1891",
+   "attributo": {
+    "relazione": "data di morte",
+    "id_relazione": "P570",
+    "id_oggetto": null,
+    "tipo_oggetto": "data",
+    "url_citabile": "https://www.wikidata.org/wiki/Q94773581#P570"
+   },
+   "percorso": [
+    {
+     "qid": "Q46362",
+     "nome": "congresso di Vienna",
+     "relazione": null
+    },
+    {
+     "qid": "Q1856350",
+     "nome": "Gustav Ernst von Stackelberg",
+     "relazione": "partecipante"
+    },
+    {
+     "qid": "Q94773581",
+     "nome": "Sophie von Stackelberg",
+     "relazione": "figlio"
+    }
+   ],
+   "motivo_unicita": "Il marito Meyendorff, il matrimonio del luglio 1830 e il padre partecipante al congresso di Vienna individuano solo Sophie von Stackelberg, morta nel 1891.",
+   "generata_il": "2026-10-14T01:15:12+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "1862",
+     "1876"
+    ],
+    "qwen": "1895",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "1862"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "1876"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "1895"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "storia",
+   "seme": "Repubblica di Venezia",
+   "domanda": "Una grande fortezza costruita a fine Cinquecento sulla costa settentrionale di Creta, a Rethymno, dalla potenza marinara che allora dominava l'isola, è oggi gestita da un ministero greco che ha preso il posto di un dicastero più ampio, comprendente anche istruzione e affari religiosi. Qual è la data completa (giorno, mese e anno, a metà degli anni Ottanta del Novecento) di fondazione di questo ministero?",
+   "risposta": "26 luglio 1985",
+   "attributo": {
+    "relazione": "data di fondazione o creazione",
+    "id_relazione": "P571",
+    "id_oggetto": null,
+    "tipo_oggetto": "data",
+    "url_citabile": "https://www.wikidata.org/wiki/Q16331895#P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q4948",
+     "nome": "Repubblica di Venezia",
+     "relazione": null
+    },
+    {
+     "qid": "Q611427",
+     "nome": "Fortezza of Rethymno",
+     "relazione": "proprietario di"
+    },
+    {
+     "qid": "Q16331895",
+     "nome": "Ministero della cultura e dello sport",
+     "relazione": "operatore"
+    }
+   ],
+   "motivo_unicita": "La fortezza di Rethymno ha un solo operatore, il ministero greco della cultura e dello sport, che ha un'unica data di fondazione (26 luglio 1985).",
+   "generata_il": "2026-10-14T01:17:08+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "10 giugno 1985",
+     "31 ottobre 1985"
+    ],
+    "qwen": "12 dicembre 1985",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "10 giugno 1985"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "31 ottobre 1985"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "12 dicembre 1985"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "storia",
+   "seme": "Concilio di Trento",
+   "domanda": "Un cardinale lorenese partecipò al grande concilio tridentino di metà Cinquecento; suo padre fu il primo duca di Guisa, e tra i figli di quest'uomo c'era anche un fratello più giovane del cardinale, che divenne marchese d'Elbeuf. Qual è la superficie, in chilometri quadrati (con due decimali), del comune francese dell'Alta Marna, sulle rive della Marna, in cui nacque questo fratello?",
+   "risposta": "18.94 chilometro quadrato",
+   "attributo": {
+    "relazione": "superficie",
+    "id_relazione": "P2046",
+    "id_oggetto": null,
+    "tipo_oggetto": "numero",
+    "url_citabile": "https://www.wikidata.org/wiki/Q817418#P2046"
+   },
+   "percorso": [
+    {
+     "qid": "Q172991",
+     "nome": "concilio di Trento",
+     "relazione": null
+    },
+    {
+     "qid": "Q712264",
+     "nome": "Carlo di Lorena",
+     "relazione": "partecipante"
+    },
+    {
+     "qid": "Q366025",
+     "nome": "Claudio I di Guisa",
+     "relazione": "padre"
+    },
+    {
+     "qid": "Q2297325",
+     "nome": "Renato di Guisa",
+     "relazione": "figlio"
+    },
+    {
+     "qid": "Q817418",
+     "nome": "Joinville",
+     "relazione": "luogo di nascita"
+    }
+   ],
+   "motivo_unicita": "Il fratello minore, marchese d'Elbeuf, nacque a Joinville, e il comune ha una sola superficie registrata (18,94 km²).",
+   "generata_il": "2026-10-14T01:22:21+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "Alta Marna",
+     "42,30"
+    ],
+    "qwen": "28.47",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "Alta Marna"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "42,30"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "28.47"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "storia",
+   "seme": "Battaglia di Waterloo",
+   "domanda": "Un dipinto intitolato «La Battaglia di Waterloo», che raffigura lo scontro del 1815, fa parte di una collezione museale ospitata in una villa neoclassica di Haarlem. Uno dei proprietari di quella villa, un uomo d'affari nato in Cornovaglia che lavorò a Haarlem nei primi anni dell'Ottocento e morì a Londra negli anni 1810, in che anno nacque?",
+   "risposta": "1757",
+   "attributo": {
+    "relazione": "data di nascita",
+    "id_relazione": "P569",
+    "id_oggetto": null,
+    "tipo_oggetto": "data",
+    "url_citabile": "https://www.wikidata.org/wiki/Q18527800#P569"
+   },
+   "percorso": [
+    {
+     "qid": "Q48314",
+     "nome": "battaglia di Waterloo",
+     "relazione": null
+    },
+    {
+     "qid": "Q11688247",
+     "nome": "La Battaglia di Waterloo",
+     "relazione": "raffigurato da"
+    },
+    {
+     "qid": "Q51543916",
+     "nome": "Museum of Living Dutch Masters",
+     "relazione": "collezione"
+    },
+    {
+     "qid": "Q1802996",
+     "nome": "Villa Welgelegen",
+     "relazione": "luogo"
+    },
+    {
+     "qid": "Q18527800",
+     "nome": "John Williams Hope",
+     "relazione": "proprietario"
+    }
+   ],
+   "motivo_unicita": "La catena (dipinto, collezione, villa, proprietario) è unita da indizi biografici (nato in Cornovaglia, attivo a Haarlem 1802-1808, morto a Londra nel 1813) che identificano solo John Williams Hope, nato nel 1757.",
+   "generata_il": "2026-10-14T01:25:14+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "1753",
+     "1805"
+    ],
+    "qwen": "1763",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "1753"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "1805"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "1763"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "storia",
+   "seme": "Ducato di Milano",
+   "domanda": "Un duca di Milano della fine del Quattrocento, noto per il soprannome legato alla sua carnagione scura e figlio di Francesco Sforza, nacque in una città lombarda della Lomellina. Tra i comuni confinanti con quella città ce n'è uno, in provincia di Pavia, gemellato con un piccolo paese francese dell'Alta Vienna (Limosino). A che altitudine sul livello del mare, in metri, si trova quel comune (un valore tra 100 e 130)?",
+   "risposta": "118 metro",
+   "attributo": {
+    "relazione": "altezza sul mare",
+    "id_relazione": "P2044",
+    "id_oggetto": null,
+    "tipo_oggetto": "numero",
+    "url_citabile": "https://www.wikidata.org/wiki/Q40336#P2044"
+   },
+   "percorso": [
+    {
+     "qid": "Q153529",
+     "nome": "Ducato di Milano",
+     "relazione": null
+    },
+    {
+     "qid": "Q236853",
+     "nome": "Ludovico il Moro",
+     "relazione": "capo di Stato"
+    },
+    {
+     "qid": "Q40832",
+     "nome": "Vigevano",
+     "relazione": "luogo di nascita"
+    },
+    {
+     "qid": "Q40336",
+     "nome": "Gravellona Lomellina",
+     "relazione": "confina con"
+    }
+   ],
+   "motivo_unicita": "Il comune confinante con Vigevano gemellato con Linards (Alta Vienna) è solo Gravellona Lomellina, la cui altitudine è 118 m.",
+   "generata_il": "2026-10-14T01:27:13+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "279",
+     "128"
+    ],
+    "qwen": "115",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "279"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "128"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "115"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "storia",
+   "seme": "Regno delle Due Sicilie",
+   "domanda": "Il regno borbonico che governava il Mezzogiorno d'Italia fu assorbito nel 1861 dal Regno d'Italia. Nel 1945, alla fine della guerra, un effimero Stato balcanico con capitale Belgrado, confinante con quel Regno d'Italia, aveva un primo ministro partigiano (poi maresciallo) e un giovane re come capo di Stato formale, e sciolto entro lo stesso anno. Qual è il giorno, il mese e l'anno esatti della sua fondazione?",
+   "risposta": "7 marzo 1945",
+   "attributo": {
+    "relazione": "data di fondazione o creazione",
+    "id_relazione": "P571",
+    "id_oggetto": null,
+    "tipo_oggetto": "data",
+    "url_citabile": "https://www.wikidata.org/wiki/Q1277557#P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q180393",
+     "nome": "Regno delle Due Sicilie",
+     "relazione": null
+    },
+    {
+     "qid": "Q172579",
+     "nome": "Regno d'Italia",
+     "relazione": "sostituito da"
+    },
+    {
+     "qid": "Q1277557",
+     "nome": "Jugoslavia Federale Democratica",
+     "relazione": "confina con"
+    }
+   ],
+   "motivo_unicita": "Solo la Jugoslavia Federale Democratica (Tito premier, Pietro II capo di Stato, Belgrado, esistita solo nel 1945) ebbe una fondazione il 7 marzo 1945, quindi la data è unica.",
+   "generata_il": "2026-10-14T01:28:20+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "20 novembre 1945",
+     "15 aprile 1876"
+    ],
+    "qwen": "28 ottobre 1944",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "20 novembre 1945"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "15 aprile 1876"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "28 ottobre 1944"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "storia",
+   "seme": "Pace di Lodi",
+   "domanda": "Nel 1454 una pace chiuse una lunga guerra tra Milano e Venezia e prese il nome da una città lombarda sull'Adda. Un piccolo comune confina con quella città e porta \"d'Adda\" nel nome; tra i suoi vicini, un comune in provincia di Cremona ha come patrono San Lorenzo e il codice postale 26010. Qual era la superficie di quest'ultimo comune, in chilometri quadrati, secondo il rilevamento del 2011?",
+   "risposta": "20.65 chilometro quadrato",
+   "attributo": {
+    "relazione": "superficie",
+    "id_relazione": "P2046",
+    "id_oggetto": null,
+    "tipo_oggetto": "numero",
+    "url_citabile": "https://www.wikidata.org/wiki/Q42167#P2046"
+   },
+   "percorso": [
+    {
+     "qid": "Q1456635",
+     "nome": "pace di Lodi",
+     "relazione": null
+    },
+    {
+     "qid": "Q6244",
+     "nome": "Lodi",
+     "relazione": "luogo"
+    },
+    {
+     "qid": "Q42310",
+     "nome": "Boffalora d’Adda",
+     "relazione": "confina con"
+    },
+    {
+     "qid": "Q42167",
+     "nome": "Dovera",
+     "relazione": "confina con"
+    }
+   ],
+   "motivo_unicita": "Il comune cremonese confinante con Boffalora d'Adda, con patrono San Lorenzo e CAP 26010, è Dovera, e la sua superficie nel 2011 è un solo valore (20,65 km²).",
+   "generata_il": "2026-10-14T01:30:21+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "2.95",
+     "1,83"
+    ],
+    "qwen": "58,3",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "2.95"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "1,83"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "58,3"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "scienze",
+   "seme": "Penicillina",
+   "domanda": "Il primo antibiotico di larga diffusione fu scoperto nel 1928 in un laboratorio al St Mary's Hospital, oggi un piccolo museo londinese dedicato al suo scopritore. Quel museo fa parte di un gruppo che riunisce vari musei della salute e della medicina della capitale britannica: in che anno è stato fondato questo gruppo?",
+   "risposta": "1991",
+   "attributo": {
+    "relazione": "data di fondazione o creazione",
+    "id_relazione": "P571",
+    "id_oggetto": null,
+    "tipo_oggetto": "data",
+    "url_citabile": "https://www.wikidata.org/wiki/Q7748058#P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q12190",
+     "nome": "penicillina",
+     "relazione": null
+    },
+    {
+     "qid": "Q6033467",
+     "nome": "Alexander Fleming Laboratory Museum",
+     "relazione": "luogo di scoperta"
+    },
+    {
+     "qid": "Q7748058",
+     "nome": "The London Museums of Health & Medicine",
+     "relazione": "membro di"
+    }
+   ],
+   "motivo_unicita": "Il museo del laboratorio di Fleming appartiene a un solo network di musei di salute e medicina londinesi, la cui data di fondazione è un singolo anno.",
+   "generata_il": "2026-10-14T01:34:14+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "1928",
+     "1972"
+    ],
+    "qwen": "1968",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "1928"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "1972"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "1968"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "scienze",
+   "seme": "Galileo Galilei",
+   "domanda": "In che giorno, mese e anno è nato il gesuita emiliano, poi rettore di un celebre ateneo pontificio romano, che nel Seicento studiò con un confratello gesuita bolognese di astronomia e matematica, a sua volta indicato come allievo di dottorato del grande scienziato pisano processato dall'Inquisizione nel 1633?",
+   "risposta": "6 dicembre 1586",
+   "attributo": {
+    "relazione": "data di nascita",
+    "id_relazione": "P569",
+    "id_oggetto": null,
+    "tipo_oggetto": "data",
+    "url_citabile": "https://www.wikidata.org/wiki/Q983213#P569"
+   },
+   "percorso": [
+    {
+     "qid": "Q307",
+     "nome": "Galileo Galilei",
+     "relazione": null
+    },
+    {
+     "qid": "Q501774",
+     "nome": "Giuseppe Biancani",
+     "relazione": "studente di dottorato"
+    },
+    {
+     "qid": "Q983213",
+     "nome": "Niccolò Zucchi",
+     "relazione": "studente"
+    }
+   ],
+   "motivo_unicita": "Il percorso porta a un solo studente, Niccolò Zucchi (gesuita nato a Parma, rettore della Gregoriana), la cui data di nascita è un fatto unico: 6 dicembre 1586.",
+   "generata_il": "2026-10-14T01:37:19+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "28 settembre 1598",
+     "24 ottobre 1870"
+    ],
+    "qwen": "27 dicembre 1598",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "28 settembre 1598"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "24 ottobre 1870"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "27 dicembre 1598"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "scienze",
+   "seme": "Marie Curie",
+   "domanda": "Una scienziata di origine polacca, due volte premio Nobel, figura tra le circa settanta donne di scienza i cui nomi sono stati iscritti sulla più celebre torre di ferro di Parigi. In quale giorno, mese e anno (siamo nel primo decennio degli anni Duemila) è stata costituita la società di economia mista che gestisce la torre e ha organizzato quell'omaggio?",
+   "risposta": "13 dicembre 2005",
+   "attributo": {
+    "relazione": "data di fondazione o creazione",
+    "id_relazione": "P571",
+    "id_oggetto": null,
+    "tipo_oggetto": "data",
+    "url_citabile": "https://www.wikidata.org/wiki/Q16008666#P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q7186",
+     "nome": "Marie Curie",
+     "relazione": null
+    },
+    {
+     "qid": "Q137915278",
+     "nome": "72 scientist women names on the Eiffel tower",
+     "relazione": "premio ricevuto"
+    },
+    {
+     "qid": "Q16008666",
+     "nome": "Société d'exploitation de la tour Eiffel",
+     "relazione": "organizzatore"
+    }
+   ],
+   "motivo_unicita": "L'omaggio con i nomi di donne scienziate sulla Torre Eiffel è stato organizzato da un unico ente, la società di gestione della torre (SETE), che ha una sola data di costituzione.",
+   "generata_il": "2026-10-14T01:40:12+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "15 aprile 2003",
+     "24"
+    ],
+    "qwen": "2012-07-09",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "15 aprile 2003"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "24"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "2012-07-09"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "scienze",
+   "seme": "Telescopio spaziale Hubble",
+   "domanda": "Una missione dello Space Shuttle di fine 1999 fu dedicata alla manutenzione del più celebre telescopio spaziale in orbita. Tra i membri del suo equipaggio c'era un astronauta statunitense, nato a Chicago, che all'inizio degli anni 2000 fu per circa un anno scienziato capo della NASA e che tornò poi sul telescopio nell'ultima missione di servizio. Qual è la sua data di nascita completa (giorno, mese e anno)?",
+   "risposta": "10 ottobre 1958",
+   "attributo": {
+    "relazione": "data di nascita",
+    "id_relazione": "P569",
+    "id_oggetto": null,
+    "tipo_oggetto": "data",
+    "url_citabile": "https://www.wikidata.org/wiki/Q362209#P569"
+   },
+   "percorso": [
+    {
+     "qid": "Q2513",
+     "nome": "telescopio spaziale Hubble",
+     "relazione": null
+    },
+    {
+     "qid": "Q834666",
+     "nome": "STS-103",
+     "relazione": "evento significativo"
+    },
+    {
+     "qid": "Q362209",
+     "nome": "John Grunsfeld",
+     "relazione": "equipaggio"
+    }
+   ],
+   "motivo_unicita": "Solo un membro dell'equipaggio di STS-103 fu anche capo scienziato della NASA (2003-2004), quindi la data di nascita è unica: 10 ottobre 1958.",
+   "generata_il": "2026-10-14T01:41:19+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "21 luglio 1958",
+     "1956-08-27"
+    ],
+    "qwen": "17 novembre 1956",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "21 luglio 1958"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "1956-08-27"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "17 novembre 1956"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "scienze",
+   "seme": "Enrico Fermi",
+   "domanda": "In che anno è nata la prestigiosa borsa di studio statunitense, assegnata da una fondazione intitolata a un figlio di un senatore americano, di cui fu beneficiario il fisico che si addottorò con Enrico Fermi a Chicago e partecipò alla costruzione della prima pila atomica?",
+   "risposta": "1925",
+   "attributo": {
+    "relazione": "data di fondazione o creazione",
+    "id_relazione": "P571",
+    "id_oggetto": null,
+    "tipo_oggetto": "data",
+    "url_citabile": "https://www.wikidata.org/wiki/Q1316544#P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q8753",
+     "nome": "Enrico Fermi",
+     "relazione": null
+    },
+    {
+     "qid": "Q1608700",
+     "nome": "Herbert L. Anderson",
+     "relazione": "studente di dottorato"
+    },
+    {
+     "qid": "Q1316544",
+     "nome": "Guggenheim Fellowship",
+     "relazione": "premio ricevuto"
+    }
+   ],
+   "motivo_unicita": "La borsa, ricevuta dal dottorando di Fermi Herbert L. Anderson e assegnata da una fondazione intitolata a un figlio di senatore, ha un'unica data di istituzione, il 1925.",
+   "generata_il": "2026-10-14T01:44:22+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "1953",
+     "1930"
+    ],
+    "qwen": "1947",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "1953"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "1930"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "1947"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "scienze",
+   "seme": "Charles Darwin",
+   "domanda": "Un celebre naturalista inglese dell'Ottocento, autore di un'opera sull'origine delle specie, ricevette un premio scientifico intitolato a un medico piemontese e assegnato da un'accademia delle scienze di una città sabauda. Tra i fondatori di quella accademia ci fu uno scienziato nato a Mondovì, che fu anche membro della Royal Society dagli anni '60 del Settecento. Qual è la sua data di nascita completa (giorno, mese e anno)?",
+   "risposta": "2 luglio 1734",
+   "attributo": {
+    "relazione": "data di nascita",
+    "id_relazione": "P569",
+    "id_oggetto": null,
+    "tipo_oggetto": "data",
+    "url_citabile": "https://www.wikidata.org/wiki/Q3767265#P569"
+   },
+   "percorso": [
+    {
+     "qid": "Q1035",
+     "nome": "Charles Darwin",
+     "relazione": null
+    },
+    {
+     "qid": "Q96382318",
+     "nome": "Premio Bressa",
+     "relazione": "premio ricevuto"
+    },
+    {
+     "qid": "Q2822396",
+     "nome": "Accademia delle Scienze di Torino",
+     "relazione": "conferito da"
+    },
+    {
+     "qid": "Q3767265",
+     "nome": "Giovanni Francesco Cigna",
+     "relazione": "fondatore"
+    }
+   ],
+   "motivo_unicita": "Tra i fondatori dell'Accademia di Torino, l'unico nato a Mondovì e membro della Royal Society dal 1764 è Giovanni Francesco Cigna, nato il 2 luglio 1734.",
+   "generata_il": "2026-10-14T01:46:22+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "15 giugno 1732",
+     "15 settembre 1742"
+    ],
+    "qwen": "17 febbraio 1732",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "15 giugno 1732"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "15 settembre 1742"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "17 febbraio 1732"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "scienze",
+   "seme": "Plutone",
+   "domanda": "In che anno fu fondato il college dell'Ohio frequentato dall'astronomo statunitense che, nei primi anni 2010, scoprì la più interna delle piccole lune del pianeta nano scoperto nel 1930 e battezzato con il nome del dio degli inferi?",
+   "risposta": "1833",
+   "attributo": {
+    "relazione": "data di fondazione o creazione",
+    "id_relazione": "P571",
+    "id_oggetto": null,
+    "tipo_oggetto": "data",
+    "url_citabile": "https://www.wikidata.org/wiki/Q616591#P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q339",
+     "nome": "Plutone",
+     "relazione": null
+    },
+    {
+     "qid": "Q105713",
+     "nome": "Stige",
+     "relazione": "oggetto astronomico figlio"
+    },
+    {
+     "qid": "Q5999525",
+     "nome": "Mark R. Showalter",
+     "relazione": "scoperto o inventato da"
+    },
+    {
+     "qid": "Q616591",
+     "nome": "Oberlin College",
+     "relazione": "scuola frequentata"
+    }
+   ],
+   "motivo_unicita": "Stige, la luna più interna di Plutone, fu scoperta da Mark Showalter, il cui college da studente universitario è Oberlin, fondato in un solo anno (1833).",
+   "generata_il": "2026-10-14T01:48:19+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "1845",
+     "1857"
+    ],
+    "qwen": "1878",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "1845"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "1857"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "1878"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "scienze",
+   "seme": "Alessandro Volta",
+   "domanda": "Qual è la data completa (giorno, mese e anno) di nascita del signore che, alla fine del Trecento, ottenne il titolo di primo duca e fondò lo Stato di cui era suddito lo scienziato comasco inventore della pila elettrica?",
+   "risposta": "16 ottobre 1351",
+   "attributo": {
+    "relazione": "data di nascita",
+    "id_relazione": "P569",
+    "id_oggetto": null,
+    "tipo_oggetto": "data",
+    "url_citabile": "https://www.wikidata.org/wiki/Q357539#P569"
+   },
+   "percorso": [
+    {
+     "qid": "Q680",
+     "nome": "Alessandro Volta",
+     "relazione": null
+    },
+    {
+     "qid": "Q153529",
+     "nome": "Ducato di Milano",
+     "relazione": "paese di cittadinanza"
+    },
+    {
+     "qid": "Q357539",
+     "nome": "Gian Galeazzo Visconti",
+     "relazione": "fondatore"
+    }
+   ],
+   "motivo_unicita": "Lo Stato è il Ducato di Milano, fondato da un solo uomo, Gian Galeazzo Visconti, che ha un'unica data di nascita documentata: 16 ottobre 1351.",
+   "generata_il": "2026-10-14T01:50:14+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "10 giugno 1462",
+     "25 novembre 1439"
+    ],
+    "qwen": "12 novembre 1378",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "10 giugno 1462"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "25 novembre 1439"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "12 novembre 1378"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "scienze",
+   "seme": "Cassini-Huygens",
+   "domanda": "La missione verso Saturno che portò una sonda su Titano fu finanziata anche da un'agenzia spaziale europea con sede a Roma, la quale è membro di un comitato internazionale per gli standard dei dati spaziali. Nello stesso comitato partecipa l'agenzia spaziale di un paese nordamericano, con sede a Longueuil, in Québec: il centro spaziale che ospita la sua sede legale porta il nome di una persona. Qual è il nome completo di questa persona?",
+   "risposta": "John Herbert Chapman",
+   "attributo": {
+    "relazione": "prende il nome da",
+    "id_relazione": "P138",
+    "id_oggetto": "Q1667358",
+    "tipo_oggetto": "entita",
+    "url_citabile": "https://www.wikidata.org/wiki/Q1700304#P138"
+   },
+   "percorso": [
+    {
+     "qid": "Q165585",
+     "nome": "Missione spaziale Cassini-Huygens",
+     "relazione": null
+    },
+    {
+     "qid": "Q392953",
+     "nome": "Agenzia spaziale italiana",
+     "relazione": "finanziatore"
+    },
+    {
+     "qid": "Q126379",
+     "nome": "Consultative Committee for Space Data Systems",
+     "relazione": "membro di"
+    },
+    {
+     "qid": "Q212227",
+     "nome": "Canadian Space Agency",
+     "relazione": "partecipante"
+    },
+    {
+     "qid": "Q1700304",
+     "nome": "John H. Chapman Space Centre",
+     "relazione": "sede legale"
+    }
+   ],
+   "motivo_unicita": "L'agenzia spaziale canadese ha una sola sede legale, il centro spaziale a Longueuil, intitolato a una sola persona, John Herbert Chapman.",
+   "generata_il": "2026-10-14T01:54:10+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "CNES",
+     "CSA"
+    ],
+    "qwen": "Jean-Louis Léger",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "CNES"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "CSA"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "Jean-Louis Léger"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "geografia_cultura",
+   "seme": "Monte Bianco",
+   "domanda": "Una riserva di ambienti glaciali tutela parte del più alto massiccio delle Alpi; il comune valdostano in cui ricade confina con una località sciistica al confine francese, a sud-ovest. Questa località è gemellata con un borgo ligure sul mare, in provincia di Savona. Qual è il codice di avviamento postale (CAP) di quel borgo ligure?",
+   "risposta": "17053",
+   "attributo": {
+    "relazione": "codice postale",
+    "id_relazione": "P281",
+    "id_oggetto": null,
+    "tipo_oggetto": "valore",
+    "url_citabile": "https://www.wikidata.org/wiki/Q270761#P281"
+   },
+   "percorso": [
+    {
+     "qid": "Q583",
+     "nome": "Monte Bianco",
+     "relazione": null
+    },
+    {
+     "qid": "Q49966280",
+     "nome": "Ambienti Glaciali del Monte Bianco",
+     "relazione": "area protetta"
+    },
+    {
+     "qid": "Q34993",
+     "nome": "Courmayeur",
+     "relazione": "unità amministrativa in cui è situato"
+    },
+    {
+     "qid": "Q35188",
+     "nome": "La Thuile",
+     "relazione": "confina con"
+    },
+    {
+     "qid": "Q270761",
+     "nome": "Laigueglia",
+     "relazione": "città gemellata"
+    }
+   ],
+   "motivo_unicita": "Il percorso porta a Laigueglia, che ha un solo CAP (17053), e la descrizione costringe a un'unica città gemella ligure di La Thuile.",
+   "generata_il": "2026-10-14T01:57:21+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "10038",
+     "10015"
+    ],
+    "qwen": "18015",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "10038"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "10015"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "18015"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "geografia_cultura",
+   "seme": "Lago di Garda",
+   "domanda": "Un corso d'acqua chiamato San Michele sfocia nel più grande lago italiano, sulla sponda lombarda occidentale, e scorre nel territorio di un comune bresciano di circa 2000 abitanti, noto per i suoi altipiani a picco sul lago e inserito tra i borghi più belli d'Italia. Come si chiama la frazione che è capoluogo di quel comune?",
+   "risposta": "Pieve",
+   "attributo": {
+    "relazione": "capitale",
+    "id_relazione": "P36",
+    "id_oggetto": "Q18509646",
+    "tipo_oggetto": "entita",
+    "url_citabile": "https://www.wikidata.org/wiki/Q112127#P36"
+   },
+   "percorso": [
+    {
+     "qid": "Q6414",
+     "nome": "lago di Garda",
+     "relazione": null
+    },
+    {
+     "qid": "Q3947686",
+     "nome": "San Michele",
+     "relazione": "immissario"
+    },
+    {
+     "qid": "Q112127",
+     "nome": "Tremosine sul Garda",
+     "relazione": "unità amministrativa in cui è situato"
+    }
+   ],
+   "motivo_unicita": "Il comune (Tremosine sul Garda) ha un solo capoluogo, Pieve, quindi la risposta è unica.",
+   "generata_il": "2026-10-14T01:59:08+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "San Michele",
+     "San Michele"
+    ],
+    "qwen": "Breno",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "San Michele"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "San Michele"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "Breno"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "geografia_cultura",
+   "seme": "Duomo di Milano",
+   "domanda": "Un architetto medievale, attivo sul finire del Trecento e originario di un paese della zona comasca, lavorò al cantiere della grande cattedrale gotica del capoluogo lombardo. In quale giorno dell'anno cade l'onomastico legato al suo nome di battesimo, nella forma italiana maschile?",
+   "risposta": "28 ottobre",
+   "attributo": {
+    "relazione": "onomastico",
+    "id_relazione": "P1750",
+    "id_oggetto": "Q2952",
+    "tipo_oggetto": "entita",
+    "url_citabile": "https://www.wikidata.org/wiki/Q602977#P1750"
+   },
+   "percorso": [
+    {
+     "qid": "Q18068",
+     "nome": "Duomo di Milano",
+     "relazione": null
+    },
+    {
+     "qid": "Q7520449",
+     "nome": "Simone da Orsenigo",
+     "relazione": "architetto"
+    },
+    {
+     "qid": "Q602977",
+     "nome": "Simone",
+     "relazione": "prenome"
+    }
+   ],
+   "motivo_unicita": "Il percorso porta a Simone da Orsenigo, architetto del Duomo di Milano, e il prenome Simone ha un solo onomastico indicato, il 28 ottobre.",
+   "generata_il": "2026-10-14T02:00:09+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "16",
+     "1º giugno"
+    ],
+    "qwen": "25 novembre",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "16"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "1º giugno"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "25 novembre"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "geografia_cultura",
+   "seme": "Divina Commedia",
+   "domanda": "Un discepolo di san Paolo ad Atene, che Dante colloca tra gli spiriti sapienti del Paradiso, è il santo patrono di una cittadina della Messenia, nel Peloponneso. Il territorio confinante con questa cittadina ha tra le sue comunità una che porta lo stesso nome di diversi imperatori bizantini. Quanti abitanti contava questa comunità al censimento del 2021 (indica il numero esatto, compreso tra 300 e 350)?",
+   "risposta": "324",
+   "attributo": {
+    "relazione": "popolazione",
+    "id_relazione": "P1082",
+    "id_oggetto": null,
+    "tipo_oggetto": "numero",
+    "url_citabile": "https://www.wikidata.org/wiki/Q125129369#P1082"
+   },
+   "percorso": [
+    {
+     "qid": "Q40185",
+     "nome": "Divina Commedia",
+     "relazione": null
+    },
+    {
+     "qid": "Q310686",
+     "nome": "Dionigi l'Areopagita",
+     "relazione": "personaggi"
+    },
+    {
+     "qid": "Q1494236",
+     "nome": "Gargalianoi",
+     "relazione": "santo patrono"
+    },
+    {
+     "qid": "Q1576389",
+     "nome": "Nestoras",
+     "relazione": "confina con"
+    },
+    {
+     "qid": "Q125129369",
+     "nome": "Commune of Romanos, Messinia",
+     "relazione": "sottodivisioni amministrative"
+    }
+   ],
+   "motivo_unicita": "Il percorso identifica una sola comunità (Romanos, nell'unità di Nestoras) e il suo dato di popolazione del 2021 è un unico valore, 324.",
+   "generata_il": "2026-10-14T02:03:10+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "278",
+     "318"
+    ],
+    "qwen": "346",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "278"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "318"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "346"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "geografia_cultura",
+   "seme": "Galleria degli Uffizi",
+   "domanda": "In che anno è stata fondata l'associazione di categoria degli editori italiani a cui aderisce la casa editrice milanese, nata negli anni '60 del Novecento, per cui ha lavorato lo storico dell'arte oggi alla guida del grande museo fiorentino che ha sede in un palazzo cinquecentesco vicino all'Arno?",
+   "risposta": "1869",
+   "attributo": {
+    "relazione": "data di fondazione o creazione",
+    "id_relazione": "P571",
+    "id_oggetto": null,
+    "tipo_oggetto": "data",
+    "url_citabile": "https://www.wikidata.org/wiki/Q3626582#P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q51252",
+     "nome": "Palazzo degli Uffizi",
+     "relazione": null
+    },
+    {
+     "qid": "Q119996718",
+     "nome": "Simone Verde",
+     "relazione": "gestore/direttore"
+    },
+    {
+     "qid": "Q355301",
+     "nome": "Adelphi",
+     "relazione": "datore di lavoro"
+    },
+    {
+     "qid": "Q3626582",
+     "nome": "Associazione Italiana Editori",
+     "relazione": "membro di"
+    }
+   ],
+   "motivo_unicita": "La catena (direttore degli Uffizi → Adelphi → Associazione Italiana Editori) porta a una sola associazione, la cui data di fondazione è un unico anno.",
+   "generata_il": "2026-10-14T02:05:08+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "1965",
+     "1973"
+    ],
+    "qwen": "1945",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "1965"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "1973"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "1945"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "geografia_cultura",
+   "seme": "Teatro alla Scala",
+   "domanda": "In che anno è nato l'uomo d'affari britannico che ha fondato un importante premio internazionale per la lirica, tra i cui riconoscimenti è stato assegnato anche al celebre teatro d'opera milanese inaugurato nel tardo Settecento?",
+   "risposta": "1956",
+   "attributo": {
+    "relazione": "data di nascita",
+    "id_relazione": "P569",
+    "id_oggetto": null,
+    "tipo_oggetto": "data",
+    "url_citabile": "https://www.wikidata.org/wiki/Q14946950#P569"
+   },
+   "percorso": [
+    {
+     "qid": "Q5471",
+     "nome": "teatro alla Scala",
+     "relazione": null
+    },
+    {
+     "qid": "Q16481619",
+     "nome": "International Opera Awards",
+     "relazione": "premio ricevuto"
+    },
+    {
+     "qid": "Q14946950",
+     "nome": "Harry Hyman",
+     "relazione": "fondatore"
+    }
+   ],
+   "motivo_unicita": "Il premio è fondato da una sola persona, Harry Hyman, che ha un'unica data di nascita, quindi l'anno è univoco.",
+   "generata_il": "2026-10-14T02:06:16+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "1869",
+     "1795"
+    ],
+    "qwen": "1928",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "1869"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "1795"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "1928"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "geografia_cultura",
+   "seme": "Pinacoteca di Brera",
+   "domanda": "Il direttore scozzese-canadese che ha guidato una grande pinacoteca milanese è stato in precedenza a capo della fondazione di un palazzo rinascimentale fiorentino, voluto da un mercante-banchiere della famiglia che gli dà il nome. Quel committente ebbe un figlio con il suo stesso nome di battesimo, che sposò una Medici: in quale giorno e anno, alla fine degli anni '30 del Cinquecento, morì questo figlio?",
+   "risposta": "18 dicembre 1538",
+   "attributo": {
+    "relazione": "data di morte",
+    "id_relazione": "P570",
+    "id_oggetto": null,
+    "tipo_oggetto": "data",
+    "url_citabile": "https://www.wikidata.org/wiki/Q708954#P570"
+   },
+   "percorso": [
+    {
+     "qid": "Q150066",
+     "nome": "Pinacoteca di Brera",
+     "relazione": null
+    },
+    {
+     "qid": "Q24698763",
+     "nome": "James M. Bradburne",
+     "relazione": "gestore/direttore"
+    },
+    {
+     "qid": "Q521619",
+     "nome": "Palazzo Strozzi",
+     "relazione": "datore di lavoro"
+    },
+    {
+     "qid": "Q323993",
+     "nome": "Filippo Strozzi il Vecchio",
+     "relazione": "commissionato da"
+    },
+    {
+     "qid": "Q708954",
+     "nome": "Filippo Strozzi",
+     "relazione": "figlio"
+    }
+   ],
+   "motivo_unicita": "Tra i figli del committente solo uno si chiama Filippo e sposò una Medici (Clarice), quindi la data di morte è unica: 18 dicembre 1538.",
+   "generata_il": "2026-10-14T02:10:19+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "18 giugno 1592",
+     "27 ottobre 1635"
+    ],
+    "qwen": "28 aprile 1597",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "18 giugno 1592"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "27 ottobre 1635"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "28 aprile 1597"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "geografia_cultura",
+   "seme": "I promessi sposi",
+   "domanda": "Un celebre romanzo storico ottocentesco ambientato nella Lombardia spagnola del Seicento è stato trasposto in un'opera lirica. Il musicista accreditato come librettista di quella trasposizione fu anche insegnante di Pietro Mascagni al conservatorio milanese. In quale giorno, mese e anno nacque questo musicista, negli anni '30 dell'Ottocento?",
+   "risposta": "31 agosto 1834",
+   "attributo": {
+    "relazione": "data di nascita",
+    "id_relazione": "P569",
+    "id_oggetto": null,
+    "tipo_oggetto": "data",
+    "url_citabile": "https://www.wikidata.org/wiki/Q207390#P569"
+   },
+   "percorso": [
+    {
+     "qid": "Q28491",
+     "nome": "I promessi sposi",
+     "relazione": null
+    },
+    {
+     "qid": "Q3791176",
+     "nome": "I promessi sposi",
+     "relazione": "opera derivata"
+    },
+    {
+     "qid": "Q207390",
+     "nome": "Amilcare Ponchielli",
+     "relazione": "librettista"
+    }
+   ],
+   "motivo_unicita": "Il percorso porta a un solo musicista, maestro di Mascagni e librettista dell'opera tratta da Manzoni, con un'unica data di nascita (31 agosto 1834).",
+   "generata_il": "2026-10-14T02:12:09+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "16 ottobre 1895",
+     "16 marzo 1893"
+    ],
+    "qwen": "25 novembre 1833",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "16 ottobre 1895"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "16 marzo 1893"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "25 novembre 1833"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "geografia_cultura",
+   "seme": "Cappella Sistina",
+   "domanda": "La celebre cappella vaticana costruita a fine Quattrocento e affrescata anche da Michelangelo è dedicata a una festa mariana. In quale comune del Messinese, nell'entroterra tra i Peloritani e i Nebrodi, si trova il bene catalogato come \"Simulacro\" che raffigura proprio quella festa?",
+   "risposta": "Novara di Sicilia",
+   "attributo": {
+    "relazione": "unità amministrativa in cui è situato",
+    "id_relazione": "P131",
+    "id_oggetto": "Q378280",
+    "tipo_oggetto": "entita",
+    "url_citabile": "https://www.wikidata.org/wiki/Q126679080#P131"
+   },
+   "percorso": [
+    {
+     "qid": "Q2943",
+     "nome": "cappella Sistina",
+     "relazione": null
+    },
+    {
+     "qid": "Q162691",
+     "nome": "Assunzione di Maria",
+     "relazione": "dedicato a"
+    },
+    {
+     "qid": "Q126679080",
+     "nome": "Simulacro dell'Assunzione di Maria",
+     "relazione": "raffigurato da"
+    }
+   ],
+   "motivo_unicita": "Il percorso collega la cappella Sistina all'Assunzione di Maria e al suo specifico simulacro, situato in un solo comune, Novara di Sicilia.",
+   "generata_il": "2026-10-14T02:13:21+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "Santa Maria della Salute",
+     "Palazzolo Milanese"
+    ],
+    "qwen": "San Fratello",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "Santa Maria della Salute"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "Palazzolo Milanese"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "San Fratello"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "informatica",
+   "seme": "Arduino",
+   "domanda": "Una piattaforma hardware open source nata in Italia per microcontrollori ha ispirato un'azienda americana che produce tastiere programmabili. Qual è la data di nascita (giorno, mese e anno, a metà anni '70 del Novecento) del coniuge della donna che fondò quell'azienda?",
+   "risposta": "21 giugno 1976",
+   "attributo": {
+    "relazione": "data di nascita",
+    "id_relazione": "P569",
+    "id_oggetto": null,
+    "tipo_oggetto": "data",
+    "url_citabile": "https://www.wikidata.org/wiki/Q6186939#P569"
+   },
+   "percorso": [
+    {
+     "qid": "Q175957",
+     "nome": "Arduino",
+     "relazione": null
+    },
+    {
+     "qid": "Q55340885",
+     "nome": "Keyboardio",
+     "relazione": "opera derivata"
+    },
+    {
+     "qid": "Q61662960",
+     "nome": "Kaia Dekker",
+     "relazione": "fondatore"
+    },
+    {
+     "qid": "Q6186939",
+     "nome": "Jesse Vincent",
+     "relazione": "coniuge"
+    }
+   ],
+   "motivo_unicita": "La fondatrice di Keyboardio, Kaia Dekker, ha un solo coniuge, Jesse Vincent, e la sua data di nascita è un'unica data precisa: 21 giugno 1976.",
+   "generata_il": "2026-10-14T02:21:17+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "1974-03-25",
+     "19/08/1976"
+    ],
+    "qwen": "12 marzo 1953",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "1974-03-25"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "19/08/1976"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "12 marzo 1953"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "storia",
+   "seme": "Battaglia di Solferino",
+   "domanda": "Il comune lombardo vicino al quale, a fine anni '50 dell'Ottocento, si combatté una celebre battaglia della seconda guerra d'indipendenza italiana ha un omonimo gemellato in Francia. Quel comune francese si trova in un dipartimento sudoccidentale, la cui capitale è una città delle Lande, creato nei primi anni della Rivoluzione francese. In quale giorno, mese e anno fu istituito quel dipartimento?",
+   "risposta": "4 marzo 1790",
+   "attributo": {
+    "relazione": "data di fondazione o creazione",
+    "id_relazione": "P571",
+    "id_oggetto": null,
+    "tipo_oggetto": "data",
+    "url_citabile": "https://www.wikidata.org/wiki/Q12563#P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q11372926",
+     "nome": "battaglia di Solferino",
+     "relazione": null
+    },
+    {
+     "qid": "Q42788",
+     "nome": "Solferino",
+     "relazione": "luogo"
+    },
+    {
+     "qid": "Q1111614",
+     "nome": "Solférino",
+     "relazione": "città gemellata"
+    },
+    {
+     "qid": "Q12563",
+     "nome": "Landes",
+     "relazione": "unità amministrativa in cui è situato"
+    }
+   ],
+   "motivo_unicita": "Il comune francese gemellato con Solferino sta nelle Landes, e il dipartimento ha un'unica data di creazione, il 4 marzo 1790.",
+   "generata_il": "2026-10-14T02:33:10+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "Gennaio",
+     "17 giugno 1802"
+    ],
+    "qwen": "12 dicembre 1789",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "Gennaio"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "17 giugno 1802"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "12 dicembre 1789"
+     }
+    ]
+   }
+  },
+  {
+   "tema": "scienze",
+   "seme": "Luigi Galvani",
+   "domanda": "Qual è la data di nascita (giorno, mese e anno) della scienziata nata a Bari, morta a Roma alla fine degli anni 2010 e premiata negli anni 2000 con il Premio Feltrinelli, che ha presieduto l'accademia italiana detta \"dei XL\", della quale fece parte anche Giovanni Aldini, allievo del medico bolognese noto per gli esperimenti sull'elettricità animale con le rane?",
+   "risposta": "3 maggio 1938",
+   "attributo": {
+    "relazione": "data di nascita",
+    "id_relazione": "P569",
+    "id_oggetto": null,
+    "tipo_oggetto": "data",
+    "url_citabile": "https://www.wikidata.org/wiki/Q50308963#P569"
+   },
+   "percorso": [
+    {
+     "qid": "Q1589",
+     "nome": "Luigi Galvani",
+     "relazione": null
+    },
+    {
+     "qid": "Q171637",
+     "nome": "Giovanni Aldini",
+     "relazione": "studente di dottorato"
+    },
+    {
+     "qid": "Q3603946",
+     "nome": "Accademia Nazionale delle Scienze detta dei XL",
+     "relazione": "membro di"
+    },
+    {
+     "qid": "Q50308963",
+     "nome": "Emilia Chiancone",
+     "relazione": "presidente"
+    }
+   ],
+   "motivo_unicita": "Il percorso porta a Emilia Chiancone, identificata in modo univoco da luogo di nascita, morte, premio e presidenza dell'Accademia dei XL, e la sua data di nascita è una sola.",
+   "generata_il": "2026-10-14T02:36:17+02:00",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "spark": [
+     "10 02 1934",
+     "10 giugno 1938"
+    ],
+    "qwen": "25 luglio 1934",
+    "giudizi": [
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "10 02 1934"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "spark-x2.5-4b",
+      "risposta": "10 giugno 1938"
+     },
+     {
+      "corretta": false,
+      "da": "giudice",
+      "modello": "qwen3.8-27b",
+      "risposta": "25 luglio 1934"
+     }
+    ]
+   }
+  }
+ ]
+}
