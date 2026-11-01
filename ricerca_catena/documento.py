@@ -124,6 +124,12 @@ def _riga(d: dict, etichetta: str) -> str:
     return trovata.group(1).strip() if trovata else ""
 
 
+def _livello(fiducia: str) -> str:
+    """Solo il livello della fiducia (alta, media, bassa): il motivo sta nella risposta."""
+    trovato = re.match(r"\W*(alta|media|bassa)", fiducia, re.IGNORECASE)
+    return trovato.group(1).lower() if trovato else fiducia[:40]
+
+
 def _togli_titolo(testo: str, titolo: str) -> str:
     """Se la regia ha ripetuto il titolo della sezione in testa, si toglie (lo mette il programma)."""
     righe = testo.strip().splitlines()
@@ -165,7 +171,7 @@ def componi(stato: dict, sezioni: list[dict], cornice: dict, fonti: list[dict], 
         f"<tr><td>{e(d['id'])}</td><td>{d['giro']}</td><td>{e(titoli_sezioni.get(d['sezione'], d['sezione']))}</td>"
         f"<td>{e(d['domanda'])}</td><td class='esito-{e(d['stato'])}'>{e(ESITI.get(d['stato'], d['stato']))}</td>"
         f"<td>{_html(rinumera(_riga(d, 'Risposta'), mappe.get(d['id'], {})), numeri_validi)}</td>"
-        f"<td>{e(_riga(d, 'Fiducia')[:80])}</td></tr>" for d in domande)
+        f"<td>{e(_livello(_riga(d, 'Fiducia')))}</td></tr>" for d in domande)
     elenco_fonti = "".join(
         f'<li id="fonte-{f["numero"]}"><span class="titolo-fonte">{e(f["titolo"])}</span><br>'
         f'<a href="{e(f["url"])}">{e(f["url"])}</a></li>' for f in fonti)
