@@ -8,13 +8,15 @@
 - Appendici: tutte le domande con la risposta e la fiducia, come è stata fatta l'indagine; elenco delle fonti.
 - PDF: la pagina HTML stampata dal Chromium del progetto.
 """
+import hashlib
 import html
+import json
 import os
 import re
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlsplit, urlunsplit
 
 from markdown_it import MarkdownIt
@@ -78,6 +80,21 @@ def _risposta_pulita(d: dict, mappa: dict[int, int]) -> str:
     return pulizia.testo(rinumera(d.get("risposta") or "", mappa), origine="risposta")
 
 
+def _con_bozza(indagine: "Indagine", chiave: str, ingresso: Any, produci: Any) -> Any:
+    """Il risultato già scritto per questi stessi dati, oppure lo si scrive e si salva: se una sezione o il PDF falliscono,
+    alla prossima prova quelle già pagate non si rifanno."""
+    impronta = hashlib.sha256(json.dumps(ingresso, ensure_ascii=False, sort_keys=True, default=str).encode()).hexdigest()
+    with indagine._serratura:
+        bozza = (indagine.stato.get("bozze") or {}).get(chiave)
+    if bozza and bozza["impronta"] == impronta:
+        return bozza["testo"]
+    testo = produci()
+    with indagine._serratura:
+        indagine.stato.setdefault("bozze", {})[chiave] = {"impronta": impronta, "testo": testo}
+    indagine.salva()
+    return testo
+
+
 def scrivi(indagine: "Indagine") -> dict:
     stato = indagine.stato
     piano = stato["piano"]
@@ -93,11 +110,13 @@ def scrivi(indagine: "Indagine") -> dict:
                     "risposta": _risposta_pulita(d, mappe[d["id"]])} for d in risolte if d["sezione"] == s["id"]]
         if not proprie:
             return {**s, "testo": "*Nessuna domanda di questa sezione ha trovato una risposta.*"}
-        indagine.evento({"tipo": "documento", "testo": f"Scrivo la sezione «{s['titolo']}»…"})
-        testo = indagine.regia.chiedi("documento_sezione", {
-            "titolo": piano["titolo"], "obiettivo": piano["obiettivo"], "sezione": s, "risposte": proprie,
-            "fatti_brevi_altre_sezioni": [b for b in brevi if b["sezione"] != s["id"]]}, None)
-        return {**s, "testo": _togli_titolo(str(testo), s["titolo"])}
+        ingresso = {"titolo": piano["titolo"], "obiettivo": piano["obiettivo"], "sezione": s, "risposte": proprie,
+                    "fatti_brevi_altre_sezioni": [b for b in brevi if b["sezione"] != s["id"]]}
+
+        def produci() -> str:
+            indagine.evento({"tipo": "documento", "testo": f"Scrivo la sezione «{s['titolo']}»…"})
+            return str(indagine.regia.chiedi("documento_sezione", ingresso, None))
+        return {**s, "testo": _togli_titolo(_con_bozza(indagine, f"sezione:{s['id']}", ingresso, produci), s["titolo"])}
 
     with ThreadPoolExecutor(max_workers=3) as esecutore:
         sezioni = list(esecutore.map(sezione, piano["sezioni"]))
@@ -105,10 +124,11 @@ def scrivi(indagine: "Indagine") -> dict:
     non_risolte = [{"domanda": d["domanda"], "esito": ESITI.get(d["stato"]),
                     "motivo": d.get("motivo_catena") or d.get("errore") or ""}
                    for d in domande if d["stato"] != "risposta"]
-    cornice = indagine.regia.chiedi("documento_cornice", {
-        "titolo": piano["titolo"], "obiettivo": piano["obiettivo"],
-        "sezioni": [{"titolo": s["titolo"], "testo": s["testo"]} for s in sezioni],
-        "domande_non_risolte": non_risolte}, SCHEMA_CORNICE)
+    ingresso_cornice = {"titolo": piano["titolo"], "obiettivo": piano["obiettivo"],
+                        "sezioni": [{"titolo": s["titolo"], "testo": s["testo"]} for s in sezioni],
+                        "domande_non_risolte": non_risolte}
+    cornice = _con_bozza(indagine, "cornice", ingresso_cornice,
+                         lambda: indagine.regia.chiedi("documento_cornice", ingresso_cornice, SCHEMA_CORNICE))
     numeri_validi = set(range(1, len(fonti) + 1))
     pagina = componi(stato, sezioni, cornice, fonti, mappe, numeri_validi)
     file_html = indagine.cartella / "documento.html"
@@ -150,6 +170,11 @@ def _html(markdown: str, numeri_validi: set[int]) -> str:
     return CITAZIONE.sub(collega, pagina)
 
 
+def _in_linea(markdown: str, numeri_validi: set[int]) -> str:
+    """Come `_html`, senza il paragrafo intorno (per le voci di un elenco)."""
+    return _html(markdown, numeri_validi).strip().removeprefix("<p>").removesuffix("</p>").strip()
+
+
 def _durata(secondi: float) -> str:
     minuti = round(secondi / 60)
     return f"{minuti // 60} h {minuti % 60} min" if minuti >= 60 else f"{minuti} min"
@@ -164,17 +189,25 @@ def componi(stato: dict, sezioni: list[dict], cornice: dict, fonti: list[dict], 
     indice = "".join(f'<li><a href="#{e(s["id"])}">{e(s["titolo"])}</a></li>' for s in sezioni)
     corpo_sezioni = "".join(f'<section id="{e(s["id"])}"><h2>{e(s["titolo"])}</h2>{_html(s["testo"], numeri_validi)}'
                             f"</section>" for s in sezioni)
-    punti = "".join(f"<li>{_html(p, numeri_validi).removeprefix('<p>').removesuffix('</p>').strip()}</li>"
-                    for p in cornice["punti_chiave"])
+    punti = "".join(f"<li>{_in_linea(p, numeri_validi)}</li>" for p in cornice["punti_chiave"])
     titoli_sezioni = {s["id"]: s["titolo"] for s in sezioni}
     righe_domande = "".join(
         f"<tr><td>{e(d['id'])}</td><td>{d['giro']}</td><td>{e(titoli_sezioni.get(d['sezione'], d['sezione']))}</td>"
         f"<td>{e(d['domanda'])}</td><td class='esito-{e(d['stato'])}'>{e(ESITI.get(d['stato'], d['stato']))}</td>"
         f"<td>{_html(rinumera(_riga(d, 'Risposta'), mappe.get(d['id'], {})), numeri_validi)}</td>"
         f"<td>{e(_livello(_riga(d, 'Fiducia')))}</td></tr>" for d in domande)
-    elenco_fonti = "".join(
-        f'<li id="fonte-{f["numero"]}"><span class="titolo-fonte">{e(f["titolo"])}</span><br>'
-        f'<a href="{e(f["url"])}">{e(f["url"])}</a></li>' for f in fonti)
+    sintesi, conclusioni, limiti = (_html(cornice[k], numeri_validi) for k in ("sintesi", "conclusioni", "limiti"))
+    citate = {int(n) for n in re.findall(r'href="#fonte-(\d+)"',
+                                         corpo_sezioni + punti + sintesi + conclusioni + limiti + righe_domande)}
+    confermate = sum(bool(d.get("confermata")) for d in domande)
+
+    def voci_fonti(scelte: list[dict]) -> str:
+        return "".join(f'<li id="fonte-{f["numero"]}" value="{f["numero"]}"><span class="titolo-fonte">{e(f["titolo"])}'
+                       f'</span><br><a href="{e(f["url"])}">{e(f["url"])}</a></li>' for f in scelte)
+    fonti_citate = voci_fonti([f for f in fonti if f["numero"] in citate])
+    fonti_altre = voci_fonti([f for f in fonti if f["numero"] not in citate])
+    elenco_fonti = f'<h3>Fonti citate</h3><ol class="fonti">{fonti_citate}</ol>' + (
+        f'<h3>Altre fonti consultate</h3><ol class="fonti">{fonti_altre}</ol>' if fonti_altre else "")
     valutazioni = stato.get("valutazioni") or []
     ultima = valutazioni[-1] if valutazioni else None
     metodo = (
@@ -184,8 +217,9 @@ def componi(stato: dict, sezioni: list[dict], cornice: dict, fonti: list[dict], 
         f"collegamenti tra le pagine di Wikipedia e del web, e usa Claude ({e(stato['modello_catena'])}) solo per "
         f"leggere poche righe alla volta; ogni prova citata è stata controllata dal programma nella pagina da cui "
         f"viene. Dopo ogni giro Claude ha valutato quanto ogni sezione fosse coperta e ha aggiunto domande sui buchi "
-        f"e sui nomi emersi.</p><p>Giri di domande: {stato['giro']} · domande: {len(domande)}, con risposta "
-        f"{trovate} · fonti: {len(fonti)} · durata: {_durata(stato.get('secondi', 0))} · costo di Claude: "
+        f"e sui nomi emersi. Il testo delle sezioni è scritto da Claude a partire dalle risposte: le sue citazioni non "
+        f"sono ricontrollate dal programma.</p><p>Giri di domande: {stato['giro']} · domande: {len(domande)}, con risposta "
+        f"{trovate}, confermate da tutta la catena {confermate} · fonti citate: {len(citate)}, consultate: {len(fonti)} · durata: {_durata(stato.get('secondi', 0))} · costo di Claude: "
         f"{sum(d.get('costo_usd') or 0 for d in domande) + stato.get('speso_regia_usd', 0):.2f} $ · conclusione "
         f"dell'indagine: {e(stato.get('motivo_fine') or '')}.</p>"
         + (f"<p>Ultima valutazione di Claude: {e(ultima['motivo'])}</p>" if ultima else ""))
@@ -199,23 +233,23 @@ def componi(stato: dict, sezioni: list[dict], cornice: dict, fonti: list[dict], 
 <div class="sopra">Documento di ricerca · {data}</div>
 <h1>{e(piano['titolo'])}</h1>
 <p class="obiettivo">{e(piano['obiettivo'])}</p>
-<p class="dati">{len(domande)} domande · {trovate} con risposta verificata · {len(fonti)} fonti ·
-{stato['giro']} giri di indagine</p>
+<p class="dati">{len(domande)} domande · {trovate} con risposta, {confermate} confermate da tutta la catena ·
+{len(citate)} fonti citate su {len(fonti)} consultate · {stato['giro']} giri di indagine</p>
 </header>
 <nav class="indice"><h2>Indice</h2><ol><li><a href="#sintesi">Sintesi</a></li>{indice}
 <li><a href="#conclusioni">Conclusioni</a></li><li><a href="#limiti">Limiti</a></li>
 <li><a href="#domande">Appendice A · Domande e risposte</a></li><li><a href="#metodo">Appendice B · Metodo</a></li>
 <li><a href="#fonti">Fonti</a></li></ol></nav>
-<section id="sintesi" class="sintesi"><h2>Sintesi</h2>{_html(cornice['sintesi'], numeri_validi)}
+<section id="sintesi" class="sintesi"><h2>Sintesi</h2>{sintesi}
 <h3>Punti chiave</h3><ul>{punti}</ul></section>
 {corpo_sezioni}
-<section id="conclusioni"><h2>Conclusioni</h2>{_html(cornice['conclusioni'], numeri_validi)}</section>
-<section id="limiti"><h2>Limiti</h2>{_html(cornice['limiti'], numeri_validi)}</section>
+<section id="conclusioni"><h2>Conclusioni</h2>{conclusioni}</section>
+<section id="limiti"><h2>Limiti</h2>{limiti}</section>
 <section id="domande" class="appendice"><h2>Appendice A · Domande e risposte</h2>
 <div class="tabella"><table><thead><tr><th>#</th><th>Giro</th><th>Sezione</th><th>Domanda</th><th>Esito</th>
 <th>Risposta</th><th>Fiducia</th></tr></thead><tbody>{righe_domande}</tbody></table></div></section>
 <section id="metodo" class="appendice"><h2>Appendice B · Metodo</h2>{metodo}</section>
-<section id="fonti" class="appendice"><h2>Fonti</h2><ol class="fonti">{elenco_fonti}</ol></section>
+<section id="fonti" class="appendice"><h2>Fonti</h2>{elenco_fonti}</section>
 </main></body></html>
 """
 

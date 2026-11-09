@@ -9,6 +9,8 @@ import hmac
 import json
 import logging
 import os
+import re
+import shutil
 import signal
 import socket
 import subprocess
@@ -27,7 +29,7 @@ from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
 from . import RADICE, configurazione
-from .indagine import Indagine
+from .indagine import FILE_BLOCCO, Indagine, processo_attivo
 from .web.fonti import config as config_fonti
 from .web.fonti.wikipedia_grafo import contatto_valido, contatto_wikipedia
 
@@ -74,7 +76,6 @@ class Gestore:
         return self._cartella or configurazione.cartella("cartella_indagini")
 
     def percorso(self, ident: str) -> Path:
-        import re
         if not re.match(NOME_VALIDO, ident or "") or not (self.cartella / ident / "stato.json").is_file():
             raise ValueError("Indagine inesistente.")
         return self.cartella / ident
@@ -87,44 +88,81 @@ class Gestore:
         for file in sorted(self.cartella.glob("*/stato.json"), reverse=True):
             try:
                 s = json.loads(file.read_text(encoding="utf-8"))
-            except ValueError:
+                domande = s.get("domande") or []
+                voci.append({"id": s["id"], "argomento": s["argomento"], "titolo": (s.get("piano") or {}).get("titolo"),
+                             "stato": self._stato_vero(s), "creata": s["creata"], "giro": s.get("giro"),
+                             "domande": len(domande), "trovate": sum(d["stato"] == "risposta" for d in domande),
+                             "speso_usd": round(s.get("speso_regia_usd", 0) + sum(d.get("costo_usd") or 0
+                                                                               for d in domande), 2),
+                             "pdf": bool((s.get("documento") or {}).get("pdf"))})
+            except (ValueError, KeyError, TypeError):  # un file rovinato non deve nascondere le altre indagini
                 continue
-            domande = s.get("domande") or []
-            voci.append({"id": s["id"], "argomento": s["argomento"], "titolo": (s.get("piano") or {}).get("titolo"),
-                         "stato": self._stato_vero(s), "creata": s["creata"], "giro": s.get("giro"),
-                         "domande": len(domande), "trovate": sum(d["stato"] == "risposta" for d in domande),
-                         "speso_usd": round(s.get("speso_regia_usd", 0) + sum(d.get("costo_usd") or 0
-                                                                           for d in domande), 2),
-                         "pdf": bool((s.get("documento") or {}).get("pdf"))})
         return voci
 
     def _stato_vero(self, s: dict) -> str:
         """Un'indagine "in corso" sul disco ma senza processo è stata interrotta (app chiusa, computer spento)."""
-        if s["stato"] == "in_corso" and not (self.attiva() and self.in_corso == s["id"]):
+        if s["stato"] == "in_corso" and not self.in_esecuzione(s["id"]):
             return "interrotta"
         return s["stato"]
 
-    def attiva(self) -> bool:
+    def _mio_attivo(self) -> bool:
         return self.processo is not None and self.processo.poll() is None
+
+    def in_esecuzione(self, ident: str) -> bool:
+        """Anche un processo sopravvissuto a un server precedente: il blocco nella cartella lo dice."""
+        return (self._mio_attivo() and self.in_corso == ident) or processo_attivo(self.cartella / ident) is not None
+
+    def attiva(self) -> bool:
+        return self._mio_attivo() or any(processo_attivo(f.parent) is not None
+                                         for f in self.cartella.glob(f"*/{FILE_BLOCCO}"))
 
     def avvia(self, ident: str, solo_documento: bool = False) -> None:
         if self.attiva():
             raise ValueError("C'è già un'indagine in corso: fermala o aspetta che finisca.")
         cartella = self.percorso(ident)
         python = RADICE / "venv" / "bin" / "python"
-        self.processo = subprocess.Popen(
-            [str(python if python.exists() else sys.executable), "-m", "ricerca_catena.indagine", str(cartella)]
-            + (["--documento"] if solo_documento else []), cwd=RADICE, stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL, stderr=(cartella / "errori.log").open("a"), start_new_session=True)
+        with (cartella / "errori.log").open("a", encoding="utf-8") as errori:
+            self.processo = subprocess.Popen(
+                [str(python if python.exists() else sys.executable), "-m", "ricerca_catena.indagine", str(cartella)]
+                + (["--documento"] if solo_documento else []), cwd=RADICE, stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL, stderr=errori, start_new_session=True)
         self.in_corso = ident
 
+    def aggiorna_limiti(self, ident: str, dati: dict) -> None:
+        """Limiti nuovi per un'indagine ferma, prima di riprenderla (solo quelli indicati)."""
+        if self.in_esecuzione(ident):
+            raise ValueError("Questa indagine è già in corso.")
+        s = self.stato(ident)
+        budget = _numero(dati.get("budget_usd"), *configurazione.INTERVALLI["budget_usd"], "Budget")
+        minuti = _numero(dati.get("max_minuti"), *configurazione.INTERVALLI["max_minuti"], "Tempo massimo")
+        if budget is not None:
+            s["limiti"]["budget_usd"] = budget
+        if minuti is not None:
+            s["limiti"]["max_minuti"] = minuti
+        if "senza_limiti" in dati:
+            s["limiti"]["senza_limiti"] = bool(dati["senza_limiti"])
+        file = self.percorso(ident) / "stato.json"
+        temporaneo = file.with_suffix(".tmp")
+        temporaneo.write_text(json.dumps(s, ensure_ascii=False, indent=1), encoding="utf-8")
+        temporaneo.replace(file)
+
+    def pulisci(self, ident: str) -> None:
+        """Toglie i pezzi di pagina letti: servono solo mentre le domande sono in corso."""
+        if self.in_esecuzione(ident):
+            raise ValueError("Questa indagine è in corso.")
+        shutil.rmtree(self.percorso(ident) / "pezzi", ignore_errors=True)
+
     def ferma(self, ident: str) -> None:
-        if not self.attiva() or self.in_corso != ident:
+        if self._mio_attivo() and self.in_corso == ident:
+            self.processo.send_signal(signal.SIGTERM)
+            return
+        pid = processo_attivo(self.percorso(ident))
+        if not pid:
             raise ValueError("Questa indagine non è in corso.")
-        self.processo.send_signal(signal.SIGTERM)
+        os.kill(pid, signal.SIGTERM)  # sopravvissuta a un server precedente
 
     def chiudi(self) -> None:
-        if self.attiva():
+        if self._mio_attivo():
             self.processo.send_signal(signal.SIGTERM)
             try:
                 self.processo.wait(timeout=20)
@@ -190,11 +228,18 @@ def crea_app(token: str, porta: Callable[[], int], gestore: Gestore | None = Non
     async def azione(request: Request) -> JSONResponse:
         ident, nome = request.path_params["ident"], request.path_params["azione"]
 
+        dati = await corpo(request)
+
         def esegui() -> dict:
             if nome == "ferma":
                 gestore.ferma(ident)
             elif nome == "riprendi":
+                if gestore.attiva():
+                    raise ValueError("C'è già un'indagine in corso: fermala o aspetta che finisca.")
+                gestore.aggiorna_limiti(ident, dati)
                 gestore.avvia(ident)
+            elif nome == "pulisci":
+                gestore.pulisci(ident)
             elif nome == "documento":
                 gestore.avvia(ident, solo_documento=True)
             elif nome == "apri":
@@ -217,7 +262,10 @@ def crea_app(token: str, porta: Callable[[], int], gestore: Gestore | None = Non
             file = gestore.percorso(ident) / "eventi.jsonl"
         except ValueError as e:
             return JSONResponse({"errore": str(e)}, status_code=400)
-        ultimo = int(request.headers.get("last-event-id") or request.query_params.get("da") or 0)
+        try:
+            ultimo = max(0, int(request.headers.get("last-event-id") or request.query_params.get("da") or 0))
+        except ValueError:
+            ultimo = 0
 
         async def flusso():
             inviati, giri = ultimo, 0
@@ -227,7 +275,8 @@ def crea_app(token: str, porta: Callable[[], int], gestore: Gestore | None = Non
                     yield f"id: {numero + 1}\ndata: {righe[numero]}\n\n"
                 inviati = max(inviati, len(righe))
                 # Indagine conclusa e nessun processo al lavoro: il flusso finisce (l'app lo riapre se riprende).
-                if righe and '"tipo": "fine"' in righe[-1] and not (gestore.attiva() and gestore.in_corso == ident):
+                if righe and '"tipo": "fine"' in righe[-1] and not gestore.in_esecuzione(ident):
+                    yield "event: chiuso\ndata: {}\n\n"  # solo questo chiude il flusso: un «fine» può essere di una corsa passata
                     break
                 giri += 1
                 if giri % 30 == 0:
@@ -274,6 +323,8 @@ def leggi_impostazioni() -> dict:
     segreti = config_fonti.segreti()
     contatto, origine = contatto_wikipedia()
     return {"modello_regia": imp["modello_regia"], "modelli": list(configurazione.MODELLI),
+            "modello_catena": imp["modello_catena"], "budget_domanda_usd": imp["budget_domanda_usd"],
+            "pagine_domanda": imp["pagine_domanda"], "minuti_domanda": imp["minuti_domanda"],
             "budget_usd": imp["budget_usd"], "max_minuti": imp["max_minuti"], "senza_limiti": imp["senza_limiti"],
             "domande_in_parallelo": imp["domande_in_parallelo"],
             "wikipedia": {"attivo": segreti.get("contatto_wikipedia_attivo") is not False,
@@ -283,16 +334,18 @@ def leggi_impostazioni() -> dict:
 
 def salva_impostazioni(dati: dict) -> dict:
     modifiche: dict[str, Any] = {}
-    if "modello_regia" in dati:
-        if dati["modello_regia"] not in configurazione.MODELLI:
-            raise ValueError("Modello non valido.")
-        modifiche["modello_regia"] = dati["modello_regia"]
-    for chiave, minimo, massimo, nome in (("budget_usd", 0.5, 500, "Budget"), ("max_minuti", 10, 24 * 60, "Tempo"),
-                                          ("domande_in_parallelo", 1, 4, "Domande in parallelo")):
+    for chiave in ("modello_regia", "modello_catena"):
         if chiave in dati:
-            valore = _numero(dati[chiave], minimo, massimo, nome)
+            if dati[chiave] not in configurazione.MODELLI:
+                raise ValueError("Modello non valido.")
+            modifiche[chiave] = dati[chiave]
+    for chiave, nome in (("budget_usd", "Budget"), ("max_minuti", "Tempo"), ("domande_in_parallelo", "Domande in parallelo"),
+                         ("budget_domanda_usd", "Budget per domanda"), ("pagine_domanda", "Pagine per domanda"),
+                         ("minuti_domanda", "Minuti per domanda")):
+        if chiave in dati:
+            valore = _numero(dati[chiave], *configurazione.INTERVALLI[chiave], nome)
             if valore is not None:
-                modifiche[chiave] = int(valore) if chiave == "domande_in_parallelo" else valore
+                modifiche[chiave] = int(valore) if chiave in ("domande_in_parallelo", "pagine_domanda") else valore
     if "senza_limiti" in dati:
         modifiche["senza_limiti"] = bool(dati["senza_limiti"])
     wiki = dati.get("wikipedia")

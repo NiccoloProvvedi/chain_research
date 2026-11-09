@@ -6,6 +6,7 @@ parte di Claude con i pezzi salvati nel grafo dei concetti, limiti di pagine, mi
 con le fonti. È la stessa raccolta del banco di prova (36/40 con Claude Haiku), senza le strade dei modelli locali.
 """
 import hashlib
+import html as codifica_html
 import json
 import re
 import secrets
@@ -17,7 +18,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, quote_plus, urlsplit
+from urllib.parse import parse_qs, quote_plus, unquote, urlsplit
 
 from .. import configurazione
 from ..modello import claude_json, pulizia
@@ -27,13 +28,16 @@ from ..modello.pensatore import SCHEMI, Pensatore, istruzioni
 from ..prove.concetti import Concetti
 from .browser import Browser, indirizzo_sicuro
 from .fonti import chiave_canonica
+from .fonti.http import ClientFonte
+from .fonti.limiti import limitatore
 
 ESTRATTORE = Path(__file__).with_name("estrattore.js").read_text(encoding="utf-8")
 BLOCCO = 10_000          # caratteri per blocco di lettura
 MAX_BLOCCHI = 8          # al massimo ~80.000 caratteri letti per pagina
 MIN_TESTO = 600          # sotto questa lunghezza la pagina non è una fonte utile
-ESCLUSI = re.compile(r"(youtube|youtu\.be|facebook|instagram|tiktok|pinterest|twitter|x\.com|amazon|ebay|"
-                     r"linkedin|duckduckgo|bing\.com|google\.)", re.IGNORECASE)
+# Sul nome dell'host, a parole intere: «x.com» dentro «linux.com» non conta.
+ESCLUSI = re.compile(r"(^|\.)((youtube|facebook|instagram|tiktok|pinterest|twitter|amazon|ebay|linkedin|duckduckgo|bing|"
+                     r"google)\.[a-z.]+|x\.com|youtu\.be)$", re.IGNORECASE)
 REDDIT = re.compile(r"(^|\.)(reddit\.com|redd\.it)$", re.IGNORECASE)
 PAROLE_COMUNI = {"the", "this", "that", "these", "in", "on", "at", "a", "an", "it", "he", "she", "they", "his",
                  "her", "il", "la", "lo", "le", "gli", "i", "un", "una", "di", "da", "per", "con", "nel", "nella",
@@ -119,6 +123,7 @@ class Raccolta:
         self.browser: Browser | None = None
         self._in_corso: list[tuple[dict, list[Future]]] = []
         self._lavoratori = ThreadPoolExecutor(max_workers=3)
+        self._archivio: ClientFonte | None = None
         self._serratura_grafo = threading.Lock()
         self._inizio = time.monotonic()
         self._attesa_iniziale = claude_json.ATTESA_LIMITE["secondi"]
@@ -140,10 +145,13 @@ class Raccolta:
         finally:
             self.browser.close()
             self._lavoratori.shutdown(wait=False, cancel_futures=True)
+            if self._archivio is not None:
+                self._archivio.chiudi()
         risposta = self.scrivi()
         self.costo = max(self.costo, self.pensatore.bilancio.speso)
         esito = {"domanda": self.argomento, "risposta": risposta, "fonti": self._elenco_fonti(),
                  "valore": (self.catena.valore or {}).get("valore"), "trovata": bool(self.catena.valore),
+                 "confermata": bool(self.catena.valore) and self.catena._anelli_deboli() == 0,
                  "secondi": round(time.monotonic() - self._inizio), "costo_usd": round(self.costo, 4),
                  "motivo_fine": self.motivo_fine, "ricerche": self.ricerche_fatte, "autore": self.autore,
                  "pagine_lette": len(self.pagine_lette), "pezzi": str(self.cartella_pezzi / f"{self.id_piano}.sqlite"),
@@ -170,7 +178,7 @@ class Raccolta:
         if len(self.visitati) >= 3 * int(self.o["max_pagine"]):
             return f"raggiunto il tetto di {3 * int(self.o['max_pagine'])} pagine visitate"
         if self._trascorsi() > 60 * float(self.o["max_minuti"]):
-            return f"raggiunto il limite di sicurezza di {self.o['max_minuti']} minuti"
+            return f"raggiunto il limite di sicurezza di {float(self.o['max_minuti']):.0f} minuti"
         return ""
 
     def _chiedi(self, istruzioni_compito: str, testo: str) -> str:
@@ -280,10 +288,10 @@ class Raccolta:
                 self.coda.append(c)
 
     def _escluso(self, url: str) -> bool:
-        dominio = urlsplit(url).netloc
-        if self.o.get("senza_wikidata") and dominio.endswith("wikidata.org"):
+        host = urlsplit(url).hostname or ""
+        if self.o.get("senza_wikidata") and host.endswith("wikidata.org"):
             return True
-        return bool(ESCLUSI.search(dominio)) or bool(REDDIT.search(urlsplit(url).hostname or ""))
+        return bool(ESCLUSI.search(host)) or bool(REDDIT.search(host))
 
     # --- lettura ------------------------------------------------------------------------------------------------
 
@@ -418,30 +426,42 @@ class Raccolta:
         media = sum(voti) / len(voti)
         return 3 if media >= 2.5 else 2 if media >= 2 else 1 if media >= 1 else 0
 
+    def _client_archivio(self, host: str) -> ClientFonte:
+        """Il client HTTP sicuro per api.php (redirect e indirizzi controllati). Wikipedia passa dal client della
+        catena, con il suo User-Agent e i suoi limiti di frequenza."""
+        wiki = self.catena.wiki if self.catena is not None else None
+        if wiki is not None and (host == "wikipedia.org" or host.endswith(".wikipedia.org")):
+            return wiki.client
+        if self._archivio is None:
+            self._archivio = ClientFonte("Archivio wiki", user_agent="ricerca-catena/0.1 (uso personale)", domini=None,
+                                         limitatore=limitatore("archivio-wiki", 1.0),
+                                         consenti_locali=self.consenti_locali)
+        return self._archivio
+
     def _da_archivio_wiki(self, url: str) -> dict | None:
         """Per le wiki (MediaWiki: Fandom, Wikipedia...) il testo si prende dall'archivio ufficiale api.php: è l'HTML
         del solo contenuto, e funziona anche quando la pagina è protetta da verifiche anti-bot."""
         parti = urlsplit(url)
         if "/wiki/" not in parti.path:
             return None
-        titolo = parti.path.split("/wiki/", 1)[1]
+        titolo = unquote(parti.path.split("/wiki/", 1)[1])
         for percorso in ("/w/api.php", "/api.php"):
-            archivio = (f"{parti.scheme}://{parti.netloc}{percorso}?action=parse&page={titolo}&prop=text"
-                        "&format=json&formatversion=2&redirects=1")
-            if not (self.consenti_locali or indirizzo_sicuro(archivio)):
-                return None
+            archivio = f"{parti.scheme}://{parti.netloc}{percorso}"
             try:
-                risposta = self.browser.pagina.request.get(archivio, timeout=30_000)
-                dati = risposta.json() if risposta.ok else {}
-            except Exception:  # noqa: BLE001
+                dati = self._client_archivio(parti.hostname or "").get_json(archivio, params={
+                    "action": "parse", "page": titolo, "prop": "text", "format": "json", "formatversion": 2,
+                    "redirects": 1})
+            except Exception:  # noqa: BLE001 - archivio assente o non permesso: si legge la pagina con il browser
                 continue
             html = (dati.get("parse") or {}).get("text")
             if isinstance(html, str) and len(html) > 500:
                 # Pagina vuota prima: le regole di sicurezza della pagina precedente (es. DuckDuckGo) bloccherebbero
                 # il <base> e i collegamenti verrebbero costruiti con l'indirizzo sbagliato.
+                base = codifica_html.escape(url, quote=True)
+                nome = codifica_html.escape(str(dati["parse"].get("title") or ""))
                 self.browser.pagina.goto("about:blank")
                 self.browser.pagina.set_content(
-                    f'<html><head><base href="{url}"><title>{(dati["parse"].get("title") or "")}</title></head>'
+                    f'<html><head><base href="{base}"><title>{nome}</title></head>'
                     f'<body><div class="mw-parser-output">{html}</div></body></html>', wait_until="domcontentloaded")
                 return self.browser.pagina.evaluate(ESTRATTORE)
         return None

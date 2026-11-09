@@ -25,11 +25,12 @@ from .config import email_account_claude, segreti
 from .http import ClientFonte
 from .limiti import limitatore
 
-log = logging.getLogger("navigatore.fonti")
-USER_AGENT = "ai-locale-ricerca/0.1 (uso personale)"
+log = logging.getLogger("ricerca_catena.fonti")
+USER_AGENT = "ricerca-catena/0.1 (uso personale)"
 
 
 CONTATTO_VALIDO = re.compile(r"[^\s;()<>\"]{3,120}")
+ERRORE_TEMPORANEO = "_errore_temporaneo"  # chiave della risposta quando Wikipedia non ha risposto
 
 
 def contatto_valido(contatto: str) -> bool:
@@ -56,8 +57,16 @@ def user_agent() -> tuple[str, bool]:
     """Lo User-Agent per Wikipedia e se contiene un contatto (vedi contatto_wikipedia)."""
     contatto, _ = contatto_wikipedia()
     if contatto:
-        return f"ai-locale-ricerca/0.1 (uso personale; {contatto}) httpx", True
+        return f"ricerca-catena/0.1 (uso personale; {contatto}) httpx", True
     return USER_AGENT, False
+
+
+def intervallo_per(parallele: int) -> float:
+    """Secondi tra le richieste di ogni processo, con `parallele` domande insieme, per restare nei limiti di Wikimedia
+    in totale: 200 al minuto con un contatto, 10 senza."""
+    return max(0.7, 0.3 * parallele) if user_agent()[1] else 6.5 * parallele
+
+
 LINGUA = re.compile(r"^[a-z]{2,3}(-[a-z]+)?$")
 # Spazi dei nomi da non seguire (file, categorie, aiuto, portali...) in varie lingue.
 SERVIZIO = re.compile(r"^(file|image|immagine|categoria|category|aiuto|help|portale|portal|template|wikipedia|"
@@ -302,9 +311,9 @@ class WikipediaGrafo:
                 if attesa is None:
                     return dati if isinstance(dati, dict) else {}
                 self.limite.pausa(min(max(attesa, 5.0), 90.0))  # HTTP 429: si rispetta Retry-After
-            return {}
+            return {ERRORE_TEMPORANEO: True}
         except Exception:  # noqa: BLE001 - Wikipedia non raggiungibile: la catena passa al web
-            return {}
+            return {ERRORE_TEMPORANEO: True}
 
     def url(self, titolo: str, lingua: str) -> str:
         return f"https://{lingua}.wikipedia.org/wiki/{quote(titolo.replace(' ', '_'), safe='()_,-.:')}"
@@ -333,6 +342,10 @@ class WikipediaGrafo:
         # Categorie e proprietà (disambiguazione, codice) arrivano con la stessa richiesta (23/10, idea di YAGO).
         dati = self._json(lingua, action="parse", page=titolo, prop="text|langlinks|displaytitle|categories|properties",
                           redirects=1)
+        if dati.get(ERRORE_TEMPORANEO):  # rete o 429: la voce non è «inesistente», si potrà richiedere
+            with self._serratura:
+                self.lette -= 1
+            return None
         parse = dati.get("parse") or {}
         html = parse.get("text")
         voce = None

@@ -83,7 +83,7 @@ def test_indagine_completa_fino_al_pdf(finti, tmp_path: Path) -> None:
     assert [p for p, _ in finti].count("regia_valuta") == 2 and [p for p, _ in finti].count("documento_sezione") == 2
     pagina = Path(stato["documento"]["html"]).read_text()
     # fonti uniche per tutto il documento (stesso indirizzo con la barra finale = stessa fonte) e citazioni collegate
-    assert stato["documento"]["fonti"] == 3 and '<li id="fonte-3">' in pagina and 'href="#fonte-1"' in pagina
+    assert stato["documento"]["fonti"] == 3 and 'id="fonte-3"' in pagina and 'href="#fonte-1"' in pagina
     assert "Appendice A" in pagina and "non trovata" in pagina and "Massimo Banzi" in pagina
     assert Path(stato["documento"]["pdf"]).read_bytes()[:5] == b"%PDF-"
     assert [e["tipo"] for e in eventi][-1] == "fine" and any(e["tipo"] == "valutazione" for e in eventi)

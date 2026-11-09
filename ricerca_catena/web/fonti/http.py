@@ -24,7 +24,7 @@ from .. import rete
 from .base import ContenutoNonLeggibile, FonteNonDisponibile, LimiteRaggiunto
 from .limiti import Limitatore
 
-log = logging.getLogger("navigatore.fonti")
+log = logging.getLogger("ricerca_catena.fonti")
 MAX_REDIRECT = 5
 TENTATIVI = 3
 MB = 1024 * 1024
@@ -64,7 +64,7 @@ class BackendSicuro(httpcore.SyncBackend):
 class TrasportoSicuro(httpx.HTTPTransport):
     def __init__(self, consenti_locali: bool = False, **opzioni: Any) -> None:
         super().__init__(**opzioni)
-        self._pool._network_backend = BackendSicuro(consenti_locali)  # httpx non lo espone: vedi DECISIONI.md
+        self._pool._network_backend = BackendSicuro(consenti_locali)  # httpx non lo espone: versione fissata
 
 
 def _secondi_retry_after(valore: str | None) -> float | None:

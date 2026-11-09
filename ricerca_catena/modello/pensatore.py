@@ -4,9 +4,7 @@ Claude riceve dati brevi e strutturati (righe numerate, mai pagine intere da nav
 da uno schema. Se Claude non risponde, se la risposta non è valida dopo una correzione o se il budget della domanda
 non basta, il punto usa il suo predefinito e la ricerca prosegue: il risultato lo dice.
 """
-import json
 import threading
-import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -14,7 +12,6 @@ from typing import Any
 import jsonschema
 
 from . import claude_json, pulizia, registro
-from . import config as config_pensatore
 
 CARTELLA_PROMPT = Path(__file__).resolve().parent / "prompt"
 
@@ -23,6 +20,7 @@ CARTELLA_PROMPT = Path(__file__).resolve().parent / "prompt"
 PREZZO_INGRESSO = 7.5
 PREZZO_USCITA = 30.0
 USCITA_STIMATA = 1500
+CODA_REGISTRO = 256 * 1024  # abbastanza per le ultime 200 chiamate
 
 SCHEMI: dict[str, dict] = {
     "lettura": {
@@ -180,15 +178,17 @@ class Bilancio:
         return self.residuo if punto in PUNTI_FINALI else max(0.0, self.residuo - self.riserva)
 
     @staticmethod
-    def stima(punto: str, caratteri: int) -> float:
-        """Costo massimo osservato per questo punto (ultime 200 chiamate riuscite), oppure una stima prudente."""
-        osservati = [r.get("costo_usd", 0.0) for r in registro.leggi("pensatore")[-200:]
-                     if r.get("punto") == punto and r.get("esito") == "ok"]
+    def stima(punto: str, caratteri: int, modello: str | None = None) -> float:
+        """Costo massimo osservato per questo punto e modello (ultime 200 chiamate riuscite), oppure una stima prudente.
+        Si legge solo la coda del registro: questa funzione gira a ogni decisione."""
+        osservati = [r.get("costo_usd", 0.0) for r in registro.leggi("pensatore", ultimi_byte=CODA_REGISTRO)[-200:]
+                     if r.get("punto") == punto and r.get("esito") == "ok"
+                     and (modello is None or r.get("modello") == modello)]
         prudente = caratteri / 3 * PREZZO_INGRESSO / 1e6 + USCITA_STIMATA * PREZZO_USCITA / 1e6
         return max(osservati) * 1.2 if osservati else prudente
 
-    def basta(self, punto: str, caratteri: int) -> bool:
-        return self.stima(punto, caratteri) <= self.disponibile(punto)
+    def basta(self, punto: str, caratteri: int, modello: str | None = None) -> bool:
+        return self.stima(punto, caratteri, modello) <= self.disponibile(punto)
 
 
 def errori_schema(dati: Any, schema: dict) -> list[str]:
@@ -212,6 +212,16 @@ class Pensatore:
         self._costo_massimo: dict[str, float] = {}
         self.pubblica = pubblica or (lambda e: None)
         self.decisioni: list[dict] = []
+        self.modelli: set[str] = set()  # i modelli esatti che hanno risposto (gli alias cambiano nel tempo)
+
+    def _conta(self, consumo: claude_json.Consumo) -> None:
+        """Un consumo nel bilancio; l'evento dice a chi guarda da fuori quanto si è speso (anche se poi il processo
+        viene chiuso prima della fine)."""
+        with self._serratura:
+            self.bilancio.speso += consumo.costo_usd
+            self.modelli |= {m.strip() for m in consumo.modello_esatto.split(",") if m.strip()}
+            speso = round(self.bilancio.speso, 4)
+        self.pubblica({"tipo": "costo", "speso_usd": speso})
 
     def _evento(self, punto: str, da: str, motivo: str, dati: Any = None) -> None:
         voce = {"tipo": "pensatore", "piano": self.id_piano, "punto": punto, "da": da, "motivo": motivo,
@@ -225,7 +235,8 @@ class Pensatore:
         """Chiede a Claude la decisione `punto` sui dati `oggetto`; altrimenti il predefinito. Restituisce (dati, da)."""
         testo = pulizia.dati(oggetto)
         regole = istruzioni(punto)
-        if not self.bilancio.basta(punto, len(regole) + len(testo)):
+        if not self.bilancio.basta(punto, len(regole) + len(testo), self.modello):
+            self.esaurito = True
             self._evento(punto, "locale", f"budget di Claude esaurito ({self.bilancio.speso:.3f} $ su "
                                            f"{self.bilancio.budget_usd:.2f} $)")
             return predefinito(), "locale"
@@ -236,6 +247,8 @@ class Pensatore:
                 dati, consumo = claude_json.chiedi(regole, richiesta, schema, punto, modello=self.modello,
                                                    max_budget_usd=max(0.01, self.bilancio.disponibile(punto)),
                                                    piano=self.id_piano)
+            except claude_json.LimiteSessione:
+                raise
             except claude_json.ErroreClaude as errore:
                 consumo_errore = getattr(errore, "consumo", None)
                 with self._serratura:
@@ -245,13 +258,12 @@ class Pensatore:
             finally:
                 with self._serratura:
                     self.bilancio.chiamate += 1
-            with self._serratura:  # la catena chiede in parallelo (un thread per entità del fascio)
-                self.bilancio.speso += consumo.costo_usd
+            self._conta(consumo)  # la catena chiede in parallelo (un thread per entità del fascio)
             problemi = errori_schema(dati, schema) + (valida(dati) if valida else [])
             if not problemi:
                 self._evento(punto, "claude", dati.get("motivo", "") if isinstance(dati, dict) else "", dati)
                 return dati, "claude"
-            if tentativo == 2 or not self.bilancio.basta(punto, len(regole) + len(richiesta)):
+            if tentativo == 2 or not self.bilancio.basta(punto, len(regole) + len(richiesta), self.modello):
                 break
             richiesta = f"{testo}\n\nLA RISPOSTA PRECEDENTE NON ERA VALIDA:\n- " + "\n- ".join(problemi[:8])
         self._evento(punto, "locale", "risposta di Claude non valida: " + "; ".join(problemi[:3]))
@@ -278,6 +290,8 @@ class Pensatore:
         try:
             dati, consumo = claude_json.chiedi(regole, testo, schema, punto, modello=self.modello,
                                                max_budget_usd=tetto, piano=self.id_piano)
+        except claude_json.LimiteSessione:
+            raise
         except claude_json.ErroreClaude as errore:
             costo = getattr(getattr(errore, "consumo", None), "costo_usd", 0.0)
             with self._serratura:
@@ -286,13 +300,13 @@ class Pensatore:
             return None
         if schema is not None and errori_schema(dati, schema):
             dati = None
+        self._conta(consumo)
         with self._serratura:
-            self.bilancio.speso += consumo.costo_usd
             self.bilancio.chiamate += 1
             self._costo_massimo[punto] = max(self._costo_massimo.get(punto, 0.0), consumo.costo_usd)
         return dati
 
     def riepilogo(self) -> dict:
         return {"speso_usd": round(self.bilancio.speso, 4), "budget_usd": self.bilancio.budget_usd,
-                "chiamate": self.bilancio.chiamate,
+                "chiamate": self.bilancio.chiamate, "modelli": sorted(self.modelli),
                 "decisioni": [{k: d[k] for k in ("punto", "da", "motivo")} for d in self.decisioni]}

@@ -2,14 +2,19 @@
 
 Uso: `python -m ricerca_catena.domanda` con una richiesta JSON sull'ingresso
 ({"domanda": ..., "opzioni": {...}, "profilo": ..., "cartella_pezzi": ...}). Sull'uscita una riga JSON per evento
-({"evento": {...}}) e alla fine {"esito": {...}} oppure {"errore": "..."}. L'indagine ne lancia alcuni in parallelo:
-ognuno ha il suo browser e si può fermare chiudendo il processo.
+({"evento": {...}}) e alla fine {"esito": {...}} oppure {"errore": "...", "costo_usd": ...}, con "limite_sessione"
+(secondi al rinnovo) se è finito il limite dell'abbonamento. L'indagine ne lancia alcuni in parallelo: ognuno ha il suo
+browser e si può fermare chiudendo il processo.
 """
 import json
+import os
+import signal
 import sys
 import threading
 from pathlib import Path
+from typing import Any
 
+from .modello import claude_json
 from .web.raccolta import Raccolta
 
 _scrittura = threading.Lock()
@@ -21,8 +26,18 @@ def _scrivi(oggetto: dict) -> None:
         sys.stdout.flush()
 
 
+def _termina(*_: Any) -> None:
+    """Chiusura chiesta dall'indagine: le chiamate a Claude in corso non devono continuare a costare da sole. Il browser
+    si chiude da solo quando il suo programma di controllo perde il collegamento con questo processo."""
+    claude_json.interrompi()
+    os._exit(143)
+
+
 def main() -> int:
+    signal.signal(signal.SIGTERM, _termina)
     richiesta = json.loads(sys.stdin.readline())
+    raccolta = None
+    costo = lambda: round(raccolta.pensatore.bilancio.speso, 4) if raccolta is not None else 0.0  # noqa: E731
     try:
         raccolta = Raccolta(richiesta["domanda"], opzioni=richiesta.get("opzioni") or {},
                             pubblica=lambda e: _scrivi({"evento": e}),
@@ -30,8 +45,11 @@ def main() -> int:
                             cartella_pezzi=Path(richiesta["cartella_pezzi"]) if richiesta.get("cartella_pezzi")
                             else None)
         _scrivi({"esito": raccolta.esegui()})
+    except claude_json.LimiteSessione as errore:
+        _scrivi({"errore": str(errore)[:500], "limite_sessione": errore.secondi, "costo_usd": costo()})
+        return 3
     except Exception as errore:  # noqa: BLE001 - l'indagine registra l'errore e continua con le altre domande
-        _scrivi({"errore": f"{type(errore).__name__}: {errore}"[:500]})
+        _scrivi({"errore": f"{type(errore).__name__}: {errore}"[:500], "costo_usd": costo()})
         return 1
     return 0
 

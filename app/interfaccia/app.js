@@ -8,6 +8,7 @@ let scelta = null;      // id dell'indagine mostrata
 let flusso = null;      // EventSource degli eventi
 let ricarica = null;    // ricarica dello stato, al massimo una ogni secondo
 let impostazioni = null;
+let limitiMostrati = null; // limiti dell'indagine mostrata
 
 function crea(tag, testo, classe) {
   const e = document.createElement(tag);
@@ -78,8 +79,11 @@ function aggiornaLimiti() {
 }
 $("senza-limiti").addEventListener("change", aggiornaLimiti);
 
+const AVVISO_SENZA_LIMITI = "Senza limiti l'indagine può arrivare a circa 160 domande e durare molte ore. Continuare?";
+
 $("nuova").addEventListener("submit", async (e) => {
   e.preventDefault();
+  if ($("senza-limiti").checked && !window.confirm(AVVISO_SENZA_LIMITI)) return;
   const esito = await prova(() => api("/api/indagini", {
     argomento: $("argomento").value, modello_regia: $("modello").value, budget_usd: $("budget").value,
     max_minuti: $("minuti").value, senza_limiti: $("senza-limiti").checked,
@@ -114,6 +118,8 @@ async function caricaElenco() {
 // ---------- indagine scelta ----------
 function mostra(id) {
   scelta = id;
+  limitiMostrati = null;              // quelli dell'indagine di prima non valgono
+  $("b-riprendi").hidden = true;      // si mostra quando lo stato di questa indagine è arrivato
   document.querySelectorAll("#elenco li").forEach((li) => li.setAttribute("aria-current", "false"));
   $("nessuna").hidden = true;
   $("vista").hidden = false;
@@ -126,8 +132,10 @@ function mostra(id) {
     try { ev = JSON.parse(m.data); } catch { return; }
     attivita(ev);
     if (["piano", "domanda", "valutazione", "fine", "inizio", "fase"].includes(ev.tipo)) caricaPresto();
-    if (ev.tipo === "fine") { caricaElenco(); flusso.close(); }
+    if (ev.tipo === "fine") caricaElenco();
   };
+  // Si chiude solo su richiesta del server: nel flusso ci sono anche i «fine» delle corse passate.
+  flusso.addEventListener("chiuso", (m) => { m.target.close(); });
 }
 
 function caricaPresto() {
@@ -182,6 +190,8 @@ async function carica() {
   $("b-ferma").hidden = !attiva;
   $("b-riprendi").hidden = attiva || s.stato === "finita";
   $("b-documento").hidden = attiva || !domande.some((d) => d.stato === "risposta");
+  $("b-pulisci").hidden = attiva;
+  limitiMostrati = s.limiti;
   sezioni(s);
   elencoDomande(s);
 }
@@ -228,16 +238,39 @@ function elencoDomande(s) {
 }
 
 for (const [bottone, azione, messaggio] of [["b-ferma", "ferma", "Fermo l'indagine…"],
-  ["b-riprendi", "riprendi", "Indagine ripresa."], ["b-documento", "documento", "Scrivo il documento…"],
-  ["b-apri", "apri", null], ["b-cartella", "cartella", null]]) {
+  ["b-documento", "documento", "Scrivo il documento…"], ["b-apri", "apri", null], ["b-cartella", "cartella", null],
+  ["b-pulisci", "pulisci", "Pezzi di pagina tolti."]]) {
   $(bottone).addEventListener("click", async () => {
     if (!scelta) return;
+    if (azione === "pulisci" && !window.confirm("Togliere i pezzi di pagina letti da questa indagine?")) return;
     const esito = await prova(() => api(`/api/indagini/${encodeURIComponent(scelta)}/${azione}`, {}), messaggio);
-    if (esito && (azione === "riprendi" || azione === "documento")) mostra(scelta);  // riapre il flusso degli eventi
+    if (esito && azione === "documento") mostra(scelta);  // riapre il flusso degli eventi
     caricaPresto();
     caricaElenco();
   });
 }
+
+$("b-riprendi").addEventListener("click", () => {
+  if (!scelta || !limitiMostrati) return;
+  $("r-budget").value = limitiMostrati.budget_usd;
+  $("r-minuti").value = limitiMostrati.max_minuti;
+  $("r-senza-limiti").checked = limitiMostrati.senza_limiti;
+  $("riprendi").showModal();
+});
+
+$("form-riprendi").addEventListener("submit", async (e) => {
+  if (e.submitter?.value !== "riprendi") return;
+  e.preventDefault();
+  if ($("r-senza-limiti").checked && !window.confirm(AVVISO_SENZA_LIMITI)) return;
+  const esito = await prova(() => api(`/api/indagini/${encodeURIComponent(scelta)}/riprendi`, {
+    budget_usd: $("r-budget").value, max_minuti: $("r-minuti").value, senza_limiti: $("r-senza-limiti").checked,
+  }), "Indagine ripresa.");
+  if (esito) {
+    $("riprendi").close();
+    mostra(scelta);  // riapre il flusso degli eventi
+    caricaElenco();
+  }
+});
 
 // ---------- impostazioni ----------
 async function caricaImpostazioni() {
@@ -259,6 +292,10 @@ $("apri-impostazioni").addEventListener("click", async () => {
   $("i-minuti").value = impostazioni.max_minuti;
   $("i-senza-limiti").checked = impostazioni.senza_limiti;
   $("i-parallelo").value = impostazioni.domande_in_parallelo;
+  $("i-modello-catena").value = impostazioni.modello_catena;
+  $("i-budget-domanda").value = impostazioni.budget_domanda_usd;
+  $("i-pagine-domanda").value = impostazioni.pagine_domanda;
+  $("i-minuti-domanda").value = impostazioni.minuti_domanda;
   $("i-wiki-attivo").checked = w.attivo;
   $("i-wiki-contatto").value = w.contatto;
   $("i-wiki-contatto").placeholder = w.origine === "account" ? w.in_uso : "";
@@ -271,6 +308,8 @@ $("form-impostazioni").addEventListener("submit", async (e) => {
   const esito = await prova(() => api("/api/impostazioni", {
     modello_regia: $("i-modello").value, budget_usd: $("i-budget").value, max_minuti: $("i-minuti").value,
     senza_limiti: $("i-senza-limiti").checked, domande_in_parallelo: $("i-parallelo").value,
+    modello_catena: $("i-modello-catena").value, budget_domanda_usd: $("i-budget-domanda").value,
+    pagine_domanda: $("i-pagine-domanda").value, minuti_domanda: $("i-minuti-domanda").value,
     wikipedia: { attivo: $("i-wiki-attivo").checked, contatto: $("i-wiki-contatto").value },
   }), "Impostazioni salvate.");
   if (esito) {

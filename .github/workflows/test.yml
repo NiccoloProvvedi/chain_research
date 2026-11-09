@@ -1,0 +1,28 @@
+name: test
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Dipendenze
+        run: |
+          python -m venv venv
+          venv/bin/pip install -r requirements-dev.txt
+          PLAYWRIGHT_BROWSERS_PATH=browser/motori venv/bin/playwright install --with-deps chromium
+      - name: Controlli statici
+        run: |
+          venv/bin/ruff check ricerca_catena banco test
+          node --check app/main.js
+          node --check app/interfaccia/app.js
+      - name: Test senza Internet e senza Claude
+        run: |
+          venv/bin/coverage run -m pytest -q -m "not rete and not claude"
+          venv/bin/coverage report

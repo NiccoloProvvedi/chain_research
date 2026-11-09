@@ -10,7 +10,9 @@
 Tutto lo stato sta in `indagini/<cartella>/stato.json` (si riprende dopo un'interruzione) e gli eventi in
 `eventi.jsonl` (l'app li mostra). Uso: `python -m ricerca_catena.indagine <cartella>` (riprende o avvia).
 """
+import fcntl
 import json
+import math
 import os
 import re
 import signal
@@ -28,12 +30,19 @@ from . import RADICE, configurazione
 from .modello import claude_json, pulizia
 from .modello import query as query_doppie
 from .modello.pensatore import errori_schema, istruzioni
+from .web.fonti.wikipedia_grafo import intervallo_per
 
 GIRI_MASSIMI = 12               # anche senza limiti: oltre, le domande nuove aggiungono poco
 STIMA_DOMANDA_USD = 0.20        # prima di avere costi osservati (banco: media 0,14 $, sbagliate 0,34 $)
-RISERVA_MINUTI_DOCUMENTO = 10
+COSTI_PER_LA_STIMA = 5          # da quante domande finite vale il 75° percentile dei costi osservati
+RISERVA_MINUTI_DOCUMENTO = 5    # indagini del 1-2/11: una sezione costa circa 15 secondi
+MINUTI_MINIMI_DOMANDA = 10      # sotto, una domanda non fa in tempo (mediana 5 minuti, media 6,6)
+MARGINE_GUARDIA_S = 600         # oltre i minuti della domanda (per scrivere la risposta): poi il processo si chiude
+MIGLIORAMENTO_MINIMO = 0.05     # copertura media (0-3) che un giro deve aggiungere perché ne serva un altro
+FILE_BLOCCO = "processo.lock"
+IMPOSTAZIONI_DELLA_CORSA = ("domande_in_parallelo", "budget_domanda_usd", "pagine_domanda", "minuti_domanda")
 # Costo stimato di una chiamata di scrittura del documento per modello (una per sezione, più la cornice).
-STIMA_SCRITTURA_USD = {"haiku": 0.03, "sonnet": 0.10, "opus": 0.40}
+STIMA_SCRITTURA_USD = {"haiku": 0.03, "sonnet": 0.06, "opus": 0.40}
 SCHEMA_DOMANDE = {"type": "array", "maxItems": 16, "items": {
     "type": "object", "additionalProperties": False, "required": ["sezione", "domanda", "motivo"],
     "properties": {"sezione": {"type": "string", "maxLength": 20},
@@ -78,12 +87,48 @@ def riga(testo: str, etichetta: str) -> str:
     return trovata.group(1).strip() if trovata else ""
 
 
+def blocca(cartella: Path) -> Any | None:
+    """Il blocco dell'indagine, tenuto dal suo processo finché vive (anche se muore di colpo il sistema lo rilascia), o
+    None se un altro processo la sta già eseguendo."""
+    file = (cartella / FILE_BLOCCO).open("a+", encoding="utf-8")
+    try:
+        fcntl.flock(file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        file.close()
+        return None
+    file.seek(0)
+    file.truncate()
+    file.write(str(os.getpid()))
+    file.flush()
+    return file
+
+
+def processo_attivo(cartella: Path) -> int | None:
+    """Il pid del processo che sta eseguendo l'indagine (0 se non ancora scritto), None se non ce n'è nessuno."""
+    percorso = cartella / FILE_BLOCCO
+    if not percorso.is_file():
+        return None
+    with percorso.open("a+", encoding="utf-8") as file:
+        try:
+            fcntl.flock(file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            file.seek(0)
+            testo = file.read().strip()
+            return int(testo) if testo.isdigit() else 0
+        fcntl.flock(file, fcntl.LOCK_UN)
+    return None
+
+
 class Regia:
     """Le decisioni dell'indagine e la scrittura del documento, con il modello scelto dall'utente."""
 
-    def __init__(self, modello: str, al_costo: Callable[[float], None]) -> None:
+    def __init__(self, modello: str, al_costo: Callable[[float], None],
+                 fermata: Callable[[], bool] = lambda: False,
+                 al_modello: Callable[[str], None] = lambda _m: None) -> None:
         self.modello = modello
         self.al_costo = al_costo
+        self.fermata = fermata
+        self.al_modello = al_modello
 
     def chiedi(self, punto: str, oggetto: Any, schema: dict | None, tetto_usd: float = 2.0,
                attesa: float = 900, regole: str | None = None) -> Any:
@@ -92,9 +137,13 @@ class Regia:
         testo = pulizia.dati(oggetto)
         richiesta = testo
         for tentativo in (1, 2):
+            if self.fermata():
+                raise claude_json.Interrotta("Indagine fermata.")
             try:
                 dati, consumo = claude_json.chiedi(regole, richiesta, schema, punto, modello=self.modello,
                                                    max_budget_usd=tetto_usd, attesa=attesa)
+            except (claude_json.LimiteSessione, claude_json.Interrotta):
+                raise
             except claude_json.ErroreClaude as errore:
                 costo = getattr(getattr(errore, "consumo", None), "costo_usd", 0.0)
                 self.al_costo(costo)
@@ -102,6 +151,7 @@ class Regia:
                     raise
                 continue
             self.al_costo(consumo.costo_usd)
+            self.al_modello(consumo.modello_esatto)
             problemi = errori_schema(dati, schema) if schema is not None else []
             if not problemi:
                 return dati
@@ -119,7 +169,9 @@ class Indagine:
         self._fermata = threading.Event()
         self._processi: dict[str, subprocess.Popen] = {}
         self._inizio = time.monotonic() - float(self.stato.get("secondi", 0))
-        self.regia = Regia(self.stato["modello_regia"], self._aggiungi_costo_regia)
+        self._limite_sessione = ""  # il messaggio, se l'abbonamento ha finito il limite durante la corsa
+        self.regia = Regia(self.stato["modello_regia"], self._aggiungi_costo_regia, self._fermata.is_set,
+                           self._aggiungi_modello)
 
     # --- creazione e stato --------------------------------------------------------------------------------------
 
@@ -136,10 +188,14 @@ class Indagine:
             raise ValueError(f"Modello non valido: {modello}")
         base = cartella_base or configurazione.cartella("cartella_indagini")
         cartella = base / nome_cartella(argomento)
-        cartella.mkdir(parents=True, exist_ok=False)
+        try:
+            cartella.mkdir(parents=True, exist_ok=False)
+        except FileExistsError:
+            raise ValueError("Hai appena avviato un'indagine sullo stesso argomento: riprova tra un minuto.") from None
         stato = {
             "id": cartella.name, "argomento": argomento, "creata": _ora(), "stato": "in_attesa", "fase": "",
             "modello_regia": modello, "modello_catena": impostazioni["modello_catena"],
+            "impostazioni": {k: impostazioni[k] for k in IMPOSTAZIONI_DELLA_CORSA},
             "limiti": {"senza_limiti": bool(impostazioni["senza_limiti"] if senza_limiti is None else senza_limiti),
                        "budget_usd": float(budget_usd if budget_usd is not None else impostazioni["budget_usd"]),
                        "max_minuti": float(max_minuti if max_minuti is not None else impostazioni["max_minuti"])},
@@ -172,6 +228,15 @@ class Indagine:
         with self._serratura:
             self.stato["speso_regia_usd"] = round(self.stato["speso_regia_usd"] + costo, 4)
 
+    def _aggiungi_modello(self, modelli: str) -> None:
+        with self._serratura:
+            noti = set(self.stato.get("modelli_regia") or [])
+            self.stato["modelli_regia"] = sorted(noti | {m.strip() for m in modelli.split(",") if m.strip()})
+
+    def _imp(self) -> dict[str, Any]:
+        """Le impostazioni di questa corsa: quelle fissate alla creazione, anche se poi l'utente le cambia."""
+        return {**configurazione.carica(), **(self.stato.get("impostazioni") or {})}
+
     def speso(self) -> float:
         return round(self.stato["speso_regia_usd"] + sum(d.get("costo_usd") or 0 for d in self.stato["domande"]), 4)
 
@@ -181,7 +246,9 @@ class Indagine:
     # --- limiti -------------------------------------------------------------------------------------------------
 
     def _stima_domanda(self) -> float:
-        costi = [d["costo_usd"] for d in self.stato["domande"] if d.get("costo_usd")]
+        costi = sorted(d["costo_usd"] for d in self.stato["domande"] if d.get("costo_usd"))
+        if len(costi) >= COSTI_PER_LA_STIMA:
+            return costi[math.ceil(0.75 * len(costi)) - 1]
         return max(STIMA_DOMANDA_USD, sum(costi) / len(costi)) if costi else STIMA_DOMANDA_USD
 
     def riserva_documento(self) -> float:
@@ -198,25 +265,26 @@ class Indagine:
         impegnato = self.speso() + (in_corso + 1) * self._stima_domanda() + self.riserva_documento()
         if impegnato > limiti["budget_usd"]:
             return f"budget di {limiti['budget_usd']:.2f} $ quasi raggiunto (speso {self.speso():.2f} $)"
-        if self.trascorsi() / 60 > limiti["max_minuti"] - RISERVA_MINUTI_DOCUMENTO - 5:
+        if limiti["max_minuti"] - RISERVA_MINUTI_DOCUMENTO - self.trascorsi() / 60 < MINUTI_MINIMI_DOMANDA:
             return f"tempo massimo di {limiti['max_minuti']:.0f} minuti quasi raggiunto"
         return ""
 
     def _minuti_domanda(self) -> float:
         """Minuti massimi per la prossima domanda: quelli della catena, o meno se il tempo dell'indagine finisce."""
-        massimo = float(configurazione.carica()["minuti_domanda"])
+        massimo = float(self._imp()["minuti_domanda"])
         limiti = self.stato["limiti"]
         if limiti["senza_limiti"]:
             return massimo
         resto = limiti["max_minuti"] - RISERVA_MINUTI_DOCUMENTO - self.trascorsi() / 60
-        return max(5.0, min(massimo, resto))
+        return max(MINUTI_MINIMI_DOMANDA, min(massimo, resto))
 
     def ferma(self) -> None:
-        """Ferma l'indagine: nessuna nuova domanda, quelle in corso si chiudono."""
+        """Ferma l'indagine: nessuna nuova domanda, quelle in corso si chiudono, come le chiamate della regia."""
         self._fermata.set()
         for processo in list(self._processi.values()):
             if processo.poll() is None:
                 processo.terminate()
+        claude_json.interrompi()
 
     # --- svolgimento --------------------------------------------------------------------------------------------
 
@@ -224,8 +292,12 @@ class Indagine:
         """Avvia o riprende l'indagine fino al documento."""
         from . import documento
         for d in self.stato["domande"]:
-            if d["stato"] == "in_corso":  # interrotta a metà: si rifà
+            if d["stato"] == "in_corso" or (d["stato"] == "errore" and not solo_documento):  # si rifà
                 d["stato"] = "in_attesa"
+            if d["stato"] == "in_attesa":
+                d.pop("errore", None)
+        if not solo_documento:
+            self.stato["motivo_fine"] = ""
         self.stato["stato"] = "in_corso"
         self.salva()
         self.evento({"tipo": "inizio", "argomento": self.stato["argomento"], "modello_regia": self.stato["modello_regia"],
@@ -236,10 +308,7 @@ class Indagine:
                     self._pianifica()
                 self._ciclo()
             if self._fermata.is_set() and not solo_documento:
-                self.stato["stato"] = "fermata"
-                self.stato["motivo_fine"] = self.stato["motivo_fine"] or "fermata dall'utente"
-                self.salva()
-                self.evento({"tipo": "fine", "stato": "fermata", "motivo": self.stato["motivo_fine"]})
+                self._concludi_fermata()
                 return
             self._fase("Scrivo il documento…")
             self.stato["documento"] = documento.scrivi(self)
@@ -247,12 +316,26 @@ class Indagine:
             self.salva()
             self.evento({"tipo": "fine", "stato": "finita", "motivo": self.stato["motivo_fine"],
                          "documento": self.stato["documento"], "speso_usd": self.speso()})
+        except claude_json.LimiteSessione as errore:
+            self._limite_sessione = str(errore)
+            self._concludi_fermata()
+        except claude_json.Interrotta:
+            self._concludi_fermata()
         except Exception as errore:  # noqa: BLE001 - lo stato resta salvato: l'indagine si può riprendere
             self.stato["stato"] = "errore"
             self.stato["motivo_fine"] = f"{type(errore).__name__}: {errore}"[:500]
             self.salva()
             self.evento({"tipo": "fine", "stato": "errore", "motivo": self.stato["motivo_fine"]})
             raise
+
+    def _concludi_fermata(self) -> None:
+        self.stato["stato"] = "fermata"
+        if self._limite_sessione:
+            self.stato["motivo_fine"] = f"{self._limite_sessione} Riprendi l'indagine dopo il rinnovo."
+        else:
+            self.stato["motivo_fine"] = self.stato["motivo_fine"] or "fermata dall'utente"
+        self.salva()
+        self.evento({"tipo": "fine", "stato": "fermata", "motivo": self.stato["motivo_fine"]})
 
     def _pianifica(self) -> None:
         self._fase("Claude prepara il piano e le prime domande…")
@@ -276,7 +359,7 @@ class Indagine:
                 continue
             fatte.append(testo)
             voce = {"id": f"d{len(self.stato['domande']) + 1}", "giro": giro,
-                    "sezione": d["sezione"] if d["sezione"] in sezioni else next(iter(sezioni)),
+                    "sezione": d["sezione"] if d["sezione"] in sezioni else self.stato["piano"]["sezioni"][0]["id"],
                     "domanda": testo, "motivo": str(d.get("motivo") or ""), "stato": "in_attesa"}
             self.stato["domande"].append(voce)
             aggiunte.append(voce)
@@ -312,8 +395,11 @@ class Indagine:
         for s in valutazione["nuove_sezioni"]:
             if s["id"] not in {x["id"] for x in self.stato["piano"]["sezioni"]}:
                 self.stato["piano"]["sezioni"].append(s)
-        aggiunte = [] if valutazione["conoscenza_solida"] else \
-            self._aggiungi_domande(valutazione["nuove_domande"], giro=self.stato["giro"])
+        copertura = self._copertura_media(valutazione)
+        precedenti = self.stato["valutazioni"]
+        ferma = bool(precedenti) and copertura < self._copertura_media(precedenti[-1]) + MIGLIORAMENTO_MINIMO
+        aggiunte = [] if valutazione["conoscenza_solida"] or ferma else \
+            self._aggiungi_domande(self._nuove_scelte(valutazione), giro=self.stato["giro"])
         self.stato["valutazioni"].append({"giro": self.stato["giro"] - 1, "quando": _ora(), **valutazione,
                                           "domande_aggiunte": [d["id"] for d in aggiunte]})
         self.salva()
@@ -322,9 +408,34 @@ class Indagine:
                      "domande": aggiunte, "speso_usd": self.speso()})
         if valutazione["conoscenza_solida"] or not aggiunte:
             self.stato["motivo_fine"] = ("Claude ritiene la conoscenza solida: " if valutazione["conoscenza_solida"]
+                                         else "la copertura non cresce più: " if ferma
                                          else "nessuna domanda nuova utile: ") + valutazione["motivo"]
             return True
         return False
+
+    @staticmethod
+    def _copertura_media(valutazione: dict) -> float:
+        coperture = [s["copertura"] for s in valutazione.get("sezioni") or []]
+        return sum(coperture) / len(coperture) if coperture else 0.0
+
+    def _quante_ancora(self) -> int | None:
+        """Quante domande si possono ancora finire con budget e tempo rimasti (None: nessun limite)."""
+        limiti = self.stato["limiti"]
+        if limiti["senza_limiti"]:
+            return None
+        parallele = max(1, int(self._imp()["domande_in_parallelo"]))
+        per_budget = (limiti["budget_usd"] - self.speso() - self.riserva_documento()) / self._stima_domanda()
+        tempi = [d["secondi"] for d in self.stato["domande"] if d.get("secondi")]
+        minuti_domanda = sum(tempi) / len(tempi) / 60 if tempi else 7.0
+        resto = limiti["max_minuti"] - RISERVA_MINUTI_DOCUMENTO - MINUTI_MINIMI_DOMANDA - self.trascorsi() / 60
+        per_tempo = parallele * (max(0.0, resto) / minuti_domanda + 1)
+        return max(1, int(min(per_budget, per_tempo)))
+
+    def _nuove_scelte(self, valutazione: dict) -> list[dict]:
+        """Le nuove domande, prima quelle delle sezioni meno coperte, solo quante si possono finire."""
+        copertura = {s["id"]: s["copertura"] for s in valutazione["sezioni"]}
+        ordinate = sorted(valutazione["nuove_domande"], key=lambda d: copertura.get(d["sezione"], 0))
+        return ordinate[:self._quante_ancora()]
 
     @staticmethod
     def in_breve(d: dict) -> dict:
@@ -340,7 +451,7 @@ class Indagine:
 
     def _rispondi(self, domande: list[dict]) -> str:
         """Risponde alle domande in parallelo; "" se tutte fatte, altrimenti il motivo per cui ci si è fermati."""
-        parallele = max(1, int(configurazione.carica()["domande_in_parallelo"]))
+        parallele = max(1, int(self._imp()["domande_in_parallelo"]))
         profili = [f"profilo_{i + 1}" for i in range(parallele)]
         liberi = list(profili)
         serratura = threading.Lock()
@@ -352,6 +463,12 @@ class Indagine:
         def lavora(d: dict, profilo: str) -> None:
             try:
                 self._una_domanda(d, profilo, parallele)
+            except Exception as errore:  # noqa: BLE001 - un errore qui non deve lasciare la domanda «in corso»
+                with self._serratura:
+                    d.update(stato="errore", errore=f"{type(errore).__name__}: {errore}"[:500], finita=_ora())
+                self.salva()
+                self.evento({"tipo": "domanda", "id": d["id"], "stato": "errore", "domanda": d["domanda"],
+                             "errore": d["errore"], "speso_usd": self.speso()})
             finally:
                 with fatto:
                     liberi.append(profilo)
@@ -373,8 +490,14 @@ class Indagine:
                 esecutore.submit(lavora, d, profilo)
         return motivo["testo"]
 
+    @staticmethod
+    def _comando_domanda() -> list[str]:
+        python = RADICE / "venv" / "bin" / "python"
+        return [str(python if python.exists() else sys.executable), "-m", "ricerca_catena.domanda"]
+
     def _una_domanda(self, d: dict, profilo: str, parallele: int) -> None:
-        impostazioni = configurazione.carica()
+        impostazioni = self._imp()
+        minuti = self._minuti_domanda()
         with self._serratura:
             d.update(stato="in_corso", iniziata=_ora())
         self.salva()
@@ -384,15 +507,27 @@ class Indagine:
                      "opzioni": {"modello_claude": self.stato["modello_catena"],
                                  "budget_claude": float(impostazioni["budget_domanda_usd"]),
                                  "pagine_catena": int(impostazioni["pagine_domanda"]),
-                                 "minuti_catena": self._minuti_domanda(),
-                                 # Wikimedia: 200 richieste al minuto con il contatto, per tutte le domande insieme.
-                                 "wikipedia_intervallo": max(0.7, 0.3 * parallele)}}
-        python = RADICE / "venv" / "bin" / "python"
-        processo = subprocess.Popen([str(python if python.exists() else sys.executable), "-m", "ricerca_catena.domanda"],
-                                    cwd=RADICE, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                    stderr=subprocess.DEVNULL, text=True, start_new_session=True)
+                                 "minuti_catena": minuti,
+                                 # Limiti di Wikimedia, per tutte le domande insieme.
+                                 "wikipedia_intervallo": intervallo_per(parallele)}}
+        with (self.cartella / "errori.log").open("a", encoding="utf-8") as registro_errori:
+            processo = subprocess.Popen(self._comando_domanda(), cwd=RADICE, stdin=subprocess.PIPE,
+                                        stdout=subprocess.PIPE, stderr=registro_errori, text=True,
+                                        start_new_session=True)
         self._processi[d["id"]] = processo
-        esito, errore = None, ""
+        esito, errore, speso, limite = None, "", 0.0, None
+        scaduta = threading.Event()
+
+        def scadenza() -> None:
+            scaduta.set()
+            try:
+                os.killpg(processo.pid, signal.SIGKILL)
+            except OSError:
+                pass
+
+        guardia = threading.Timer(minuti * 60 + MARGINE_GUARDIA_S, scadenza)
+        guardia.daemon = True
+        guardia.start()
         try:
             processo.stdin.write(json.dumps(richiesta, ensure_ascii=False) + "\n")
             processo.stdin.close()
@@ -402,22 +537,35 @@ class Indagine:
                 except ValueError:
                     continue
                 if "evento" in messaggio:
-                    self._evento_domanda(d, messaggio["evento"])
+                    evento = messaggio["evento"]
+                    speso = max(speso, float(evento.get("speso_usd") or 0))
+                    self._evento_domanda(d, evento)
                 elif "esito" in messaggio:
                     esito = messaggio["esito"]
                 elif "errore" in messaggio:
                     errore = messaggio["errore"]
+                    speso = max(speso, float(messaggio.get("costo_usd") or 0))
+                    limite = messaggio.get("limite_sessione")
             processo.wait()
         finally:
+            guardia.cancel()
             self._processi.pop(d["id"], None)
+        if limite is not None:  # le altre domande troverebbero lo stesso limite: ci si ferma, «non trovata» sarebbe falso
+            self._limite_sessione = errore
+            self.ferma()
+        if esito is None and speso:  # la domanda è costata anche se non è finita; il totale la conta come spesa a parte
+            self._aggiungi_costo_regia(speso)
         with self._serratura:
             if esito is None:
                 d["stato"] = "in_attesa" if self._fermata.is_set() else "errore"
-                d["errore"] = errore or ("fermata" if self._fermata.is_set() else
+                d["errore"] = errore or ("tempo massimo della domanda superato" if scaduta.is_set() else
+                                         "fermata" if self._fermata.is_set() else
                                          f"processo chiuso ({processo.returncode})")
             else:
                 d.update(stato="risposta" if esito.get("trovata") else "non_trovata", risposta=esito["risposta"],
                          valore=esito.get("valore"), fonti=esito["fonti"], costo_usd=esito["costo_usd"],
+                         confermata=bool(esito.get("confermata")),
+                         modelli=(esito.get("pensatore") or {}).get("modelli"),
                          secondi=esito["secondi"], pagine_lette=esito.get("pagine_lette"),
                          motivo_catena=esito.get("motivo_fine"))
             d["finita"] = _ora()
@@ -438,6 +586,10 @@ class Indagine:
 def main() -> int:
     """`python -m ricerca_catena.indagine <cartella> [--documento]`: avvia o riprende l'indagine."""
     cartella = Path(sys.argv[1])
+    blocco = blocca(cartella)
+    if blocco is None:
+        print("Questa indagine è già in esecuzione in un altro processo.", file=sys.stderr)
+        return 2
     indagine = Indagine(cartella)
     signal.signal(signal.SIGTERM, lambda *_: indagine.ferma())
     signal.signal(signal.SIGINT, lambda *_: indagine.ferma())

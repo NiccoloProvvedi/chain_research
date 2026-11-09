@@ -6,6 +6,7 @@ app/node_modules/
 __pycache__/
 *.pyc
 .pytest_cache/
+.coverage
 # Dati dell'utente: indagini, registri, impostazioni e segreti (mai in git)
 indagini/
 log/

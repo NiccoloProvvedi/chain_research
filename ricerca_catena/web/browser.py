@@ -5,6 +5,7 @@ Adattato da jev_ultrafast/browser.py (MIT, vedi LICENZA_JEV_ULTRAFAST.txt): al p
 Browser Harness, che si collega al Chrome dell'utente, si avvia un Chromium dedicato.
 """
 import os
+import shutil
 import socket
 from pathlib import Path
 from typing import Any
@@ -12,9 +13,14 @@ from typing import Any
 from playwright.sync_api import Error as ErrorePlaywright
 from playwright.sync_api import sync_playwright
 
+from .proxy import ProxySicuro
 from .rete import host_vietato, indirizzo_sicuro  # noqa: F401 - usati anche da altri moduli
 
 LARGHEZZA, ALTEZZA = 1120, 780
+
+
+class StalePage(RuntimeError):
+    """La pagina è cambiata mentre si valutava lo script."""
 
 
 def _togli_lucchetto_abbandonato(cartella_profilo: Path) -> None:
@@ -41,23 +47,36 @@ def _togli_lucchetto_abbandonato(cartella_profilo: Path) -> None:
                 pass
 
 
+def _svuota_profilo(cartella_profilo: Path) -> None:
+    """Ogni domanda parte da un profilo vuoto (niente cookie o service worker delle pagine di prima, niente disco che
+    cresce). Un profilo con un lucchetto ancora vivo è in uso: non si tocca."""
+    if not os.path.lexists(cartella_profilo / "SingletonLock"):
+        shutil.rmtree(cartella_profilo, ignore_errors=True)
+
+
 class Browser:
     def __init__(self, url: str, cartella_motori: Path, cartella_profilo: Path, headless: bool = True,
                  consenti_locali: bool = False) -> None:
         os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(cartella_motori)
         cartella_profilo.mkdir(parents=True, exist_ok=True)
         _togli_lucchetto_abbandonato(cartella_profilo)
+        _svuota_profilo(cartella_profilo)
+        cartella_profilo.mkdir(parents=True, exist_ok=True)
         self.consenti_locali = consenti_locali
+        self._profilo = cartella_profilo
+        self._proxy = None if consenti_locali else ProxySicuro()
         self._pw = sync_playwright().start()
         try:
             # channel="chromium": Chromium completo in modalità headless moderna (molti siti, come DuckDuckGo,
-            # bloccano la versione "headless shell").
+            # bloccano la versione "headless shell"). Tutto il traffico passa dal proxy: `route` non vede redirect e
+            # WebSocket; i service worker sono spenti perché sfuggono a `route`.
             self._contesto = self._pw.chromium.launch_persistent_context(
                 str(cartella_profilo), headless=headless, channel="chromium",
-                viewport={"width": LARGHEZZA, "height": ALTEZZA}, locale="it-IT",
+                viewport={"width": LARGHEZZA, "height": ALTEZZA}, locale="it-IT", service_workers="block",
+                **({"proxy": {"server": self._proxy.indirizzo}} if self._proxy else {}),
             )
             if not consenti_locali:
-                # Il browser del navigatore non può raggiungere il computer né la rete di casa.
+                # Il browser del navigatore non può raggiungere il computer né la rete di casa (primo filtro, rapido).
                 self._contesto.route("**/*", self._filtra_richiesta)
             self.pagina = self._contesto.pages[0] if self._contesto.pages else self._contesto.new_page()
             self.sessione = self._contesto.new_cdp_session(self.pagina)
@@ -103,3 +122,8 @@ class Browser:
                     chiudi()
             except Exception:  # noqa: BLE001 - chiusura best effort
                 pass
+        proxy, self._proxy = getattr(self, "_proxy", None), None
+        if proxy is not None:
+            proxy.chiudi()
+        if getattr(self, "_profilo", None) is not None:
+            _svuota_profilo(self._profilo)

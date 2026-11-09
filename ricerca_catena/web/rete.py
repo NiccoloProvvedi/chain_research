@@ -16,8 +16,9 @@ def ip_vietato(ip: str) -> bool:
     indirizzo = ipaddress.ip_address(ip.split("%")[0])
     if isinstance(indirizzo, ipaddress.IPv6Address) and indirizzo.ipv4_mapped:
         indirizzo = indirizzo.ipv4_mapped  # ::ffff:127.0.0.1 è il computer stesso
-    return (indirizzo.is_private or indirizzo.is_loopback or indirizzo.is_link_local or indirizzo.is_reserved
-            or indirizzo.is_multicast or indirizzo.is_unspecified)
+    # is_global esclude anche 100.64.0.0/10 (CGNAT, Tailscale), che is_private lascia passare.
+    return (not indirizzo.is_global or indirizzo.is_private or indirizzo.is_loopback or indirizzo.is_link_local
+            or indirizzo.is_reserved or indirizzo.is_multicast or indirizzo.is_unspecified)
 
 
 def nome_locale(host: str) -> bool:

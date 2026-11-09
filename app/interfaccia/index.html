@@ -31,7 +31,7 @@
         <label>Tempo massimo (min)<input id="minuti" type="number" min="10" max="1440" step="10"></label>
       </div>
       <label class="spunta"><input type="checkbox" id="senza-limiti"> Nessun limite di spesa e di tempo</label>
-      <p class="nota" id="nota-limiti">Le risposte alle domande le dà sempre la catena con Claude Haiku (circa 0,15 $ e 10 minuti a domanda, tre alla volta).</p>
+      <p class="nota" id="nota-limiti">Le risposte alle domande le dà sempre la catena con Claude Haiku (circa 0,10 $ e 7 minuti a domanda, tre alla volta).</p>
       <button type="submit" id="avvia">Avvia l'indagine</button>
     </form>
 
@@ -66,6 +66,7 @@
         <button type="button" id="b-riprendi" class="secondario">Riprendi</button>
         <button type="button" id="b-documento" class="secondario">Scrivi il documento con quello che c'è</button>
         <button type="button" id="b-cartella" class="secondario">Apri la cartella</button>
+        <button type="button" id="b-pulisci" class="secondario">Libera spazio</button>
       </div>
       <section class="riquadro" id="v-sezioni-box">
         <h2>Sezioni del documento</h2>
@@ -98,6 +99,17 @@
     </div>
     <label class="spunta"><input type="checkbox" id="i-senza-limiti"> Nessun limite, come scelta predefinita</label>
     <label>Domande in parallelo<input id="i-parallelo" type="number" min="1" max="4" step="1"></label>
+    <h3>Avanzate: ogni domanda della catena</h3>
+    <label for="i-modello-catena">Modello che legge per la catena</label>
+    <select id="i-modello-catena">
+      <option value="haiku">Haiku</option><option value="sonnet">Sonnet</option><option value="opus">Opus</option>
+    </select>
+    <div class="riga">
+      <label>Budget ($)<input id="i-budget-domanda" type="number" min="0.05" max="5" step="0.05"></label>
+      <label>Pagine<input id="i-pagine-domanda" type="number" min="1" max="200" step="1"></label>
+      <label>Minuti<input id="i-minuti-domanda" type="number" min="5" max="180" step="1"></label>
+    </div>
+    <p class="nota">Le impostazioni valgono per le indagini nuove: quelle già create tengono le loro.</p>
     <h3>Wikipedia</h3>
     <label class="spunta"><input type="checkbox" id="i-wiki-attivo"> Presentarsi a Wikipedia con un contatto</label>
     <label for="i-wiki-contatto">Contatto (email o sito)</label>
@@ -105,6 +117,21 @@
     <p class="nota" id="i-wiki-nota">Wikipedia chiede un contatto a chi usa i suoi servizi: con il contatto la ricerca può fare 200 richieste al minuto, senza solo 10. Viene inviato solo a Wikipedia. Se il campo è vuoto si usa l'email del tuo account Claude.</p>
     <div class="pulsanti">
       <button type="submit" value="salva" id="i-salva">Salva</button>
+      <button type="submit" value="annulla" class="secondario" formnovalidate>Annulla</button>
+    </div>
+  </form>
+</dialog>
+<dialog id="riprendi">
+  <form id="form-riprendi" method="dialog">
+    <h2>Riprendi l'indagine</h2>
+    <div class="riga">
+      <label>Budget ($)<input id="r-budget" type="number" min="0.5" max="500" step="0.5"></label>
+      <label>Tempo massimo (min)<input id="r-minuti" type="number" min="10" max="1440" step="10"></label>
+    </div>
+    <label class="spunta"><input type="checkbox" id="r-senza-limiti"> Nessun limite di spesa e di tempo</label>
+    <p class="nota">Si contano anche la spesa e il tempo già usati.</p>
+    <div class="pulsanti">
+      <button type="submit" value="riprendi" id="r-conferma">Riprendi</button>
       <button type="submit" value="annulla" class="secondario" formnovalidate>Annulla</button>
     </div>
   </form>

@@ -54,8 +54,16 @@ CANDIDATI_MASSIMI = 8
 # fa il programma. I modelli generici dicono "sì" troppo facilmente e sbagliano proprio sui casi a metà, per questo
 # c'è "in parte" e per questo un "sì" vale solo se le due letture lo danno entrambe.
 VALORE_ESITO = {"sì": 1.0, "in parte": 0.5, "non so": 0.0, "no": -1.0}
-MESI = ("gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre|january|"
-        "february|march|april|may|june|july|august|september|october|november|december")
+MESI = ("gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre|"
+        "january|february|march|april|may|june|july|august|september|october|november|december|"
+        "jan|feb|mar|apr|jun|jul|aug|sept|sep|oct|nov|dec|"
+        "januar|februar|märz|mai|juni|juli|oktober|dezember|"
+        "janvier|février|mars|avril|juin|juillet|août|septembre|octobre|novembre|décembre|"
+        "enero|febrero|abril|mayo|junio|julio|septiembre|octubre|noviembre|diciembre|"
+        "janeiro|fevereiro|março|maio|junho|julho|setembro|outubro|novembro|dezembro")
+# Anni con l'era scritta: «44 a.C.», «800 d.C.», «44 BC», «800 AD».
+ERA = re.compile(r"\b(\d{1,4})\s*(a\.?\s?c\b\.?|b\.?\s?c\b\.?(?:e\b\.?)?|d\.?\s?c\b\.?|a\.?\s?d\b\.?|c\.?\s?e\b\.?)", re.I)
+_ORDINALE = r"(?:°|º|st|nd|rd|th|er|\.)?"
 
 
 @dataclass
@@ -132,15 +140,25 @@ def _numeri(testo: str) -> list[float]:
     return trovati
 
 
+def _anni(testo: str) -> list[int]:
+    """Gli anni scritti nel testo; prima di Cristo sono negativi. Senza l'era servono almeno 3 cifre."""
+    anni = []
+    for m in ERA.finditer(testo):
+        prima = m.group(2).lower().replace(".", "").replace(" ", "") in ("ac", "bc", "bce")
+        anni.append(-int(m.group(1)) if prima else int(m.group(1)))
+    resto = ERA.sub(" ", testo)
+    return anni + [int(x) for x in re.findall(r"\b\d{3,4}\b", resto)]
+
+
 def valore_ammesso(valore: str, risposta: dict) -> str:
     """Controllo meccanico del valore (DS4A: il tipo di dato decide quali righe valgono): tipo e intervallo dati dal
     piano. Restituisce il motivo del rifiuto, vuoto se va bene. (17/10, Due Sicilie: «29 novembre 1943» per uno Stato
     «nato e sciolto nel 1945»; Divina Commedia: 3.274 abitanti per «tra 300 e 350».)"""
     tipo = str(risposta.get("tipo_valore") or "")
     testo = str(valore or "").lower()
-    anni = [int(x) for x in re.findall(r"\b(1\d{3}|20\d{2})\b", testo)]
-    giorno_mese = re.search(rf"\b\d{{1,2}}(?:°|º)?\s+(?:{MESI})\b", testo) or re.search(
-        rf"\b(?:{MESI})\s+\d{{1,2}}\b", testo) or re.search(r"\b\d{4}-\d{2}-\d{2}\b", testo)
+    anni = _anni(testo)
+    giorno_mese = re.search(rf"\b\d{{1,2}}{_ORDINALE}\s+(?:(?:of|de|del)\s+)?(?:{MESI})\b", testo) or re.search(
+        rf"\b(?:{MESI})\.?\s+\d{{1,2}}(?:st|nd|rd|th)?\b", testo) or re.search(r"\b\d{4}-\d{2}-\d{2}\b", testo)
     if tipo == "data completa" and not (giorno_mese and anni):
         return "non è una data completa"
     if tipo == "anno" and not anni:
@@ -184,6 +202,7 @@ class Catena:
         self.azioni: list[str] = []  # frontiera: azioni fatte, in ordine (per le diagnosi)
         self._registrate: set[tuple[str, str, str]] = set()  # legami scritti da _registra: mai prove
         self._estratti: list[Prova] = []  # estratti dei risultati dell'ultima ricerca (pagine non lette)
+        self._pagine_aggiunte = 0  # pagine concesse oltre il tetto per cercare il valore
 
     # --- chiamate al modello ------------------------------------------------------------------------------------
 
@@ -1828,7 +1847,7 @@ class Catena:
                                                   f"{v.titolo} ({v.lingua})" for v in a.voci.values()),
                                                str(esito.get("motivo") or "")[:150]])]})
             if tentativo == 2 and not self.r.pensatore.esaurito and not self.r._limite_raggiunto():
-                self.o["max_pagine"] = int(self.o["max_pagine"]) + 2
+                self._aggiungi_pagine_valore()
                 # le parole della risposta, nella lingua della ricerca (le prime del piano), non la frase italiana
                 chiave = " ".join(str(x) for x in (risposta.get("parole") or [])[:2]) or risposta.get("cosa", "")
                 # Mai il nome da solo: con una parola dell'entità di prima si evitano gli omonimi più famosi (25/10,
@@ -1841,6 +1860,12 @@ class Catena:
                                                         a.nome])), 2,
                                     scopo=f"{risposta.get('cosa', '')} di {a.nome}" + (f" ({a.da.nome})" if a.da else ""))
         return False
+
+    def _aggiungi_pagine_valore(self, massimo: int = 6) -> None:
+        """Due pagine in più per cercare il valore, senza che il tetto della domanda cresca senza fine."""
+        if self._pagine_aggiunte < massimo:
+            self._pagine_aggiunte += 2
+            self.o["max_pagine"] = int(self.o["max_pagine"]) + 2
 
     def _valore_e_entita(self, a: Anello) -> bool:
         """La domanda chiede il nome dell'entità dell'ultimo passo (piano: risposta.e_entita): il valore è lei, con la
@@ -1875,7 +1900,7 @@ class Catena:
         tipo = str(risposta.get("tipo_valore") or "")
         forme = {"data completa": rf"\b\d{{1,2}}\s+(?:{MESI})\s+\d{{4}}\b|\b(?:{MESI})\s+\d{{1,2}},?\s+\d{{4}}\b",
                  "giorno e mese": rf"\b\d{{1,2}}\s+(?:{MESI})\b|\b(?:{MESI})\s+\d{{1,2}}\b",
-                 "anno": r"\b(?:1\d{3}|20\d{2})\b", "numero": r"\d", "codice": r"\b\d{4,6}\b"}
+                 "anno": rf"\b(?:1\d{{3}}|20\d{{2}})\b|{ERA.pattern}", "numero": r"\d", "codice": r"\b\d{4,6}\b"}
         forma = forme.get(tipo)
         intervallo = isinstance(risposta.get("minimo"), (int, float)) or isinstance(risposta.get("massimo"), (int, float))
         if forma is None and not intervallo:

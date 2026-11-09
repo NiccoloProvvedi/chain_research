@@ -226,7 +226,7 @@ def contatto_prova(cartella_temporanea: Path, monkeypatch: pytest.MonkeyPatch) -
 def test_contatto_wikipedia_impostazioni_poi_account(contatto_prova: Path) -> None:
     from ricerca_catena.web.fonti import wikipedia_grafo as wg
     assert wg.contatto_wikipedia() == ("persona@esempio.org", "account")
-    assert wg.user_agent() == ("ai-locale-ricerca/0.1 (uso personale; persona@esempio.org) httpx", True)
+    assert wg.user_agent() == ("ricerca-catena/0.1 (uso personale; persona@esempio.org) httpx", True)
     config.salva_segreti({"contatto_wikipedia": "dedicato@esempio.org", "stackexchange": {"chiave": "abc"}})
     assert contatto_prova.stat().st_mode & 0o777 == 0o600
     assert wg.contatto_wikipedia() == ("dedicato@esempio.org", "impostazioni")  # scritto a mano: vince

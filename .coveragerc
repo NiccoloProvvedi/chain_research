@@ -1,0 +1,6 @@
+[run]
+source = ricerca_catena
+
+[report]
+fail_under = 80
+skip_covered = true

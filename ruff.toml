@@ -1,0 +1,6 @@
+line-length = 125
+target-version = "py312"
+extend-exclude = ["python", "browser", "indagini", "app/node_modules"]
+
+[lint]
+select = ["F", "E9"]

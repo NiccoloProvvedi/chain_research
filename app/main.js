@@ -24,6 +24,10 @@ function avviaServer(token) {
       stdio: ["ignore", "pipe", "inherit"],
     });
     const scadenza = setTimeout(() => reject(new Error("Il server non si è avviato entro 30 secondi.")), 30000);
+    server.once("error", (errore) => {
+      clearTimeout(scadenza);
+      reject(errore);
+    });
     server.once("exit", (codice) => {
       clearTimeout(scadenza);
       reject(new Error(`Il server si è chiuso (codice ${codice}).`));

@@ -22,12 +22,13 @@ sys.path.insert(0, str(RADICE / "banco"))
 import giudice  # noqa: E402
 
 from ricerca_catena import configurazione  # noqa: E402
+from ricerca_catena.web.fonti.wikipedia_grafo import intervallo_per  # noqa: E402
 
 
 def una_domanda(d: dict, profilo: str, parallelo: int) -> dict:
     richiesta = {"domanda": d["domanda"], "profilo": str(configurazione.cartella("cartella_profili") / profilo),
                  "cartella_pezzi": str(RADICE / "risultati" / "banco" / ".pezzi"),
-                 "opzioni": {"senza_wikidata": True, "wikipedia_intervallo": max(0.7, 0.3 * parallelo)}}
+                 "opzioni": {"senza_wikidata": True, "wikipedia_intervallo": intervallo_per(parallelo)}}
     uscita = subprocess.run([str(RADICE / "venv" / "bin" / "python"), "-m", "ricerca_catena.domanda"], cwd=RADICE,
                             input=json.dumps(richiesta, ensure_ascii=False) + "\n", capture_output=True, text=True,
                             timeout=3 * 3600)

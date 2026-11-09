@@ -26,10 +26,36 @@ class ErroreClaude(RuntimeError):
     """Claude non ha potuto rispondere (non collegato, tempo scaduto, budget, risposta non valida)."""
 
 
+class LimiteSessione(ErroreClaude):
+    """Il limite di sessione dell'abbonamento è finito: rispondere «non trovata» sarebbe falso, l'indagine si ferma."""
+
+    def __init__(self, secondi: float) -> None:
+        super().__init__(f"Limite di sessione di Claude raggiunto: si rinnova tra circa {round(secondi / 60)} minuti.")
+        self.secondi = secondi
+
+
+class Interrotta(ErroreClaude):
+    """L'utente ha fermato l'indagine mentre Claude stava rispondendo."""
+
+
+# Le chiamate in corso in questo processo, per fermarle (`interrompi`). Dizionario senza serrature: `interrompi` gira
+# dentro un gestore di segnale e una serratura presa dal thread principale lo bloccherebbe per sempre.
+_in_corso: dict[int, subprocess.Popen] = {}
+
+
+def interrompi() -> None:
+    """Chiude le chiamate in corso: chi le aspettava riceve Interrotta."""
+    for processo in list(_in_corso.values()):
+        if processo.poll() is None:
+            processo.interrotto = True
+            processo.terminate()
+
+
 @dataclass
 class Consumo:
     punto: str
     modello: str
+    modello_esatto: str = ""
     token_ingresso: int = 0
     token_uscita: int = 0
     token_cache_letti: int = 0
@@ -65,7 +91,7 @@ def leggi_risultato(stdout: str) -> dict[str, Any] | None:
         except ValueError:
             continue
         if dati.get("type") == "assistant" and "Not logged in" in json.dumps(dati):
-            raise ErroreClaude("Claude non è collegato al tuo account (vedi le istruzioni della chat).")
+            raise ErroreClaude("Claude non è collegato al tuo account: esegui `claude` e fai l'accesso.")
         if dati.get("type") == "result":
             risultato = dati
     return risultato
@@ -73,7 +99,8 @@ def leggi_risultato(stdout: str) -> dict[str, Any] | None:
 
 def consumo_da(risultato: dict[str, Any], punto: str, modello: str, secondi: float) -> Consumo:
     uso = risultato.get("usage") or {}
-    return Consumo(punto=punto, modello=modello, token_ingresso=int(uso.get("input_tokens") or 0),
+    return Consumo(punto=punto, modello=modello, modello_esatto=", ".join(risultato.get("modelUsage") or {}),
+                   token_ingresso=int(uso.get("input_tokens") or 0),
                    token_uscita=int(uso.get("output_tokens") or 0),
                    token_cache_letti=int(uso.get("cache_read_input_tokens") or 0),
                    token_cache_scritti=int(uso.get("cache_creation_input_tokens") or 0),
@@ -83,14 +110,22 @@ def consumo_da(risultato: dict[str, Any], punto: str, modello: str, secondi: flo
 def _esegui(righe: list[str], testo: str, attesa: float) -> str:
     messaggio = {"type": "user", "message": {"role": "user", "content": [{"type": "text", "text": testo}]}}
     try:
-        uscita = subprocess.run(righe, input=json.dumps(messaggio) + "\n", capture_output=True, text=True,
-                                cwd=cartella_vuota(), env={**os.environ, "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1"},
-                                timeout=attesa)
-    except subprocess.TimeoutExpired:
-        raise ErroreClaude("Claude non ha risposto in tempo.") from None
+        processo = subprocess.Popen(righe, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                                    cwd=cartella_vuota(), env={**os.environ, "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1"})
     except FileNotFoundError:
         raise ErroreClaude("Claude Code non è installato.") from None
-    return uscita.stdout
+    _in_corso[id(processo)] = processo
+    try:
+        stdout, _ = processo.communicate(json.dumps(messaggio) + "\n", timeout=attesa)
+    except subprocess.TimeoutExpired:
+        processo.kill()
+        processo.communicate()
+        raise ErroreClaude("Claude non ha risposto in tempo.") from None
+    finally:
+        _in_corso.pop(id(processo), None)
+    if getattr(processo, "interrotto", False):
+        raise Interrotta("Indagine fermata.")
+    return stdout
 
 
 # Secondi passati ad aspettare il rinnovo del limite di sessione (in questo processo): i limiti di tempo delle
@@ -100,10 +135,22 @@ ATTESA_LIMITE = {"secondi": 0.0}
 
 def secondi_al_rinnovo(stdout: str) -> float | None:
     """Se Claude risponde che il limite di sessione è finito ("resets 12:50am"), i secondi fino al rinnovo (più un
-    minuto); altrimenti None. Senza un orario leggibile, 15 minuti."""
-    if "hit your session limit" not in stdout and "usage limit" not in stdout.lower():
+    minuto); altrimenti None. Senza un orario leggibile, 15 minuti. Conta solo una risposta di errore: il testo di una
+    risposta normale può parlare di limiti."""
+    risultato = None
+    for riga in stdout.splitlines():
+        try:
+            dati = json.loads(riga)
+        except ValueError:
+            continue
+        if isinstance(dati, dict) and dati.get("type") == "result":
+            risultato = dati
+    if risultato is not None and not risultato.get("is_error"):
         return None
-    trovato = re.search(r"resets (\d{1,2})(?::(\d{2}))?\s*(am|pm)", stdout, re.I)
+    testo = stdout if risultato is None else str(risultato.get("result") or "")
+    if "hit your session limit" not in testo and "usage limit" not in testo.lower():
+        return None
+    trovato = re.search(r"resets (\d{1,2})(?::(\d{2}))?\s*(am|pm)", testo, re.I)
     if not trovato:
         return 900.0
     ora = int(trovato.group(1)) % 12 + (12 if trovato.group(3).lower() == "pm" else 0)
@@ -140,6 +187,8 @@ def chiedi(istruzioni: str, testo: str, schema: dict | None, punto: str, modello
                 ATTESA_LIMITE["secondi"] += pausa
                 stdout = _esegui(righe, testo, attesa or cfg.pensatore.attesa_s)
             rigioco.salva(chiave, {"punto": punto, "modello": modello, "testo": testo[:2000]}, stdout)
+        if (pausa := secondi_al_rinnovo(stdout)) is not None:
+            raise LimiteSessione(pausa)
         risultato = leggi_risultato(stdout)
         if risultato:
             consumo = consumo_da(risultato, punto, modello, time.monotonic() - inizio)

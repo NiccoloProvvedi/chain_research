@@ -35,8 +35,8 @@ l'indagine». A destra segui il lavoro in diretta: sezioni con la copertura, dom
 fine «Apri il PDF». Un'indagine fermata o interrotta si può riprendere; con «Scrivi il documento con quello che c'è»
 ottieni il PDF anche prima della fine.
 
-Costi indicativi: una domanda costa in media 0,15 $ e dura circa 10 minuti (tre alla volta); un'indagine con i limiti
-predefiniti (5 $, 2 ore) fa 20-30 domande. La spesa passa dall'abbonamento Claude dell'account collegato a
+Costi indicativi (due indagini reali, novembre 2026): una domanda costa in media 0,07-0,10 $ e dura circa 7 minuti (tre
+alla volta); un'indagine con i limiti predefiniti (5 $, 2 ore) risponde a 35-45 domande. La spesa passa dall'abbonamento Claude dell'account collegato a
 `claude` (Claude Code).
 
 ## Installazione
@@ -68,7 +68,8 @@ Dal pulsante «Impostazioni» (salvate in `config/impostazioni.json`, fuori da g
   navigare, leggere file o eseguire comandi. Riceve solo testo e risponde in un formato fisso.
 - Il testo delle pagine è un dato, mai un'istruzione: le frasi rivolte a un modello vengono tolte e il testo viaggia
   tra delimitatori.
-- Il browser della ricerca è separato, senza i tuoi account, e non può raggiungere il computer né la rete di casa.
+- Il browser della ricerca è separato, senza i tuoi account, riparte vuoto a ogni domanda e tutto il suo traffico passa
+  da un proxy locale che rifiuta il computer e la rete di casa (anche dopo un redirect o con un WebSocket).
 - Il server dell'app ascolta solo su 127.0.0.1, con una chiave segreta che conosce solo la finestra.
 
 ## Struttura
@@ -92,6 +93,7 @@ Le indagini stanno in `indagini/<data>-<argomento>/`: `stato.json` (tutto lo sta
 ## Test
 
 ```bash
-venv/bin/python -m pytest -q -m "not rete and not claude"   # senza rete e senza Claude
+VIRTUAL_ENV=venv uv pip install -r requirements-dev.txt     # strumenti di sviluppo, una volta
+venv/bin/python -m pytest -q -m "not rete and not claude"   # senza rete e senza Claude (Chromium locale sì)
 venv/bin/python banco/banco.py --nome prova --semi "informatica/Linux kernel"   # una domanda del banco, dal vivo
 ```
