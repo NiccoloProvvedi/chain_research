@@ -7,7 +7,7 @@ import pytest
 RADICE = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(RADICE), str(RADICE / "ponte")]
 
-from ricerca_catena.web.fonti.wikipedia_grafo import Riga, Voce, WikipediaGrafo, corrisponde, non_entita  # noqa: E402
+from ricerca_catena.web.fonti.wikipedia_grafo import Voce, WikipediaGrafo, corrisponde, non_entita  # noqa: E402
 
 
 @pytest.mark.parametrize("nome, titolo, contesto, atteso", [

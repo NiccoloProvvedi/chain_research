@@ -1,10 +1,6 @@
 """Test dell'infrastruttura comune delle fonti (senza rete: trasporti finti, orologio finto, processi brevi)."""
-import json
-import os
 import subprocess
-import sys
 import threading
-from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
