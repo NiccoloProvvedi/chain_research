@@ -169,3 +169,4 @@
 | 2026-10-30 03:28 | terza corsa completa 40 domande, codice e1faf80 (Z) | e1faf80 | 13 domande | 13/13 | 10.7 | 1.761 | 0 |
 | 2026-10-30 03:40 | terza corsa completa 40 domande, codice e1faf80 (Y) | e1faf80 | 13 domande | 12/13 | 11.7 | 1.894 | 0 |
 | 2026-10-30 04:23 | terza corsa completa 40 domande, codice e1faf80 (X) | e1faf80 | 14 domande | 11/14 | 13.9 | 2.309 | 0 |
+| 2026-11-10 00:46 | prova dal vivo dopo la revisione | 0703055 | 1 domande | 1/1 | 11.6 | 0.072 | 0 |

@@ -8,6 +8,8 @@ dalle domande non fatte) e una riga in banco/REGISTRO.md.
 """
 import argparse
 import json
+import os
+import re
 import subprocess
 import sys
 import threading
@@ -25,17 +27,29 @@ from ricerca_catena import configurazione  # noqa: E402
 from ricerca_catena.web.fonti.wikipedia_grafo import intervallo_per  # noqa: E402
 
 
-def una_domanda(d: dict, profilo: str, parallelo: int) -> dict:
+def una_domanda(d: dict, profilo: str, parallelo: int, registra: Path | None = None) -> dict:
+    opzioni = {"senza_wikidata": True, "wikipedia_intervallo": intervallo_per(parallelo)}
     richiesta = {"domanda": d["domanda"], "profilo": str(configurazione.cartella("cartella_profili") / profilo),
-                 "cartella_pezzi": str(RADICE / "risultati" / "banco" / ".pezzi"),
-                 "opzioni": {"senza_wikidata": True, "wikipedia_intervallo": intervallo_per(parallelo)}}
+                 "cartella_pezzi": str(RADICE / "risultati" / "banco" / ".pezzi"), "opzioni": opzioni}
+    ambiente = dict(os.environ)
+    cartella, oggi = None, f"{datetime.now():%Y-%m-%d}"
+    if registra is not None:  # ogni domanda nella sua cartella; PYTHONHASHSEED e data uguali anche nel rigioco
+        cartella = registra / re.sub(r"\W+", "-", f"{d['tema']}-{d['seme']}")
+        ambiente.update(RICERCA_REGISTRA=str(cartella), RICERCA_OGGI=oggi, PYTHONHASHSEED="0")
     uscita = subprocess.run([str(RADICE / "venv" / "bin" / "python"), "-m", "ricerca_catena.domanda"], cwd=RADICE,
                             input=json.dumps(richiesta, ensure_ascii=False) + "\n", capture_output=True, text=True,
-                            timeout=3 * 3600)
+                            timeout=3 * 3600, env=ambiente)
     for riga in reversed(uscita.stdout.splitlines()):
         messaggio = json.loads(riga)
         if "esito" in messaggio:
-            return messaggio["esito"]
+            esito = messaggio["esito"]
+            if cartella is not None:
+                (cartella / "atteso.json").write_text(json.dumps({
+                    "domanda": d["domanda"], "opzioni": opzioni, "oggi": oggi, "valore": esito.get("valore"),
+                    "trovata": esito.get("trovata"), "motivo_fine": esito.get("motivo_fine"),
+                    "azioni": esito.get("catena", {}).get("azioni"), "risposta": esito.get("risposta")},
+                    ensure_ascii=False, indent=1), encoding="utf-8")
+            return esito
         if "errore" in messaggio:
             raise RuntimeError(messaggio["errore"])
     raise RuntimeError(f"nessun esito (codice {uscita.returncode})")
@@ -48,12 +62,16 @@ def main() -> None:
     a.add_argument("--parallelo", type=int, default=3)
     a.add_argument("--budget", type=float, default=12.0, help="dollari massimi di Claude per tutta la corsa")
     a.add_argument("--nota", default="")
+    a.add_argument("--domande", default="", help="file di domande diverso da banco/domande.json")
+    a.add_argument("--registra", default="", help="cartella in cui registrare tutto per il rigioco (test_rigioco.py)")
     arg = a.parse_args()
     cartella = RADICE / "risultati" / "banco" / arg.nome
     cartella.mkdir(parents=True, exist_ok=True)
     file_esiti = cartella / "esiti.json"
     esiti = json.loads(file_esiti.read_text(encoding="utf-8")) if file_esiti.is_file() else {}
-    domande = json.loads((RADICE / "banco" / "domande.json").read_text(encoding="utf-8"))["domande"][:40]
+    file_domande = Path(arg.domande) if arg.domande else RADICE / "banco" / "domande.json"
+    domande = json.loads(file_domande.read_text(encoding="utf-8"))["domande"][:None if arg.domande else 40]
+    registra = Path(arg.registra).resolve() if arg.registra else None
     if arg.semi:
         volute = {s.strip() for s in arg.semi.split(",") if s.strip()}
         domande = [d for d in domande if f"{d['tema']}/{d['seme']}" in volute]
@@ -69,7 +87,7 @@ def main() -> None:
                 return
             profilo = profili.pop(0)
         try:
-            esito = una_domanda(d, profilo, arg.parallelo)
+            esito = una_domanda(d, profilo, arg.parallelo, registra)
             finale = giudice.estrai(d["domanda"], giudice.risposta_breve(esito["risposta"]))
             corretta, deciso = giudice.giudica(d["domanda"], d["risposta"], finale)
             voce = {"tema": d["tema"], "seme": d["seme"], "domanda": d["domanda"], "attesa": d["risposta"],

@@ -10,18 +10,16 @@ import html as codifica_html
 import json
 import re
 import secrets
-import threading
 import time
 from collections import Counter
 from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, quote_plus, unquote, urlsplit
 
 from .. import configurazione
-from ..modello import claude_json, pulizia
+from ..modello import claude_json, pulizia, rigioco
 from ..modello import config as config_modello
 from ..modello import query as query_doppie
 from ..modello.pensatore import SCHEMI, Pensatore, istruzioni
@@ -83,6 +81,13 @@ def dividi_in_blocchi(testo: str) -> list[str]:
     return [testo[i:i + BLOCCO] for i in range(0, min(len(testo), BLOCCO * MAX_BLOCCHI), BLOCCO)]
 
 
+class _SenzaBrowser:
+    """Nel rigioco le pagine vengono dalla registrazione."""
+
+    def close(self) -> None:
+        pass
+
+
 class Raccolta:
     """Una domanda: `esegui()` percorre la catena e restituisce la risposta con le fonti."""
 
@@ -94,7 +99,7 @@ class Raccolta:
         self.o["max_pagine"] = int(self.o["pagine_catena"])
         self.o["max_minuti"] = float(self.o["minuti_catena"])
         self.argomento = domanda.strip()
-        self.oggi = f"{datetime.now():%Y-%m-%d}"
+        self.oggi = rigioco.oggi()
         self.id_piano = "p-" + secrets.token_hex(4)
         self.pensatore = Pensatore(self.id_piano, float(self.o["budget_claude"]), pubblica=pubblica)
         self.pensatore.modello = str(self.o.get("modello_claude") or configurazione.carica()["modello_catena"])
@@ -121,10 +126,9 @@ class Raccolta:
         self.motivo_fine = ""
         self.autore = ""
         self.browser: Browser | None = None
-        self._in_corso: list[tuple[dict, list[Future]]] = []
+        self._in_corso: list[tuple[dict, list[Future], dict[int, tuple]]] = []
         self._lavoratori = ThreadPoolExecutor(max_workers=3)
         self._archivio: ClientFonte | None = None
-        self._serratura_grafo = threading.Lock()
         self._inizio = time.monotonic()
         self._attesa_iniziale = claude_json.ATTESA_LIMITE["secondi"]
 
@@ -135,8 +139,9 @@ class Raccolta:
         self.pensatore.bilancio.riserva = float(self.o["riserva_scrittura"])
         self.cartella_pezzi.mkdir(parents=True, exist_ok=True)
         self.concetti = Concetti(self.cartella_pezzi / f"{self.id_piano}.sqlite")
-        self.browser = Browser("about:blank", configurazione.cartella("cartella_motori"), self.profilo,
-                               headless=True, consenti_locali=self.consenti_locali)
+        self.browser = _SenzaBrowser() if rigioco.in_rigioco() else Browser(
+            "about:blank", configurazione.cartella("cartella_motori"), self.profilo, headless=True,
+            consenti_locali=self.consenti_locali)
         try:
             self.catena = Catena(self)
             self.catena.percorri()
@@ -220,6 +225,9 @@ class Raccolta:
             return ""
 
     def _risultati(self, url: str, script: str) -> list[dict]:
+        return rigioco.attraverso("ricerca", url, lambda: self._risultati_vivi(url, script))
+
+    def _risultati_vivi(self, url: str, script: str) -> list[dict]:
         try:
             self.browser.pagina.goto(url, wait_until="domcontentloaded", timeout=30_000)
             self.browser.pagina.wait_for_timeout(1500)
@@ -298,28 +306,34 @@ class Raccolta:
     def leggi(self, fonte: dict) -> None:
         url = fonte["url"]
         self.visitati.add(url)
-        if not (self.consenti_locali or indirizzo_sicuro(url)):
+        if not rigioco.attraverso("sicuro", url, lambda: self.consenti_locali or indirizzo_sicuro(url)):
             return
         numero = len(self.visitati)
         self.pubblica({"tipo": "pagina", "numero": numero, "url": url, "titolo": fonte.get("titolo"),
                        "stato": "lettura"})
         try:
-            estratto = self._da_archivio_wiki(url)
-            if estratto is None:
-                self.browser.pagina.goto(url, wait_until="load", timeout=30_000)
-                self.browser.pagina.wait_for_timeout(1200)
-                estratto = self.browser.pagina.evaluate(ESTRATTORE)
+            estratto = rigioco.attraverso("pagina", url, lambda: self._estrai(url))
             if estratto.get("verifica_antibot"):
                 self.falliti[urlsplit(url).netloc] += 1
                 self.pubblica({"tipo": "pagina", "numero": numero, "url": url, "stato": "scartata",
                                "testo": "il sito blocca i browser automatici (verifica anti-bot)"})
                 return
+        except rigioco.RichiestaNonRegistrata:
+            raise
         except Exception as errore:  # noqa: BLE001
             self.falliti[urlsplit(url).netloc] += 1
             self.pubblica({"tipo": "pagina", "numero": numero, "url": url, "stato": "errore",
                            "testo": str(errore).splitlines()[0][:150]})
             return
         self._annota(numero, url, estratto.get("titolo") or fonte.get("titolo"), estratto.get("testo", ""))
+
+    def _estrai(self, url: str) -> dict:
+        estratto = self._da_archivio_wiki(url)
+        if estratto is None:
+            self.browser.pagina.goto(url, wait_until="load", timeout=30_000)
+            self.browser.pagina.wait_for_timeout(1200)
+            estratto = self.browser.pagina.evaluate(ESTRATTORE)
+        return estratto
 
     def _annota(self, numero: int, url: str, titolo: str | None, testo: str) -> None:
         """Testo letto → blocchi → lettura di Claude in sottofondo."""
@@ -336,22 +350,31 @@ class Raccolta:
         self.impronte.add(impronta)
         self.pagine_lette.add(url)
         blocchi = dividi_in_blocchi(testo)
-        futuri = [self._lavoratori.submit(self._leggi_blocco, titolo, url, i, len(blocchi), blocco)
+        rinviati: dict[int, tuple] = {}
+        futuri = [self._lavoratori.submit(self._leggi_blocco, titolo, url, i, len(blocchi), blocco, rinviati)
                   for i, blocco in enumerate(blocchi, start=1)]
         self._in_corso.append(({"numero": numero, "url": url, "titolo": titolo, "caratteri": len(testo),
-                                "blocchi": len(blocchi)}, futuri))
+                                "blocchi": len(blocchi)}, futuri, rinviati))
         self.pubblica({"tipo": "pagina", "numero": numero, "url": url, "titolo": titolo, "stato": "appunti",
                        "caratteri": len(testo), "blocchi": len(blocchi)})
 
-    def _leggi_blocco(self, titolo: str, url: str, i: int, totale: int, blocco: str) -> tuple[int, str]:
+    def _leggi_blocco(self, titolo: str, url: str, i: int, totale: int, blocco: str,
+                      rinviati: dict[int, tuple] | None = None) -> tuple[int, str]:
         """Claude legge il blocco (ripulito) e dà appunti, pertinenza e concetti con la frase da cui vengono; il pezzo
-        si salva tra i pezzi della domanda, da cui la catena sceglie le righe."""
+        si salva tra i pezzi della domanda, da cui la catena sceglie le righe. Con `rinviati` il salvataggio aspetta:
+        i blocchi finiscono in un ordine a caso, e il grafo deve venire uguale a ogni corsa."""
+        def salva(*argomenti: Any) -> None:
+            if rinviati is None:
+                self.concetti.registra(*argomenti)
+            else:
+                rinviati[i] = argomenti
+
         if self.fermata():
             return 0, ""
         pulito = pulizia.testo(blocco, origine=url)
         if not self.o.get("lettura_catena", True):
             # Lettura del modello spenta (22/10): il pezzo si salva così com'è; la catena sceglie da sé le righe.
-            self.concetti.registra(url, titolo or url, i, pulito, [], [], [])
+            salva(url, titolo or url, i, pulito, [], [], [])
             return 2, ""
         dati = self.pensatore.chiedi(
             "lettura", istruzioni("lettura"),
@@ -364,20 +387,20 @@ class Raccolta:
             return 0, ""
         pertinenza = int(dati.get("pertinenza", 0))
         if pertinenza >= 1 and (dati.get("concetti") or dati.get("fatti")):  # anche i pezzi citati di passaggio
-            with self._serratura_grafo:
-                self.concetti.registra(url, titolo or url, i, pulito, dati.get("concetti", []),
-                                       dati.get("legami", []), dati.get("fatti", []))
+            salva(url, titolo or url, i, pulito, dati.get("concetti", []), dati.get("legami", []), dati.get("fatti", []))
         appunti = str(dati.get("appunti") or "").strip()
         return (pertinenza, appunti) if pertinenza >= 2 and appunti else (pertinenza, "")
 
     def _valuta_completati(self, attendi: bool) -> None:
         """Registra le pagine i cui appunti sono pronti, nell'ordine di lettura, e ne misura pertinenza e novità."""
         while self._in_corso:
-            fonte, futuri = self._in_corso[0]
+            fonte, futuri, rinviati = self._in_corso[0]
             if not attendi and not all(f.done() for f in futuri):
                 return
             self._in_corso.pop(0)
             risultati = [f.result() for f in futuri]
+            for numero_blocco in sorted(rinviati):
+                self.concetti.registra(*rinviati[numero_blocco])
             self._controlla()
             appunti = [n for _, n in risultati if n]
             pertinenza = self._pertinenza([p for p, _ in risultati])

@@ -20,6 +20,7 @@ from urllib.parse import quote, unquote, urlsplit
 
 import lxml.html
 
+from ...modello import rigioco
 from .base import ErroreFonte
 from .config import email_account_claude, segreti
 from .http import ClientFonte
@@ -304,7 +305,8 @@ class WikipediaGrafo:
         self.richieste += 1
         try:
             if self.ottieni is None:
-                return self.client.get_json(self._api(lingua), params=params)
+                return rigioco.attraverso("wikipedia", [lingua, params],
+                                          lambda: self.client.get_json(self._api(lingua), params=params))
             for _ in range(3):
                 self.limite.attendi(attesa_massima_s=120)
                 dati, attesa = self.ottieni(self._api(lingua), params)
@@ -312,6 +314,8 @@ class WikipediaGrafo:
                     return dati if isinstance(dati, dict) else {}
                 self.limite.pausa(min(max(attesa, 5.0), 90.0))  # HTTP 429: si rispetta Retry-After
             return {ERRORE_TEMPORANEO: True}
+        except rigioco.RichiestaNonRegistrata:
+            raise
         except Exception:  # noqa: BLE001 - Wikipedia non raggiungibile: la catena passa al web
             return {ERRORE_TEMPORANEO: True}
 
