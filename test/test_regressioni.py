@@ -66,6 +66,14 @@ def test_una_risposta_che_parla_di_limiti_non_e_il_limite() -> None:
     assert claude_json.secondi_al_rinnovo(ERRORE_LIMITE) is not None
 
 
+@pytest.mark.parametrize("testo", ["You've hit your 5-hour limit · resets 3:10am (Europe/Rome)",
+                                   "You've hit your session limit · resets 3pm", "Claude AI usage limit reached|1234",
+                                   "You've hit your weekly limit"])
+def test_tutti_i_messaggi_del_limite(testo: str) -> None:
+    riga = json.dumps({"type": "result", "subtype": "success", "is_error": True, "total_cost_usd": 0, "result": testo})
+    assert claude_json.secondi_al_rinnovo(riga) is not None
+
+
 @pytest.mark.parametrize("metodo", ["decidi", "chiedi"])
 def test_il_pensatore_non_nasconde_il_limite(monkeypatch, metodo: str) -> None:
     monkeypatch.setattr(claude_json, "_esegui", lambda *_a: ERRORE_LIMITE)
@@ -190,3 +198,23 @@ def test_minuti_della_domanda_e_ultimo_lancio(tmp_path: Path, monkeypatch) -> No
     assert ind.puo_partire(0) == "" and ind._minuti_domanda() == pytest.approx(11)
     monkeypatch.setattr(ind, "trascorsi", lambda: 106 * 60)
     assert "tempo" in ind.puo_partire(0)
+
+
+def test_due_letture_danno_lo_stesso_esito_in_qualunque_ordine() -> None:
+    from ricerca_catena.web.catena import Anello, Prova
+
+    def lettura(numero: int) -> dict:
+        return {"candidati": [{"nome": "Mario Rossi", "controlli": [
+            {"controllo": "C1", "esito": "sì", "prova": numero, "citazione": "Mario Rossi fu gesuita"}]}]}
+
+    def prova_scelta(risposte: list[dict]) -> str:
+        c = Catena.__new__(Catena)
+        c.o = {}
+        c._decidi = lambda *_a: risposte.pop(0)
+        c._segmenti_su = lambda _n: []
+        c._prove_entita = lambda *_a, **_k: [Prova("Mario Rossi fu gesuita a Roma", "u1"), Prova("Mario Rossi fu gesuita a Parma", "u2")]
+        a = Anello("Mario Rossi")
+        c._esiti([a], [{"descrizione": "gesuita", "letture": [], "peso": 2}])
+        return a.esiti[0]["prova"].testo
+
+    assert prova_scelta([lettura(1), lettura(2)]) == prova_scelta([lettura(2), lettura(1)])

@@ -133,6 +133,10 @@ def _esegui(righe: list[str], testo: str, attesa: float) -> str:
 ATTESA_LIMITE = {"secondi": 0.0}
 
 
+# «You've hit your session limit», «You've hit your 5-hour limit» (10/11), «Claude AI usage limit reached».
+_MESSAGGIO_LIMITE = re.compile(r"hit your [\w -]*limit|usage limit", re.I)
+
+
 def secondi_al_rinnovo(stdout: str) -> float | None:
     """Se Claude risponde che il limite di sessione è finito ("resets 12:50am"), i secondi fino al rinnovo (più un
     minuto); altrimenti None. Senza un orario leggibile, 15 minuti. Conta solo una risposta di errore: il testo di una
@@ -148,7 +152,7 @@ def secondi_al_rinnovo(stdout: str) -> float | None:
     if risultato is not None and not risultato.get("is_error"):
         return None
     testo = stdout if risultato is None else str(risultato.get("result") or "")
-    if "hit your session limit" not in testo and "usage limit" not in testo.lower():
+    if not _MESSAGGIO_LIMITE.search(testo):
         return None
     trovato = re.search(r"resets (\d{1,2})(?::(\d{2}))?\s*(am|pm)", testo, re.I)
     if not trovato:

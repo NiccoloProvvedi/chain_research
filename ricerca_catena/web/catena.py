@@ -1697,8 +1697,10 @@ class Catena:
             esiti = list(pool.map(chiedi, [g[2] for g in gruppi for _ in range(letture)]))
         for n, (gruppo, prove, _, intervalli) in enumerate(gruppi):
             prime: dict[int, list[dict]] = {}
-            for k in range(letture):
-                self._applica_esiti(gruppo, prove, intervalli, esiti[n * letture + k], controlli)
+            # Le letture finiscono in un ordine a caso e la prima dà la riga citata: ordine fisso, corse ripetibili.
+            for esito in sorted(esiti[n * letture:(n + 1) * letture],
+                                key=lambda x: json.dumps(x, sort_keys=True, ensure_ascii=False)):
+                self._applica_esiti(gruppo, prove, intervalli, esito, controlli)
                 for a in gruppo:
                     prime[id(a)] = self._unisci_esiti(prime[id(a)], a.esiti) if id(a) in prime else a.esiti
             for a in gruppo:

@@ -170,3 +170,5 @@
 | 2026-10-30 03:40 | terza corsa completa 40 domande, codice e1faf80 (Y) | e1faf80 | 13 domande | 12/13 | 11.7 | 1.894 | 0 |
 | 2026-10-30 04:23 | terza corsa completa 40 domande, codice e1faf80 (X) | e1faf80 | 14 domande | 11/14 | 13.9 | 2.309 | 0 |
 | 2026-11-10 00:46 | prova dal vivo dopo la revisione | 0703055 | 1 domande | 1/1 | 11.6 | 0.072 | 0 |
+| 2026-11-10 01:14 | prova del rigioco | a26b341 | 1 domande | 0/1 | 6.1 | 0.096 | 0 |
+| 2026-11-10 03:03 | 40 domande dopo la revisione, con registrazione (FALSATA: limite di 5 ore non riconosciuto) | a26b341 | 40 domande | 22/40 | 8.1 | 4.378 | 0 |
