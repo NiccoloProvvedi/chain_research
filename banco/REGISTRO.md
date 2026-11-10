@@ -172,3 +172,4 @@
 | 2026-11-10 00:46 | prova dal vivo dopo la revisione | 0703055 | 1 domande | 1/1 | 11.6 | 0.072 | 0 |
 | 2026-11-10 01:14 | prova del rigioco | a26b341 | 1 domande | 0/1 | 6.1 | 0.096 | 0 |
 | 2026-11-10 03:03 | 40 domande dopo la revisione, con registrazione (FALSATA: limite di 5 ore non riconosciuto) | a26b341 | 40 domande | 22/40 | 8.1 | 4.378 | 0 |
+| 2026-11-10 14:06 | 40 domande dopo la revisione, con registrazione | 46ae7e2 | 40 domande | 34/40 | 10.1 | 5.559 | 0 |
