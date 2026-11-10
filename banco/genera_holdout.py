@@ -39,7 +39,8 @@ SEMI = {
                "Ducato di Savoia", "Spedizione dei Mille", "Battaglia di Trafalgar", "Battaglia di Legnano", "Pace di Augusta",
                "Editto di Nantes", "Presa di Roma", "Regno di Sardegna", "Granducato di Toscana", "Battaglia di Pavia",
                "Trattato di Tordesillas", "Battaglia di Poitiers (732)", "Battaglia di Marignano", "Pace di Utrecht",
-               "Regno di Napoli", "Sacco di Roma (1527)"],
+               "Regno di Napoli", "Sacco di Roma (1527)", "Battaglia di Caporetto", "Trattato di Campoformio",
+               "Battaglia di Marengo", "Vespri siciliani", "Giovine Italia"],
     "scienze": ["Albert Einstein", "Isaac Newton", "Gregor Mendel", "Louis Pasteur", "Nikola Tesla",
                 "Telescopio spaziale James Webb", "Voyager 1", "Apollo 11", "Sputnik 1", "Antonio Meucci", "Guglielmo Marconi",
                 "Rita Levi-Montalcini", "Camillo Golgi", "Lazzaro Spallanzani", "Dmitrij Ivanovič Mendeleev", "Max Planck",
@@ -49,7 +50,10 @@ SEMI = {
                           "Reggia di Caserta", "Museo del Louvre", "Museo del Prado", "Teatro La Fenice", "Teatro di San Carlo",
                           "Aida", "La traviata", "Decameron", "Il nome della rosa", "Il Gattopardo", "Orlando furioso",
                           "Gerusalemme liberata", "Gioconda", "Ultima Cena (Leonardo)", "Nascita di Venere (Botticelli)",
-                          "Sagrada Família", "Etna", "Stromboli", "Cervino", "Tosca (opera)", "Rigoletto"],
+                          "Sagrada Família", "Etna", "Stromboli", "Cervino", "Tosca (opera)", "Rigoletto", "Cavalleria rusticana",
+                          "Il barbiere di Siviglia (Rossini)", "Turandot (Puccini)", "Madama Butterfly", "Pietà vaticana",
+                          "David (Michelangelo)", "Guernica (Picasso)", "Il deserto dei Tartari", "Se questo è un uomo",
+                          "Mole Antonelliana", "Palazzo Pitti", "Basilica di San Pietro in Vaticano"],
 }
 # Legami da seguire: quelli che di solito hanno un valore solo. Si tengono solo se su quell'entità ne hanno uno.
 LEGAMI = {"P170": "creatore", "P112": "fondatore", "P50": "autore", "P57": "regista", "P84": "architetto", "P86": "compositore",
@@ -60,6 +64,12 @@ LEGAMI = {"P170": "creatore", "P112": "fondatore", "P50": "autore", "P57": "regi
           "P1365": "sostituisce", "P1366": "sostituito da", "P155": "preceduto da", "P156": "seguito da", "P88": "committente"}
 ATTRIBUTI = {"P569": ("data di nascita", "data"), "P570": ("data di morte", "data"), "P571": ("data di fondazione", "data"),
              "P2044": ("altitudine", "numero"), "P281": ("codice postale", "codice")}
+# Come nelle 40 del banco, soprattutto date: un'altitudine o un codice solo per una città raggiunta direttamente.
+DATE, NUMERI = ("P569", "P570", "P571"), ("P2044", "P281")
+LEGAMI_VERSO_CITTA = {"luogo di nascita", "luogo di morte", "luogo", "sede", "capitale"}
+MASSIMO_NUMERI = {"geografia_cultura": 5}
+MASSIMO_NUMERI_ALTRI = 2
+TENTATIVI_PER_PROFONDITA = 3
 MESI = ("gennaio febbraio marzo aprile maggio giugno luglio agosto settembre ottobre novembre dicembre").split()
 SCHEMA = {"type": "object", "additionalProperties": False, "required": ["domanda", "motivo_unicita"],
           "properties": {"domanda": {"type": "string", "minLength": 60, "maxLength": 450},
@@ -79,7 +89,7 @@ A_MEMORIA = "Rispondi alla DOMANDA a memoria, senza strumenti. Chiudi con una ri
 
 class Wikidata:
     def __init__(self) -> None:
-        # Wikidata rifiuta chi non lascia un contatto (403). L'email dell'account, scelta da Niccolò il 10/11, si legge qui e
+        # Wikidata rifiuta chi non lascia un contatto (403). L'email dell'account, con il consenso dell'utente (10/11), si legge qui e
         # va solo a wikidata.org (il client accetta solo quel dominio); non si salva da nessuna parte.
         contatto = email_account_claude()
         if not contatto:
@@ -131,7 +141,8 @@ def formatta(proprieta: str, valore: dict) -> str | None:
     return v if isinstance(v, str) and v.strip() else None
 
 
-def percorso(wd: Wikidata, partenza: str, caso: random.Random, profondita: int) -> tuple[list[dict], str, str] | None:
+def percorso(wd: Wikidata, partenza: str, caso: random.Random, profondita: int,
+             numeri: bool) -> tuple[list[dict], str, str] | None:
     """[{qid, nome, descrizione, relazione}], proprietà dell'attributo, risposta: un cammino valido o None."""
     def visita(qid: str, relazione: str | None, fatti: list[dict]) -> tuple[list[dict], str, str] | None:
         e = wd.entita(qid)
@@ -142,7 +153,10 @@ def percorso(wd: Wikidata, partenza: str, caso: random.Random, profondita: int) 
             return None
         cammino = [*fatti, nodo]
         if len(cammino) - 1 >= profondita:
-            for proprieta in caso.sample(list(ATTRIBUTI), len(ATTRIBUTI)):
+            ammessi = caso.sample(DATE, len(DATE))
+            if numeri and relazione in LEGAMI_VERSO_CITTA:
+                ammessi += caso.sample(NUMERI, len(NUMERI))
+            for proprieta in ammessi:
                 valore = _unico(e, proprieta)
                 risposta = formatta(proprieta, valore) if valore else None
                 if risposta:
@@ -152,7 +166,8 @@ def percorso(wd: Wikidata, partenza: str, caso: random.Random, profondita: int) 
         for proprieta in caso.sample(list(LEGAMI), len(LEGAMI)):
             valore = _unico(e, proprieta)
             prossimo = valore["value"].get("id") if valore and valore.get("type") == "wikibase-entityid" else None
-            if prossimo and prossimo not in visti:
+            salita = proprieta == "P131" and any(n["relazione"] == LEGAMI["P131"] for n in cammino)  # comune → provincia → regione
+            if prossimo and prossimo not in visti and not salita:
                 trovato = visita(prossimo, LEGAMI[proprieta], cammino)
                 if trovato:
                     return trovato
@@ -196,7 +211,7 @@ def main() -> None:
     domande: list[dict] = []
     scarti = {"senza_percorso": 0, "controlli": 0, "facili": 0, "non_scritte": 0}
     for tema, semi in SEMI.items():
-        tenute = 0
+        tenute, numeriche = 0, 0
         for seme in semi:
             if tenute >= arg.per_tema:
                 break
@@ -204,8 +219,9 @@ def main() -> None:
             qid = wd.da_titolo(seme)
             trovato = None
             if qid:
-                for profondita in caso.sample([2, 3, 4], 3):
-                    trovato = percorso(wd, qid, caso, profondita)
+                consentiti = numeriche < MASSIMO_NUMERI.get(tema, MASSIMO_NUMERI_ALTRI)
+                for profondita in caso.sample([2, 3, 4], 3) * TENTATIVI_PER_PROFONDITA:
+                    trovato = percorso(wd, qid, caso, profondita, consentiti)
                     if trovato:
                         break
             if not trovato:
@@ -233,6 +249,7 @@ def main() -> None:
                             "motivo_unicita": scritta["motivo_unicita"], "controlli": esame,
                             "filtro": {"modello": "haiku", "a_memoria": a_memoria}})
             tenute += 1
+            numeriche += proprieta in NUMERI
             print(f"✓ {tema}/{seme} ({len(cammino) - 1} legami)", flush=True)
         if tenute < arg.per_tema:
             print(f"ATTENZIONE: {tema} ha solo {tenute} domande", flush=True)

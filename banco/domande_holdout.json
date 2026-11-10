@@ -1,0 +1,1565 @@
+{
+ "generato_il": "2026-11-10T12:22:23+01:00",
+ "scarti": {
+  "senza_percorso": 46,
+  "controlli": 2,
+  "facili": 27,
+  "non_scritte": 0
+ },
+ "domande": [
+  {
+   "tema": "informatica",
+   "seme": "Python",
+   "domanda": "Qual è l'altitudine della municipalità olandese in cui è nato l'informatico che ha progettato il celebre linguaggio di programmazione dal nome di un serpente?",
+   "risposta": "2 m",
+   "attributo": {
+    "relazione": "altitudine",
+    "id_relazione": "P2044"
+   },
+   "percorso": [
+    {
+     "qid": "Q28865",
+     "nome": "Python",
+     "relazione": null
+    },
+    {
+     "qid": "Q30942",
+     "nome": "Guido van Rossum",
+     "relazione": "progettista"
+    },
+    {
+     "qid": "Q9920",
+     "nome": "Haarlem",
+     "relazione": "luogo di nascita"
+    }
+   ],
+   "motivo_unicita": "Il linguaggio indicato è Python, il suo progettista è Guido van Rossum e la sua città natale è Haarlem, di cui si chiede l'altitudine.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": ""
+   }
+  },
+  {
+   "tema": "informatica",
+   "seme": "PostgreSQL",
+   "domanda": "Qual è l'altitudine (in metri sul livello del mare) del capoluogo della contea statunitense del New Hampshire a cui appartiene il comune natale dell'informatico americano, nato nel 1943, che ha creato il celebre sistema di gestione di basi di dati relazionale open source noto come PostgreSQL?",
+   "risposta": "15 m",
+   "attributo": {
+    "relazione": "altitudine",
+    "id_relazione": "P2044"
+   },
+   "percorso": [
+    {
+     "qid": "Q192490",
+     "nome": "PostgreSQL",
+     "relazione": null
+    },
+    {
+     "qid": "Q92758",
+     "nome": "Michael Stonebraker",
+     "relazione": "creatore"
+    },
+    {
+     "qid": "Q612201",
+     "nome": "Milton",
+     "relazione": "luogo di nascita"
+    },
+    {
+     "qid": "Q54441",
+     "nome": "contea di Strafford",
+     "relazione": "unità amministrativa"
+    },
+    {
+     "qid": "Q48215",
+     "nome": "Dover",
+     "relazione": "capitale"
+    }
+   ],
+   "motivo_unicita": "Il percorso identifica in modo univoco PostgreSQL, il suo creatore Stonebraker, Milton, la contea di Strafford e il suo capoluogo Dover, di cui si chiede l'altitudine.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": ""
+   }
+  },
+  {
+   "tema": "informatica",
+   "seme": "C++",
+   "domanda": "Qual è la data di morte (giorno, mese e anno) del fisico britannico che fu relatore del dottorato dell'informatico britannico, a sua volta relatore del dottorato dell'informatico britannico (1927–2004) che seguì la tesi dello sviluppatore danese del linguaggio di programmazione C++?",
+   "risposta": "25 ottobre 1987",
+   "attributo": {
+    "relazione": "data di morte",
+    "id_relazione": "P570"
+   },
+   "percorso": [
+    {
+     "qid": "Q2407",
+     "nome": "C++",
+     "relazione": null
+    },
+    {
+     "qid": "Q92620",
+     "nome": "Bjarne Stroustrup",
+     "relazione": "sviluppatore"
+    },
+    {
+     "qid": "Q92944",
+     "nome": "David Wheeler",
+     "relazione": "relatore del dottorato"
+    },
+    {
+     "qid": "Q62857",
+     "nome": "Maurice Wilkes",
+     "relazione": "relatore del dottorato"
+    },
+    {
+     "qid": "Q6104536",
+     "nome": "J. A. Ratcliffe",
+     "relazione": "relatore del dottorato"
+    }
+   ],
+   "motivo_unicita": "La catena C++ → Stroustrup → Wheeler → Wilkes → Ratcliffe individua un solo fisico britannico, di cui si chiede la data di morte.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": "25 maggio 1986"
+   }
+  },
+  {
+   "tema": "informatica",
+   "seme": "Perl",
+   "domanda": "Qual è la data di fondazione (giorno, mese e anno) della città statunitense, capoluogo di contea nello Stato della California, in cui è nato il programmatore che ha progettato un celebre linguaggio di programmazione interpretato noto per il suo nome di pietra preziosa?",
+   "risposta": "4 settembre 1781",
+   "attributo": {
+    "relazione": "data di fondazione",
+    "id_relazione": "P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q42478",
+     "nome": "Perl",
+     "relazione": null
+    },
+    {
+     "qid": "Q92597",
+     "nome": "Larry Wall",
+     "relazione": "progettista"
+    },
+    {
+     "qid": "Q65",
+     "nome": "Los Angeles",
+     "relazione": "luogo di nascita"
+    }
+   ],
+   "motivo_unicita": "Perl identifica Larry Wall, nato a Los Angeles; la data di fondazione di Los Angeles è un attributo unico della città.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": ""
+   }
+  },
+  {
+   "tema": "informatica",
+   "seme": "PHP",
+   "domanda": "Qual è la data di fondazione (giorno, mese e anno) del comune groenlandese che amministra la cittadina in cui è nato il programmatore danese che ha progettato il celebre linguaggio di programmazione di scripting lato server noto con un acronimo di tre lettere?",
+   "risposta": "1 gennaio 2018",
+   "attributo": {
+    "relazione": "data di fondazione",
+    "id_relazione": "P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q59",
+     "nome": "PHP",
+     "relazione": null
+    },
+    {
+     "qid": "Q92768",
+     "nome": "Rasmus Lerdorf",
+     "relazione": "progettista"
+    },
+    {
+     "qid": "Q847668",
+     "nome": "Qeqertarsuaq",
+     "relazione": "luogo di nascita"
+    },
+    {
+     "qid": "Q44593337",
+     "nome": "Qeqertalik",
+     "relazione": "unità amministrativa"
+    }
+   ],
+   "motivo_unicita": "Il percorso porta da PHP al suo progettista, al suo luogo di nascita e al comune che lo amministra; si chiede la data di fondazione di quel comune.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": ""
+   }
+  },
+  {
+   "tema": "informatica",
+   "seme": "Ruby (linguaggio di programmazione)",
+   "domanda": "Qual è la data di fondazione (giorno, mese e anno) della prefettura giapponese in cui è nato l'informatico che ha sviluppato un noto linguaggio di programmazione chiamato come una pietra preziosa rossa?",
+   "risposta": "21 giugno 1868",
+   "attributo": {
+    "relazione": "data di fondazione",
+    "id_relazione": "P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q161053",
+     "nome": "Ruby",
+     "relazione": null
+    },
+    {
+     "qid": "Q92748",
+     "nome": "Yukihiro Matsumoto",
+     "relazione": "sviluppatore"
+    },
+    {
+     "qid": "Q122723",
+     "nome": "Prefettura di Osaka",
+     "relazione": "luogo di nascita"
+    }
+   ],
+   "motivo_unicita": "Il percorso porta dal linguaggio Ruby al suo sviluppatore Yukihiro Matsumoto, poi alla sua prefettura di nascita (Osaka), di cui si chiede la data di fondazione.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": "17 luglio 1868"
+   }
+  },
+  {
+   "tema": "informatica",
+   "seme": "Commodore 64",
+   "domanda": "Qual è la data di fondazione (giorno, mese e anno) della città, oggi in Polonia, in cui è nato l'imprenditore polacco che diresse la multinazionale informatica produttrice dell'home computer uscito nel 1982 e noto con un numero nel nome?",
+   "risposta": "29 luglio 1423",
+   "attributo": {
+    "relazione": "data di fondazione",
+    "id_relazione": "P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q99775",
+     "nome": "Commodore 64",
+     "relazione": null
+    },
+    {
+     "qid": "Q208305",
+     "nome": "Commodore International",
+     "relazione": "produttore"
+    },
+    {
+     "qid": "Q380363",
+     "nome": "Jack Tramiel",
+     "relazione": "direttore"
+    },
+    {
+     "qid": "Q580",
+     "nome": "Łódź",
+     "relazione": "luogo di nascita"
+    }
+   ],
+   "motivo_unicita": "Il percorso porta in modo univoco dal Commodore 64 alla Commodore International, a Jack Tramiel e alla sua città natale Łódź, di cui si chiede la data di fondazione.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": ""
+   }
+  },
+  {
+   "tema": "informatica",
+   "seme": "ENIAC",
+   "domanda": "Qual è la data di morte (giorno, mese e anno) dell'ammiraglio inglese che fu padre dell'esploratore britannico fondatore della città statunitense in cui ha sede l'università privata dove fu realizzato il quarto computer elettronico digitale della storia?",
+   "risposta": "16 settembre 1670",
+   "attributo": {
+    "relazione": "data di morte",
+    "id_relazione": "P570"
+   },
+   "percorso": [
+    {
+     "qid": "Q169399",
+     "nome": "ENIAC",
+     "relazione": null
+    },
+    {
+     "qid": "Q49117",
+     "nome": "Università della Pennsylvania",
+     "relazione": "luogo"
+    },
+    {
+     "qid": "Q1345",
+     "nome": "Filadelfia",
+     "relazione": "sede"
+    },
+    {
+     "qid": "Q209152",
+     "nome": "William Penn",
+     "relazione": "fondatore"
+    },
+    {
+     "qid": "Q656629",
+     "nome": "William Penn",
+     "relazione": "padre"
+    }
+   ],
+   "motivo_unicita": "Il percorso porta da ENIAC all'università, a Filadelfia, al fondatore William Penn l'esploratore e al padre ammiraglio omonimo; la data di morte è univoca.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": ""
+   }
+  },
+  {
+   "tema": "informatica",
+   "seme": "Fortran",
+   "domanda": "Qual è la data di fondazione (giorno, mese e anno) della contea statunitense che amministra la città della Pennsylvania in cui è nato l'informatico e matematico che progettò il celebre linguaggio di programmazione scientifico nato negli anni '50 per il calcolo numerico?",
+   "risposta": "10 marzo 1682",
+   "attributo": {
+    "relazione": "data di fondazione",
+    "id_relazione": "P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q83303",
+     "nome": "Fortran",
+     "relazione": null
+    },
+    {
+     "qid": "Q92746",
+     "nome": "John Backus",
+     "relazione": "progettista"
+    },
+    {
+     "qid": "Q1345",
+     "nome": "Filadelfia",
+     "relazione": "luogo di nascita"
+    },
+    {
+     "qid": "Q496900",
+     "nome": "contea di Filadelfia",
+     "relazione": "unità amministrativa"
+    }
+   ],
+   "motivo_unicita": "Il linguaggio indica Fortran, il suo progettista John Backus, nato a Filadelfia, la cui contea è l'unità amministrativa; si chiede la data di fondazione di tale contea.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": "25 agosto 1682"
+   }
+  },
+  {
+   "tema": "storia",
+   "seme": "Battaglia di Hastings",
+   "domanda": "Qual è la data di fondazione (giorno, mese e anno) del distretto amministrativo dell'East Sussex che comprende la cittadina in cui si svolse la celebre battaglia del 1066 tra anglosassoni e normanni per il controllo dell'Inghilterra?",
+   "risposta": "1 aprile 1974",
+   "attributo": {
+    "relazione": "data di fondazione",
+    "id_relazione": "P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q83224",
+     "nome": "battaglia di Hastings",
+     "relazione": null
+    },
+    {
+     "qid": "Q737593",
+     "nome": "Battle",
+     "relazione": "luogo"
+    },
+    {
+     "qid": "Q1811605",
+     "nome": "Rother",
+     "relazione": "unità amministrativa"
+    }
+   ],
+   "motivo_unicita": "Il distretto locale dell'East Sussex che include la cittadina del luogo della battaglia di Hastings è Rother, e ha un'unica data di fondazione.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": ""
+   }
+  },
+  {
+   "tema": "storia",
+   "seme": "Ducato di Savoia",
+   "domanda": "Qual è il codice postale della città che è capitale dello stato dell'Europa meridionale, membro dell'Unione europea, subentrato all'ente statale che dal 1861 al 1946 raccolse l'eredità dell'antico Stato esteso sull'Isola omonima, il quale a sua volta seguì il Ducato sabaudo del 1416?",
+   "risposta": "00118–00199",
+   "attributo": {
+    "relazione": "codice postale",
+    "id_relazione": "P281"
+   },
+   "percorso": [
+    {
+     "qid": "Q426025",
+     "nome": "Ducato di Savoia",
+     "relazione": null
+    },
+    {
+     "qid": "Q165154",
+     "nome": "Regno di Sardegna",
+     "relazione": "seguito da"
+    },
+    {
+     "qid": "Q172579",
+     "nome": "Regno d'Italia",
+     "relazione": "sostituito da"
+    },
+    {
+     "qid": "Q38",
+     "nome": "Italia",
+     "relazione": "sostituito da"
+    },
+    {
+     "qid": "Q220",
+     "nome": "Roma",
+     "relazione": "capitale"
+    }
+   ],
+   "motivo_unicita": "Roma è l'unica capitale dell'Italia, e la catena Ducato di Savoia → Regno di Sardegna → Regno d'Italia → Italia → capitale porta a un solo codice postale.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": "00100"
+   }
+  },
+  {
+   "tema": "storia",
+   "seme": "Spedizione dei Mille",
+   "domanda": "Qual è la data di fondazione (giorno, mese e anno) dell'ente locale istituito nel 2015, corrispondente alla precedente provincia, che ha come capoluogo la città capitale dell'isola in cui nel 1860 sbarcò la celebre impresa garibaldina del Risorgimento?",
+   "risposta": "4 agosto 2015",
+   "attributo": {
+    "relazione": "data di fondazione",
+    "id_relazione": "P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q228284",
+     "nome": "Spedizione dei Mille",
+     "relazione": null
+    },
+    {
+     "qid": "Q4951156",
+     "nome": "Sicilia",
+     "relazione": "luogo"
+    },
+    {
+     "qid": "Q2656",
+     "nome": "Palermo",
+     "relazione": "capitale"
+    },
+    {
+     "qid": "Q20795016",
+     "nome": "città metropolitana di Palermo",
+     "relazione": "unità amministrativa"
+    }
+   ],
+   "motivo_unicita": "Il percorso porta dalla spedizione garibaldina del 1860 alla Sicilia, a Palermo e infine alla città metropolitana di Palermo, di cui si chiede la data di fondazione, unica.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": ""
+   }
+  },
+  {
+   "tema": "storia",
+   "seme": "Battaglia di Legnano",
+   "domanda": "Qual è la data di fondazione (giorno, mese e anno) dell'ente locale italiano, corrispondente alla precedente provincia, che comprende il comune in cui nel 1176 l'esercito di Federico Barbarossa si scontrò con la Lega Lombarda?",
+   "risposta": "1 gennaio 2015",
+   "attributo": {
+    "relazione": "data di fondazione",
+    "id_relazione": "P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q283364",
+     "nome": "battaglia di Legnano",
+     "relazione": null
+    },
+    {
+     "qid": "Q42782",
+     "nome": "Legnano",
+     "relazione": "luogo"
+    },
+    {
+     "qid": "Q18288155",
+     "nome": "città metropolitana di Milano",
+     "relazione": "unità amministrativa"
+    }
+   ],
+   "motivo_unicita": "L'ente è la città metropolitana che comprende il comune sede della battaglia del 1176 tra Barbarossa e la Lega Lombarda; la sua data di fondazione è unica.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": ""
+   }
+  },
+  {
+   "tema": "storia",
+   "seme": "Pace di Augusta",
+   "domanda": "Qual è l'altitudine, in metri sul livello del mare, della città tedesca in cui fu stipulato il trattato del 1552 che precedette la pace religiosa del 1555 conclusa tra Ferdinando d'Asburgo e la Lega di Smalcalda?",
+   "risposta": "312 m",
+   "attributo": {
+    "relazione": "altitudine",
+    "id_relazione": "P2044"
+   },
+   "percorso": [
+    {
+     "qid": "Q154577",
+     "nome": "pace di Augusta",
+     "relazione": null
+    },
+    {
+     "qid": "Q703081",
+     "nome": "pace di Passavia",
+     "relazione": "preceduto da"
+    },
+    {
+     "qid": "Q4190",
+     "nome": "Passavia",
+     "relazione": "luogo"
+    }
+   ],
+   "motivo_unicita": "Il trattato del 1552 che precede la pace religiosa del 1555 è la pace di Passavia, e la città in cui fu stipulato è Passavia, di cui si chiede l'altitudine.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": ""
+   }
+  },
+  {
+   "tema": "storia",
+   "seme": "Presa di Roma",
+   "domanda": "Qual è la data di fondazione (giorno, mese e anno) dell'ex provincia italiana che sostituì, a partire dal 2015, la città metropolitana con capoluogo nella città dove si svolse l'evento del 1870 appartenente al Risorgimento, cioè la capitale d'Italia?",
+   "risposta": "15 ottobre 1870",
+   "attributo": {
+    "relazione": "data di fondazione",
+    "id_relazione": "P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q2604547",
+     "nome": "presa di Roma",
+     "relazione": null
+    },
+    {
+     "qid": "Q220",
+     "nome": "Roma",
+     "relazione": "luogo"
+    },
+    {
+     "qid": "Q18288160",
+     "nome": "città metropolitana di Roma Capitale",
+     "relazione": "unità amministrativa"
+    },
+    {
+     "qid": "Q15119",
+     "nome": "provincia di Roma",
+     "relazione": "sostituisce"
+    }
+   ],
+   "motivo_unicita": "La catena porta a un'unica entità, la provincia di Roma (1870-2014), sostituita dalla città metropolitana; si chiede la sua data di fondazione.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": ""
+   }
+  },
+  {
+   "tema": "storia",
+   "seme": "Battaglia di Marignano",
+   "domanda": "Qual è la data di fondazione (giorno, mese e anno) dell'ex provincia italiana, esistita dal 1861 al 2014, che è stata sostituita dall'ente locale in cui si trova il comune dove fu combattuta la battaglia del 13 e 14 settembre 1515?",
+   "risposta": "23 ottobre 1859",
+   "attributo": {
+    "relazione": "data di fondazione",
+    "id_relazione": "P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q330",
+     "nome": "battaglia di Marignano",
+     "relazione": null
+    },
+    {
+     "qid": "Q42932",
+     "nome": "Melegnano",
+     "relazione": "luogo"
+    },
+    {
+     "qid": "Q18288155",
+     "nome": "città metropolitana di Milano",
+     "relazione": "unità amministrativa"
+    },
+    {
+     "qid": "Q15121",
+     "nome": "provincia di Milano",
+     "relazione": "sostituisce"
+    }
+   ],
+   "motivo_unicita": "La battaglia del settembre 1515 identifica Melegnano, che appartiene alla città metropolitana istituita nel 2015, la quale sostituì l'ex provincia (1861-2014); si chiede la data di fondazione di quest'ultima.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": "1° gennaio 1861"
+   }
+  },
+  {
+   "tema": "storia",
+   "seme": "Regno di Napoli",
+   "domanda": "Qual è la data di fondazione (giorno, mese e anno) dell'ex provincia italiana, attiva dal 1861 al 2014, che ha preceduto l'ente locale corrispondente all'unità amministrativa del capoluogo campano che fu capitale dell'antico Stato italiano durato dal 1302 al 1816?",
+   "risposta": "27 gennaio 1861",
+   "attributo": {
+    "relazione": "data di fondazione",
+    "id_relazione": "P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q173065",
+     "nome": "Regno di Napoli",
+     "relazione": null
+    },
+    {
+     "qid": "Q2634",
+     "nome": "Napoli",
+     "relazione": "capitale"
+    },
+    {
+     "qid": "Q18241891",
+     "nome": "città metropolitana di Napoli",
+     "relazione": "unità amministrativa"
+    },
+    {
+     "qid": "Q15123",
+     "nome": "provincia di Napoli",
+     "relazione": "sostituisce"
+    }
+   ],
+   "motivo_unicita": "Il percorso porta dal Regno di Napoli alla sua capitale, poi alla città metropolitana e infine alla provincia che questa ha sostituito; ne si chiede la data di fondazione.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": "2 gennaio 1861"
+   }
+  },
+  {
+   "tema": "storia",
+   "seme": "Giovine Italia",
+   "domanda": "Qual è la data di fondazione (giorno, mese e anno) dell'ente locale italiano istituito nel 2015, corrispondente alla precedente provincia del capoluogo ligure dove morì la madre del patriota che fondò l'associazione politica attiva dal 1831 al 1848 nota come Giovine Italia?",
+   "risposta": "1 gennaio 2015",
+   "attributo": {
+    "relazione": "data di fondazione",
+    "id_relazione": "P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q938903",
+     "nome": "Giovine Italia",
+     "relazione": null
+    },
+    {
+     "qid": "Q187336",
+     "nome": "Giuseppe Mazzini",
+     "relazione": "fondatore"
+    },
+    {
+     "qid": "Q19693413",
+     "nome": "Maria Drago",
+     "relazione": "madre"
+    },
+    {
+     "qid": "Q1449",
+     "nome": "Genova",
+     "relazione": "luogo di morte"
+    },
+    {
+     "qid": "Q18288152",
+     "nome": "città metropolitana di Genova",
+     "relazione": "unità amministrativa"
+    }
+   ],
+   "motivo_unicita": "La catena passa da Giovine Italia a Mazzini, a sua madre, al suo luogo di morte (Genova) e infine alla città metropolitana, di cui si chiede la data di fondazione.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": ""
+   }
+  },
+  {
+   "tema": "scienze",
+   "seme": "Isaac Newton",
+   "domanda": "Qual è il codice postale della cittadina del Lincolnshire, in Inghilterra, in cui morì la madre del celebre matematico e fisico inglese autore dei Principia, nato nel 1642 e morto nel 1726?",
+   "risposta": "PE9",
+   "attributo": {
+    "relazione": "codice postale",
+    "id_relazione": "P281"
+   },
+   "percorso": [
+    {
+     "qid": "Q935",
+     "nome": "Isaac Newton",
+     "relazione": null
+    },
+    {
+     "qid": "Q3126832",
+     "nome": "Hannah Ayscough",
+     "relazione": "madre"
+    },
+    {
+     "qid": "Q1000662",
+     "nome": "Stamford",
+     "relazione": "luogo di morte"
+    }
+   ],
+   "motivo_unicita": "Newton ha una sola madre, Hannah Ayscough, il cui luogo di morte nei dati è Stamford; la domanda chiede il codice postale di quella cittadina.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": "NG33 5NR (incerto)"
+   }
+  },
+  {
+   "tema": "scienze",
+   "seme": "Rita Levi-Montalcini",
+   "domanda": "Qual è la data di fondazione (giorno, mese e anno) dell'ex ente provinciale italiano, esistito dal 1870 al 2014, a cui è subentrata la città metropolitana che amministra il luogo dove morì la neurologa italiana (1909-2012) famosa per gli studi sul fattore di crescita nervoso?",
+   "risposta": "15 ottobre 1870",
+   "attributo": {
+    "relazione": "data di fondazione",
+    "id_relazione": "P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q185007",
+     "nome": "Rita Levi-Montalcini",
+     "relazione": null
+    },
+    {
+     "qid": "Q220",
+     "nome": "Roma",
+     "relazione": "luogo di morte"
+    },
+    {
+     "qid": "Q18288160",
+     "nome": "città metropolitana di Roma Capitale",
+     "relazione": "unità amministrativa"
+    },
+    {
+     "qid": "Q15119",
+     "nome": "provincia di Roma",
+     "relazione": "sostituisce"
+    }
+   ],
+   "motivo_unicita": "La catena porta da Rita Levi-Montalcini al luogo di morte, alla città metropolitana e alla provincia che ha preceduto, di cui si chiede la data di fondazione.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": "1º gennaio 1870"
+   }
+  },
+  {
+   "tema": "scienze",
+   "seme": "Lazzaro Spallanzani",
+   "domanda": "Qual è l'altitudine sul livello del mare del capoluogo emiliano della provincia in cui si trova il comune che diede i natali al gesuita e biologo italiano Lazzaro Spallanzani, vissuto tra il 1729 e il 1799?",
+   "risposta": "68 m",
+   "attributo": {
+    "relazione": "altitudine",
+    "id_relazione": "P2044"
+   },
+   "percorso": [
+    {
+     "qid": "Q213351",
+     "nome": "Lazzaro Spallanzani",
+     "relazione": null
+    },
+    {
+     "qid": "Q111289",
+     "nome": "Scandiano",
+     "relazione": "luogo di nascita"
+    },
+    {
+     "qid": "Q16254",
+     "nome": "provincia di Reggio Emilia",
+     "relazione": "unità amministrativa"
+    },
+    {
+     "qid": "Q13360",
+     "nome": "Reggio Emilia",
+     "relazione": "capitale"
+    }
+   ],
+   "motivo_unicita": "Spallanzani è nato a Scandiano, in provincia di Reggio Emilia, il cui capoluogo è Reggio Emilia; l'altitudine è un valore unico del comune.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": "58 m s.l.m."
+   }
+  },
+  {
+   "tema": "scienze",
+   "seme": "Dmitrij Ivanovič Mendeleev",
+   "domanda": "Qual è la data di fondazione (giorno, mese e anno) della città federale russa in cui è morta la madre del celebre chimico russo (1834-1907) ideatore della tavola periodica degli elementi?",
+   "risposta": "16 maggio 1703",
+   "attributo": {
+    "relazione": "data di fondazione",
+    "id_relazione": "P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q9106",
+     "nome": "Dmitrij Ivanovič Mendeleev",
+     "relazione": null
+    },
+    {
+     "qid": "Q133481042",
+     "nome": "Maria Dmitrievna Mendeleeva",
+     "relazione": "madre"
+    },
+    {
+     "qid": "Q656",
+     "nome": "San Pietroburgo",
+     "relazione": "luogo di morte"
+    }
+   ],
+   "motivo_unicita": "Il chimico russo del 1834-1907 è Mendeleev; sua madre Maria Kornileva morì a San Pietroburgo, di cui si chiede la data di fondazione.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": "4 aprile 1147"
+   }
+  },
+  {
+   "tema": "scienze",
+   "seme": "Max Planck",
+   "domanda": "Qual è la data di fondazione (giorno, mese e anno) del distretto del Regno di Baviera, attivo dal 1808 al 1837, che fu sostituito dal distretto governativo il cui capoluogo è la città dove morì il giurista tedesco padre del celebre fisico che formulò la teoria dei quanti?",
+   "risposta": "1 ottobre 1808",
+   "attributo": {
+    "relazione": "data di fondazione",
+    "id_relazione": "P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q9021",
+     "nome": "Max Planck",
+     "relazione": null
+    },
+    {
+     "qid": "Q106490",
+     "nome": "Julius Wilhelm Planck",
+     "relazione": "padre"
+    },
+    {
+     "qid": "Q1726",
+     "nome": "Monaco di Baviera",
+     "relazione": "luogo di morte"
+    },
+    {
+     "qid": "Q10562",
+     "nome": "Alta Baviera",
+     "relazione": "unità amministrativa"
+    },
+    {
+     "qid": "Q1673724",
+     "nome": "Isarkreis",
+     "relazione": "sostituisce"
+    }
+   ],
+   "motivo_unicita": "Il distretto del Regno di Baviera (1808-1837) sostituito dall'Alta Baviera, distretto della città in cui morì il padre di Max Planck, è univocamente l'Isarkreis.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": "1° maggio 1808"
+   }
+  },
+  {
+   "tema": "scienze",
+   "seme": "Niels Bohr",
+   "domanda": "Qual è la data di fondazione (giorno, mese e anno) della regione amministrativa danese a cui appartiene la città capitale in cui morì il fisico e matematico danese nato nel 1885 e scomparso nel 1962?",
+   "risposta": "1 gennaio 2007",
+   "attributo": {
+    "relazione": "data di fondazione",
+    "id_relazione": "P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q7085",
+     "nome": "Niels Bohr",
+     "relazione": null
+    },
+    {
+     "qid": "Q1748",
+     "nome": "Copenaghen",
+     "relazione": "luogo di morte"
+    },
+    {
+     "qid": "Q26073",
+     "nome": "Hovedstaden",
+     "relazione": "unità amministrativa"
+    }
+   ],
+   "motivo_unicita": "La catena parte dal fisico danese (1885-1962), passa per la capitale dove morì e arriva alla regione di cui fa parte; la domanda chiede la data di fondazione di quella regione.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": ""
+   }
+  },
+  {
+   "tema": "scienze",
+   "seme": "James Clerk Maxwell",
+   "domanda": "Qual è la data di fondazione (giorno, mese e anno) dello stato insulare dell'Europa nord-occidentale che comprende la nazione costitutiva in cui è nata la città natale della fisica britannica che sposò il celebre fisico e matematico scozzese autore delle equazioni dell'elettromagnetismo?",
+   "risposta": "6 dicembre 1921",
+   "attributo": {
+    "relazione": "data di fondazione",
+    "id_relazione": "P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q9095",
+     "nome": "James Clerk Maxwell",
+     "relazione": null
+    },
+    {
+     "qid": "Q27654900",
+     "nome": "Katherine Clerk Maxwell",
+     "relazione": "coniuge"
+    },
+    {
+     "qid": "Q4093",
+     "nome": "Glasgow",
+     "relazione": "luogo di nascita"
+    },
+    {
+     "qid": "Q22",
+     "nome": "Scozia",
+     "relazione": "luogo"
+    },
+    {
+     "qid": "Q145",
+     "nome": "Regno Unito",
+     "relazione": "unità amministrativa"
+    }
+   ],
+   "motivo_unicita": "Il percorso porta da Maxwell alla moglie Katherine, a Glasgow, alla Scozia e infine al Regno Unito, di cui si chiede la data di fondazione.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": "1 gennaio 1801"
+   }
+  },
+  {
+   "tema": "scienze",
+   "seme": "Carlo Rubbia",
+   "domanda": "Qual è la data di fondazione (giorno, mese e anno) dell'ente locale di decentramento regionale che amministra la città friulana in cui nacque, nel 1934, il fisico italiano che condivise un celebre premio svedese per la fisica?",
+   "risposta": "1 luglio 2020",
+   "attributo": {
+    "relazione": "data di fondazione",
+    "id_relazione": "P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q187199",
+     "nome": "Carlo Rubbia",
+     "relazione": null
+    },
+    {
+     "qid": "Q6596",
+     "nome": "Gorizia",
+     "relazione": "luogo di nascita"
+    },
+    {
+     "qid": "Q104182151",
+     "nome": "ente di decentramento regionale di Gorizia",
+     "relazione": "unità amministrativa"
+    }
+   ],
+   "motivo_unicita": "Il fisico nato a Gorizia nel 1934 porta alla città, il cui ente di decentramento regionale ha una sola data di fondazione.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": ""
+   }
+  },
+  {
+   "tema": "geografia_cultura",
+   "seme": "Basilica di San Marco",
+   "domanda": "Qual è la data di fondazione (giorno, mese e anno) dell'ex provincia italiana, attiva dal 1866 al 2014, che è stata sostituita dall'ente locale istituito nel 2015 nel capoluogo di regione dove nacque il doge che fu architetto della celebre basilica veneziana dedicata all'evangelista patrono della città?",
+   "risposta": "23 dicembre 1866",
+   "attributo": {
+    "relazione": "data di fondazione",
+    "id_relazione": "P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q172988",
+     "nome": "basilica di San Marco",
+     "relazione": null
+    },
+    {
+     "qid": "Q522675",
+     "nome": "Domenico I Contarini",
+     "relazione": "architetto"
+    },
+    {
+     "qid": "Q641",
+     "nome": "Venezia",
+     "relazione": "luogo di nascita"
+    },
+    {
+     "qid": "Q3678587",
+     "nome": "città metropolitana di Venezia",
+     "relazione": "unità amministrativa"
+    },
+    {
+     "qid": "Q16310",
+     "nome": "provincia di Venezia",
+     "relazione": "sostituisce"
+    }
+   ],
+   "motivo_unicita": "La catena porta dalla basilica di San Marco a Domenico I Contarini, al suo luogo di nascita Venezia, alla città metropolitana e infine alla provincia di Venezia, di cui si chiede la data di fondazione.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": "12 dicembre 1866"
+   }
+  },
+  {
+   "tema": "geografia_cultura",
+   "seme": "Reggia di Caserta",
+   "domanda": "Qual è la data di fondazione (giorno, mese e anno) dell'ente locale istituito nel 2015, corrispondente alla precedente provincia, che comprende la capitale dello stato proprietario della residenza reale di Caserta?",
+   "risposta": "1 gennaio 2015",
+   "attributo": {
+    "relazione": "data di fondazione",
+    "id_relazione": "P571"
+   },
+   "percorso": [
+    {
+     "qid": "Q327983",
+     "nome": "reggia di Caserta",
+     "relazione": null
+    },
+    {
+     "qid": "Q38",
+     "nome": "Italia",
+     "relazione": "proprietario"
+    },
+    {
+     "qid": "Q220",
+     "nome": "Roma",
+     "relazione": "capitale"
+    },
+    {
+     "qid": "Q18288160",
+     "nome": "città metropolitana di Roma Capitale",
+     "relazione": "unità amministrativa"
+    }
+   ],
+   "motivo_unicita": "La catena parte dalla reggia di Caserta, passa allo stato proprietario (Italia) e alla sua capitale (Roma), e arriva all'ente metropolitano istituito nel 2015 di cui si chiede la data di fondazione.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": ""
+   }
+  },
+  {
+   "tema": "geografia_cultura",
+   "seme": "Museo del Louvre",
+   "domanda": "Qual è la data di morte (giorno, mese e anno) del politico italiano che fu padre del nobile corso, a sua volta padre del generale e imperatore francese che fondò il celebre museo parigino di arte e archeologia?",
+   "risposta": "13 dicembre 1763",
+   "attributo": {
+    "relazione": "data di morte",
+    "id_relazione": "P570"
+   },
+   "percorso": [
+    {
+     "qid": "Q19675",
+     "nome": "Museo del Louvre",
+     "relazione": null
+    },
+    {
+     "qid": "Q517",
+     "nome": "Napoleone Bonaparte",
+     "relazione": "fondatore"
+    },
+    {
+     "qid": "Q151869",
+     "nome": "Carlo Maria Buonaparte",
+     "relazione": "padre"
+    },
+    {
+     "qid": "Q1528420",
+     "nome": "Giuseppe Maria Buonaparte",
+     "relazione": "padre"
+    }
+   ],
+   "motivo_unicita": "Il museo parigino porta al suo fondatore (Napoleone), poi al padre Carlo Maria e infine al nonno paterno Giuseppe Maria Buonaparte, di cui si chiede la data di morte.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": ""
+   }
+  },
+  {
+   "tema": "geografia_cultura",
+   "seme": "Aida",
+   "domanda": "Qual è la data di morte (giorno, mese e anno) della consorte di Ibrahim d'Egitto che fu madre del khedivè d'Egitto dal 1863 al 1879, committente dell'opera lirica di Giuseppe Verdi ambientata nell'antico Egitto con una principessa etiope come protagonista?",
+   "risposta": "21 giugno 1885",
+   "attributo": {
+    "relazione": "data di morte",
+    "id_relazione": "P570"
+   },
+   "percorso": [
+    {
+     "qid": "Q171277",
+     "nome": "Aida",
+     "relazione": null
+    },
+    {
+     "qid": "Q159378",
+     "nome": "Isma'il Pascià",
+     "relazione": "committente"
+    },
+    {
+     "qid": "Q19667280",
+     "nome": "Hoshiyar Qadin",
+     "relazione": "madre"
+    }
+   ],
+   "motivo_unicita": "La catena parte dall'opera di Verdi, passa al committente (il khedivè in carica 1863-1879) e arriva a sua madre, consorte di Ibrahim d'Egitto: una sola persona, di cui si chiede la data di morte.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": "1876"
+   }
+  },
+  {
+   "tema": "geografia_cultura",
+   "seme": "Decameron",
+   "domanda": "Qual è l'altitudine (in metri sul livello del mare) del capoluogo toscano in cui nacque lo scrittore autore di una celebre raccolta di cento novelle narrate da dieci giovani durante la peste?",
+   "risposta": "50 m",
+   "attributo": {
+    "relazione": "altitudine",
+    "id_relazione": "P2044"
+   },
+   "percorso": [
+    {
+     "qid": "Q16438",
+     "nome": "Decameron",
+     "relazione": null
+    },
+    {
+     "qid": "Q1402",
+     "nome": "Giovanni Boccaccio",
+     "relazione": "autore"
+    },
+    {
+     "qid": "Q2044",
+     "nome": "Firenze",
+     "relazione": "luogo di nascita"
+    }
+   ],
+   "motivo_unicita": "L'opera con cento novelle narrate da dieci giovani identifica il Decameron, il cui autore Boccaccio è nato a Firenze, capoluogo toscano; si chiede l'altitudine di Firenze.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": ""
+   }
+  },
+  {
+   "tema": "geografia_cultura",
+   "seme": "Il nome della rosa",
+   "domanda": "Qual è l'altitudine del capoluogo lombardo in cui è morto l'autore del romanzo che segue quello ispirato a un celebre pendolo e che è ambientato su una nave al largo di un'isola, ovvero il romanzo che nell'ordine di pubblicazione viene dopo il famoso giallo medievale ambientato in un'abbazia?",
+   "risposta": "138 m",
+   "attributo": {
+    "relazione": "altitudine",
+    "id_relazione": "P2044"
+   },
+   "percorso": [
+    {
+     "qid": "Q172850",
+     "nome": "Il nome della rosa",
+     "relazione": null
+    },
+    {
+     "qid": "Q437791",
+     "nome": "Il pendolo di Foucault",
+     "relazione": "seguito da"
+    },
+    {
+     "qid": "Q472031",
+     "nome": "L'isola del giorno prima",
+     "relazione": "seguito da"
+    },
+    {
+     "qid": "Q12807",
+     "nome": "Umberto Eco",
+     "relazione": "autore"
+    },
+    {
+     "qid": "Q490",
+     "nome": "Milano",
+     "relazione": "luogo di morte"
+    }
+   ],
+   "motivo_unicita": "La catena parte dal romanzo d'esordio di Eco, passa per il secondo e il terzo romanzo, risale all'autore e arriva al suo luogo di morte, Milano, di cui si chiede l'altitudine.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": "120 m s.l.m."
+   }
+  },
+  {
+   "tema": "geografia_cultura",
+   "seme": "Ultima Cena (Leonardo)",
+   "domanda": "Qual è la data di nascita (giorno, mese e anno) della duchessa consorte di Milano che fu madre del duca che commissionò l'affresco di Leonardo da Vinci raffigurante l'ultimo pasto di Gesù con gli apostoli?",
+   "risposta": "31 marzo 1425",
+   "attributo": {
+    "relazione": "data di nascita",
+    "id_relazione": "P569"
+   },
+   "percorso": [
+    {
+     "qid": "Q128910",
+     "nome": "Ultima Cena",
+     "relazione": null
+    },
+    {
+     "qid": "Q236853",
+     "nome": "Ludovico il Moro",
+     "relazione": "committente"
+    },
+    {
+     "qid": "Q1232642",
+     "nome": "Bianca Maria Visconti",
+     "relazione": "madre"
+    }
+   ],
+   "motivo_unicita": "Il duca committente dell'Ultima Cena è Ludovico il Moro, la cui madre è Bianca Maria Visconti, duchessa consorte di Milano; ha una sola data di nascita.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": "1425"
+   }
+  },
+  {
+   "tema": "geografia_cultura",
+   "seme": "Rigoletto",
+   "domanda": "Qual è il codice postale della frazione del comune di Busseto in cui nacque il compositore italiano (1813-1901) che scrisse l'opera lirica intitolata Rigoletto?",
+   "risposta": "43010",
+   "attributo": {
+    "relazione": "codice postale",
+    "id_relazione": "P281"
+   },
+   "percorso": [
+    {
+     "qid": "Q189234",
+     "nome": "Rigoletto",
+     "relazione": null
+    },
+    {
+     "qid": "Q7317",
+     "nome": "Giuseppe Verdi",
+     "relazione": "compositore"
+    },
+    {
+     "qid": "Q1810148",
+     "nome": "Roncole Verdi",
+     "relazione": "luogo di nascita"
+    }
+   ],
+   "motivo_unicita": "Rigoletto porta al suo compositore, Verdi, e il suo luogo di nascita è la frazione Roncole Verdi, di cui si chiede il codice postale.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": "43011"
+   }
+  },
+  {
+   "tema": "geografia_cultura",
+   "seme": "Madama Butterfly",
+   "domanda": "Qual è la data di nascita (giorno, mese e anno) del compositore italiano che fu padre del compositore, a sua volta padre dell'autore di un'opera lirica su una giovane geisha giapponese sposata a un ufficiale della marina americana?",
+   "risposta": "5 aprile 1772",
+   "attributo": {
+    "relazione": "data di nascita",
+    "id_relazione": "P569"
+   },
+   "percorso": [
+    {
+     "qid": "Q19005",
+     "nome": "Madama Butterfly",
+     "relazione": null
+    },
+    {
+     "qid": "Q7311",
+     "nome": "Giacomo Puccini",
+     "relazione": "compositore"
+    },
+    {
+     "qid": "Q3311304",
+     "nome": "Michele Puccini",
+     "relazione": "padre"
+    },
+    {
+     "qid": "Q3034758",
+     "nome": "Domenico Puccini",
+     "relazione": "padre"
+    }
+   ],
+   "motivo_unicita": "Il percorso risale da Madama Butterfly a Puccini, poi a suo padre Michele e al nonno Domenico; la data di nascita è quella di Domenico Puccini.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": "1772"
+   }
+  },
+  {
+   "tema": "geografia_cultura",
+   "seme": "Pietà vaticana",
+   "domanda": "Qual è l'altitudine della città in cui morì l'artista che scolpì la celebre scultura raffigurante la Madonna con il Cristo morto, conservata nella basilica di San Pietro in Vaticano?",
+   "risposta": "21 m",
+   "attributo": {
+    "relazione": "altitudine",
+    "id_relazione": "P2044"
+   },
+   "percorso": [
+    {
+     "qid": "Q235242",
+     "nome": "Pietà vaticana",
+     "relazione": null
+    },
+    {
+     "qid": "Q5592",
+     "nome": "Michelangelo Buonarroti",
+     "relazione": "creatore"
+    },
+    {
+     "qid": "Q220",
+     "nome": "Roma",
+     "relazione": "luogo di morte"
+    }
+   ],
+   "motivo_unicita": "La scultura è la Pietà vaticana, il cui creatore è Michelangelo; il suo luogo di morte è Roma, di cui si chiede l'altitudine.",
+   "controlli": {
+    "risposta_assente_dalla_domanda": true,
+    "ultima_entita_assente": true,
+    "e_una_domanda": true,
+    "lunghezza_ok": true,
+    "superati": true
+   },
+   "filtro": {
+    "modello": "haiku",
+    "a_memoria": "circa 20 m s.l.m."
+   }
+  }
+ ]
+}
