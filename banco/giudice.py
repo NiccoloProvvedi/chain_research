@@ -27,16 +27,33 @@ def normalizza(testo: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[^\w ]", " ", "".join(c for c in testo if not unicodedata.combining(c))))
 
 
+# Un meno davanti a un numero: non il trattino di un intervallo («00118–00199») né di una data («1973-07-24»).
+_NEGATIVO = re.compile(r"(?<![\w.,])(?<!\d\s)[−–-]\s?(\d[\d.,]*)")
+_SOTTO_IL_MARE = re.compile(r"sotto il livello del mare|below sea level", re.I)
+
+
+def _cifre(numero: str) -> str:
+    return numero.rstrip(".,")
+
+
+def _negativi(testo: str) -> set[str]:
+    return {_cifre(n) for n in _NEGATIVO.findall(str(testo))}
+
+
 def uguale_normalizzata(attesa: str, data: str) -> bool:
+    """La risposta attesa compare nella risposta data, con lo stesso segno dei numeri (11/11, domande di controllo:
+    «2 m» attesa, «−2 m s.l.m.» data, contata giusta)."""
     attesa_n, data_n = normalizza(attesa).strip(), normalizza(data)
-    return bool(attesa_n) and re.search(rf"\b{re.escape(attesa_n)}\b", data_n) is not None
+    if not attesa_n or re.search(rf"\b{re.escape(attesa_n)}\b", data_n) is None:
+        return False
+    sotto = _negativi(data) | ({_cifre(n) for n in re.findall(r"\d[\d.,]*", str(data))}
+                               if _SOTTO_IL_MARE.search(str(data)) else set())
+    return all((n in _negativi(attesa)) == (n in sotto) for n in map(_cifre, re.findall(r"\d[\d.,]*", str(attesa))))
 
 
 def _chiedi(istruzioni: str, testo: str) -> str:
-    try:
-        return str(claude_json.chiedi(istruzioni, testo, None, "giudice", modello=MODELLO)[0])
-    except claude_json.ErroreClaude:
-        return ""
+    """Gli errori di Claude salgono: una chiamata fallita non è una risposta sbagliata (11/11)."""
+    return str(claude_json.chiedi(istruzioni, testo, None, "giudice", modello=MODELLO)[0])
 
 
 def risposta_breve(testo: str) -> str:
@@ -55,15 +72,31 @@ def estrai(domanda: str, testo: str) -> str:
     return "" if re.match(r"(NON|NOT)\s+(TROVATA|FOUND)", riga.upper()) else riga[:300]
 
 
-def giudica(domanda: str, attesa: str, data: str) -> tuple[bool, str]:
-    """(corretta, chi ha deciso): "confronto", "giudice", "vuota" o "giudice senza risposta valida"."""
+def finale_di(esito: dict, domanda: str) -> str:
+    """Il valore da giudicare: quello trovato dal programma; solo se manca, quello che Haiku estrae dalla riga
+    «Risposta» (11/11: «00118–00199» e «15 ottobre 1870», giusti, contati sbagliati perché l'estrazione era vuota)."""
+    valore = " ".join(str(esito.get("valore") or "").split())
+    return valore or estrai(domanda, risposta_breve(esito.get("risposta") or ""))
+
+
+def giudica(domanda: str, attesa: str, data: str) -> tuple[bool | None, str]:
+    """(corretta, chi ha deciso): "confronto", "giudice", "vuota", "giudice senza risposta valida"; (None, "giudice
+    in errore") se Claude non ha risposto: la domanda resta da giudicare. Il limite di sessione sale a chi chiama."""
     if not data:
         return False, "vuota"
     if uguale_normalizzata(attesa, data):
         return True, "confronto"
     testo = f"DOMANDA: {domanda}\nRISPOSTA ATTESA: {attesa}\nRISPOSTA DEL MODELLO: {data}"
+    errori = 0
     for _ in range(2):
-        trovato = re.search(r'"corretta"\s*:\s*(true|false)', _chiedi(SISTEMA_GIUDICE, testo))
+        try:
+            risposta = _chiedi(SISTEMA_GIUDICE, testo)
+        except claude_json.LimiteSessione:
+            raise
+        except claude_json.ErroreClaude:
+            errori += 1
+            continue
+        trovato = re.search(r'"corretta"\s*:\s*(true|false)', risposta)
         if trovato:
             return trovato.group(1) == "true", "giudice"
-    return False, "giudice senza risposta valida"
+    return (None, "giudice in errore") if errori == 2 else (False, "giudice senza risposta valida")

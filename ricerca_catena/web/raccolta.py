@@ -157,7 +157,7 @@ class Raccolta:
         esito = {"domanda": self.argomento, "risposta": risposta, "fonti": self._elenco_fonti(),
                  "valore": (self.catena.valore or {}).get("valore"), "trovata": bool(self.catena.valore),
                  "confermata": bool(self.catena.valore) and self.catena._anelli_deboli() == 0,
-                 "secondi": round(time.monotonic() - self._inizio), "costo_usd": round(self.costo, 4),
+                 "secondi": round(self._trascorsi()), "costo_usd": round(self.costo, 4),
                  "motivo_fine": self.motivo_fine, "ricerche": self.ricerche_fatte, "autore": self.autore,
                  "pagine_lette": len(self.pagine_lette), "pezzi": str(self.cartella_pezzi / f"{self.id_piano}.sqlite"),
                  "catena": self.catena.riepilogo(), "pensatore": self.pensatore.riepilogo()}

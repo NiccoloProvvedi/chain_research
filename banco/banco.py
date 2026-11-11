@@ -24,6 +24,7 @@ sys.path.insert(0, str(RADICE / "banco"))
 import giudice  # noqa: E402
 
 from ricerca_catena import configurazione  # noqa: E402
+from ricerca_catena.modello import claude_json  # noqa: E402
 from ricerca_catena.web.fonti.wikipedia_grafo import intervallo_per  # noqa: E402
 
 
@@ -55,6 +56,27 @@ def una_domanda(d: dict, profilo: str, parallelo: int, registra: Path | None = N
     raise RuntimeError(f"nessun esito (codice {uscita.returncode})")
 
 
+def giudica_voce(voce: dict) -> None:
+    """Aggiunge `finale`, `corretta` e `deciso_da`. Se il giudice non risponde la risposta trovata resta, segnata
+    `da_giudicare`: alla ripresa si rifà solo il giudizio, non la domanda."""
+    voce.pop("da_giudicare", None)
+    try:
+        voce["finale"] = giudice.finale_di(voce, voce["domanda"])
+        corretta, voce["deciso_da"] = giudice.giudica(voce["domanda"], voce["attesa"], voce["finale"])
+    except claude_json.ErroreClaude as errore:
+        voce.setdefault("finale", "")
+        corretta, voce["deciso_da"] = None, f"giudice in errore: {errore}"[:200]
+    if corretta is None:
+        voce["da_giudicare"] = True
+    else:
+        voce["corretta"] = corretta
+
+
+def contano(esiti: list[dict]) -> list[dict]:
+    """Le domande giudicate con una risposta attesa buona (`stato_riferimento`: docs/solidita-e-validazione.md §3)."""
+    return [e for e in esiti if "corretta" in e and e.get("stato_riferimento", "ok") == "ok"]
+
+
 def main() -> None:
     a = argparse.ArgumentParser(description="Banco di prova delle domande a catena")
     a.add_argument("--nome", required=True)
@@ -75,7 +97,10 @@ def main() -> None:
     if arg.semi:
         volute = {s.strip() for s in arg.semi.split(",") if s.strip()}
         domande = [d for d in domande if f"{d['tema']}/{d['seme']}" in volute]
-    da_fare = [d for d in domande if "corretta" not in esiti.get(f"{d['tema']}/{d['seme']}", {})]
+    for voce in esiti.values():  # giudizi rimasti in sospeso (limite di sessione, errore del giudice)
+        if voce.get("da_giudicare"):
+            giudica_voce(voce)
+    da_fare = [d for d in domande if not {"corretta", "da_giudicare"} & set(esiti.get(f"{d['tema']}/{d['seme']}", {}))]
     print(f"{len(da_fare)} domande da fare su {len(domande)}; risultati in {cartella}", flush=True)
     serratura = threading.Lock()
     profili = [f"banco_{i + 1}" for i in range(arg.parallelo)]
@@ -88,12 +113,12 @@ def main() -> None:
             profilo = profili.pop(0)
         try:
             esito = una_domanda(d, profilo, arg.parallelo, registra)
-            finale = giudice.estrai(d["domanda"], giudice.risposta_breve(esito["risposta"]))
-            corretta, deciso = giudice.giudica(d["domanda"], d["risposta"], finale)
             voce = {"tema": d["tema"], "seme": d["seme"], "domanda": d["domanda"], "attesa": d["risposta"],
-                    "finale": finale, "corretta": corretta, "deciso_da": deciso, **esito}
-            print(f"{'✓' if corretta else '✗'} {chiave}: attesa «{d['risposta']}», finale «{finale[:80]}» "
-                  f"({esito['secondi']} s, {esito['costo_usd']} $)", flush=True)
+                    "stato_riferimento": d.get("stato_riferimento", "ok"), **esito}
+            giudica_voce(voce)
+            print(f"{'?' if 'corretta' not in voce else '✓' if voce['corretta'] else '✗'} {chiave}: attesa "
+                  f"«{d['risposta']}», finale «{voce['finale'][:80]}» ({esito['secondi']} s, {esito['costo_usd']} $)",
+                  flush=True)
         except Exception as errore:  # noqa: BLE001 - una domanda fallita non ferma la corsa
             voce = {"tema": d["tema"], "seme": d["seme"], "errore": f"{type(errore).__name__}: {errore}"[:500]}
             print(f"ERRORE {chiave}: {errore}", flush=True)
@@ -106,17 +131,23 @@ def main() -> None:
 
     with ThreadPoolExecutor(max_workers=arg.parallelo) as esecutore:
         list(esecutore.map(lavora, da_fare))
-    fatte = [esiti[f"{d['tema']}/{d['seme']}"] for d in domande if "corretta" in esiti.get(f"{d['tema']}/{d['seme']}", {})]
+    fatte = contano([esiti.get(f"{d['tema']}/{d['seme']}", {}) for d in domande])
     giuste = sum(e["corretta"] for e in fatte)
+    confermate = [e for e in fatte if e.get("confermata")]
+    dal_giudice = sum(e.get("deciso_da") == "giudice" for e in fatte)
+    sospese = sum(1 for e in esiti.values() if e.get("da_giudicare"))
     minuti = round(sum(e["secondi"] for e in fatte) / max(1, len(fatte)) / 60, 1)
     costo = round(sum(e["costo_usd"] for e in fatte), 3)
     errori = sum(1 for d in domande if "errore" in esiti.get(f"{d['tema']}/{d['seme']}", {}))
-    print(f"RIEPILOGO {giuste}/{len(fatte)} giuste, {minuti} minuti medi, {costo} $, {errori} errori", flush=True)
+    print(f"RIEPILOGO {giuste}/{len(fatte)} giuste, {minuti} minuti medi, {costo} $, {errori} errori, confermate giuste "
+          f"{sum(e['corretta'] for e in confermate)}/{len(confermate)}, decise dal giudice {dal_giudice}, da giudicare "
+          f"{sospese}", flush=True)
     commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True,
                             cwd=RADICE).stdout.strip() or "?"
     with (RADICE / "banco" / "REGISTRO.md").open("a", encoding="utf-8") as f:
         f.write(f"| {datetime.now():%Y-%m-%d %H:%M} | {arg.nota or arg.nome} | {commit} | {len(domande)} domande | "
-                f"{giuste}/{len(fatte)} | {minuti} | {costo} | {errori} |\n")
+                f"{giuste}/{len(fatte)} | {minuti} | {costo} | {errori} | "
+                f"{sum(e['corretta'] for e in confermate)}/{len(confermate)} | {dal_giudice} |\n")
 
 
 if __name__ == "__main__":

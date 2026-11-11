@@ -1,7 +1,7 @@
 # Registro delle prove del banco
 
-| Data | Cosa si prova | Codice | Esame | Giuste | Minuti medi | Claude $ | Errori |
-|---|---|---|---|---|---|---|---|
+| Data | Cosa si prova | Codice | Esame | Giuste | Minuti medi | Claude $ | Errori | Confermate giuste | Decise dal giudice |
+|---|---|---|---|---|---|---|---|---|---|
 | 2026-10-14 14:47 | passo 2: Claude Haiku legge e scrive (dagli appunti) | dea145c | 1 domande | 0/1 | 3.1 | 0.026 | 0 |
 | 2026-10-14 14:56 | passi 2-4: grafo completo con Claude Haiku | 82cf35f | 1 domande | 0/1 | 3.2 | 0.049 | 0 |
 | 2026-10-14 15:24 | base del giorno: Spark legge, Qwen scrive (giudice Haiku) | 82cf35f | rapido (12) | 7/12 | 2.3 | 0.123 | 0 |
@@ -173,3 +173,4 @@
 | 2026-11-10 01:14 | prova del rigioco | a26b341 | 1 domande | 0/1 | 6.1 | 0.096 | 0 |
 | 2026-11-10 03:03 | 40 domande dopo la revisione, con registrazione (FALSATA: limite di 5 ore non riconosciuto) | a26b341 | 40 domande | 22/40 | 8.1 | 4.378 | 0 |
 | 2026-11-10 14:06 | 40 domande dopo la revisione, con registrazione | 46ae7e2 | 40 domande | 34/40 | 10.1 | 5.559 | 0 |
+| 2026-11-10 18:17 | domande di controllo, corsa 1 | 4f3ba92 | 36 domande | 25/36 | 19.9 | 4.452 | 0 |

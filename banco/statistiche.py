@@ -33,12 +33,31 @@ def mcnemar(solo_a: int, solo_b: int) -> float:
 
 
 def carica(corsa: str) -> dict[str, dict]:
+    """Gli esiti della corsa; se c'è, il nuovo giudizio di `rigiudica.py` (stesso metro per tutte le corse)."""
     cartella = Path(corsa) if Path(corsa).is_dir() else RADICE / "risultati" / "banco" / corsa
-    return json.loads((cartella / "esiti.json").read_text(encoding="utf-8"))
+    nuovo = cartella / "esiti_rigiudicati.json"
+    return json.loads((nuovo if nuovo.is_file() else cartella / "esiti.json").read_text(encoding="utf-8"))
+
+
+def contano(esiti: list[dict]) -> list[dict]:
+    """Le domande giudicate e con una risposta attesa buona."""
+    return [e for e in esiti if "corretta" in e and e.get("stato_riferimento", "ok") == "ok"]
+
+
+def _uguale(a: object, b: object) -> bool:
+    return " ".join(str(a or "").lower().split()) == " ".join(str(b or "").lower().split())
+
+
+def ripetizioni(corse: list[dict[str, dict]]) -> str:
+    """Quante domande danno lo stesso valore e lo stesso «confermata» in tutte le corse che le hanno fatte."""
+    comuni = [k for k in corse[0] if all("valore" in c.get(k, {}) for c in corse)]
+    valore = sum(all(_uguale(c[k]["valore"], corse[0][k]["valore"]) for c in corse) for k in comuni)
+    sigillo = sum(len({bool(c[k].get("confermata")) for c in corse}) == 1 for k in comuni)
+    return f"ripetendo ({len(comuni)} domande comuni): stesso valore {valore}, stesso «confermata» {sigillo}"
 
 
 def riassunto(esiti: list[dict]) -> str:
-    fatte = [e for e in esiti if "corretta" in e]
+    fatte = contano(esiti)
     giuste = sum(e["corretta"] for e in fatte)
     basso, alto = wilson(giuste, len(fatte))
     return f"{giuste}/{len(fatte)} = {giuste / max(1, len(fatte)):.1%} (95%: {basso:.1%}-{alto:.1%})"
@@ -63,20 +82,25 @@ def main() -> None:
     for corsa in arg.corse:
         esiti = list(carica(corsa).values())
         tutte += esiti
-        fatte = [e for e in esiti if "corretta" in e]
-        errori = len(esiti) - len(fatte)
+        fatte = contano(esiti)
+        errori = sum("errore" in e for e in esiti)
+        fuori = sum("corretta" in e for e in esiti) - len(fatte)
+        sospese = sum(1 for e in esiti if "corretta" not in e and "errore" not in e)
         print(f"{corsa}: {riassunto(esiti)}, {sum(e['costo_usd'] for e in fatte):.2f} $, "
               f"{sum(e['secondi'] for e in fatte) / max(1, len(fatte)) / 60:.1f} min medi, {errori} errori, "
-              f"{sum(bool(e.get('confermata')) for e in fatte)} confermate")
+              f"{sum(bool(e.get('confermata')) for e in fatte)} confermate, "
+              f"{sum(e.get('deciso_da') == 'giudice' for e in fatte)} decise dal giudice, {sospese} da giudicare, "
+              f"{fuori} fuori dal conto (risposta attesa non buona)")
     if len(arg.corse) > 1:
+        print(ripetizioni([carica(c) for c in arg.corse]))
         print(f"TOTALE (le ripetizioni non sono indipendenti): {riassunto(tutte)}")
     temi: dict[str, list[dict]] = defaultdict(list)
     for e in tutte:
         temi[e.get("tema", "?")].append(e)
     for tema, esiti in sorted(temi.items()):
         print(f"  {tema}: {riassunto(esiti)}")
-    confermate = [e for e in tutte if e.get("confermata") and "corretta" in e]
-    altre = [e for e in tutte if not e.get("confermata") and "corretta" in e]
+    confermate = [e for e in contano(tutte) if e.get("confermata")]
+    altre = [e for e in contano(tutte) if not e.get("confermata")]
     print(f"  catena tutta confermata: {riassunto(confermate)}")
     print(f"  catena non confermata: {riassunto(altre)}")
 

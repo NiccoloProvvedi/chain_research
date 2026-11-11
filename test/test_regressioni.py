@@ -218,3 +218,10 @@ def test_due_letture_danno_lo_stesso_esito_in_qualunque_ordine() -> None:
         return a.esiti[0]["prova"].testo
 
     assert prova_scelta([lettura(1), lettura(2)]) == prova_scelta([lettura(2), lettura(1)])
+
+
+def test_la_durata_non_conta_l_attesa_del_limite(monkeypatch) -> None:
+    import inspect
+
+    from ricerca_catena.web import raccolta
+    assert '"secondi": round(self._trascorsi())' in inspect.getsource(raccolta.Raccolta.esegui)
