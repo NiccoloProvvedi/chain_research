@@ -29,7 +29,7 @@ from ricerca_catena.web.fonti.wikipedia_grafo import intervallo_per  # noqa: E40
 
 
 def una_domanda(d: dict, profilo: str, parallelo: int, registra: Path | None = None) -> dict:
-    opzioni = {"senza_wikidata": True, "wikipedia_intervallo": intervallo_per(parallelo)}
+    opzioni = {"senza_wikidata": True, "wikipedia_intervallo": intervallo_per(parallelo), "controlli_modello": True}
     richiesta = {"domanda": d["domanda"], "profilo": str(configurazione.cartella("cartella_profili") / profilo),
                  "cartella_pezzi": str(RADICE / "risultati" / "banco" / ".pezzi"), "opzioni": opzioni}
     ambiente = dict(os.environ)

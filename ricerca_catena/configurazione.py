@@ -15,6 +15,8 @@ PREDEFINITE: dict[str, Any] = {
     # Chi guida l'indagine (domande, valutazione, documento) e chi legge per la catena (banco: Haiku, 36/40).
     "modello_regia": "sonnet",
     "modello_catena": "haiku",
+    # Chi rilegge la catena finita cercando l'errore: un modello diverso da quello che l'ha percorsa.
+    "modello_revisione": "sonnet",
     # Limiti di un'indagine (1/11, Niccolò: 5 $ e 2 ore, oppure nessun limite).
     "budget_usd": 5.0,
     "max_minuti": 120,
@@ -43,7 +45,7 @@ def _valido(chiave: str, valore: Any) -> bool:
     if chiave in INTERVALLI:
         minimo, massimo = INTERVALLI[chiave]
         return isinstance(valore, (int, float)) and not isinstance(valore, bool) and minimo <= valore <= massimo
-    if chiave in ("modello_regia", "modello_catena"):
+    if chiave in ("modello_regia", "modello_catena", "modello_revisione"):
         return valore in MODELLI
     if chiave == "senza_limiti":
         return isinstance(valore, bool)

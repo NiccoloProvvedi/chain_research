@@ -159,3 +159,85 @@ def disaccordi_sulla_strada(voci: list[dict], anello) -> list[dict]:
         a = a.da
     deboli = {_chiave(a.da.nome): _chiave(a.nome) for a in strada if a.da is not None and not _legame_forte(a)}
     return [x for x in voci if _chiave(x["da"]) in deboli and deboli[_chiave(x["da"])] != _chiave(x["nome"])]
+
+
+# --- controlli con il modello: il modello propone, queste funzioni decidono ---------------------------------------
+
+_MENO = re.compile(r"(?<![\w.,])(?<!\d\s)[−–-]\s?\d|sotto il livello del mare|below sea level", re.I)
+
+
+def _interi(testo: str) -> set[str]:
+    """I numeri di un valore, senza quelli attaccati a una lettera («km2») e senza unire «21, 1886»."""
+    return {re.sub(r"\D", "", p).lstrip("0") or "0"
+            for p in re.findall(r"(?<![^\W\d_])\d+(?:[.,]\d+)*", str(testo or ""))}
+
+
+def stesso_valore(a: str, b: str) -> bool:
+    """Due valori dicono la stessa cosa: stessi numeri, stesso segno e stesso mese (in qualunque lingua); senza numeri,
+    stesso testo. «56 m s.l.m.» = «56 metri»; «21 giugno 1886» = «June 21, 1886»; «−2 m» ≠ «2 m»."""
+    numeri_a, numeri_b = _interi(a), _interi(b)
+    if numeri_a or numeri_b:
+        mesi_a, mesi_b = _mesi(a), _mesi(b)
+        return (numeri_a == numeri_b and bool(_MENO.search(str(a))) == bool(_MENO.search(str(b)))
+                and (not mesi_a or not mesi_b or mesi_a == mesi_b))
+    return bool(_chiave(a)) and _chiave(a) == _chiave(b)
+
+
+def esamina_revisione(risposta: dict, righe: list) -> dict:
+    """G6. Che cosa resta della revisione dopo il controllo del programma: un «no» o un «sì» valgono solo con il numero
+    di una riga data e parole che in quella riga ci sono davvero; altrimenti l'indizio è «non provato»."""
+    from ..prove.triple import citazione_presente
+    obiezioni, provati, non_provati = [], 0, 0
+    for indizio in risposta.get("indizi") or []:
+        numero, esito = indizio.get("riga"), indizio.get("esito")
+        riga = righe[numero - 1] if isinstance(numero, int) and 1 <= numero <= len(righe) else None
+        valida = riga is not None and citazione_presente(str(indizio.get("citazione") or ""), riga.testo)
+        if esito == "no" and valida:
+            obiezioni.append({"indizio": str(indizio.get("indizio", ""))[:200], "url": riga.url,
+                              "citazione": str(indizio.get("citazione", ""))[:200]})
+        elif esito == "sì" and valida:
+            provati += 1
+        else:
+            non_provati += 1
+    return {"esito": "fatta", "regge": risposta.get("regge", "non provato"), "obiezioni": obiezioni,
+            "provati": provati, "non_provati": non_provati, "motivo": str(risposta.get("motivo", ""))[:300]}
+
+
+STATI = ("verificata", "sostenuta", "contestata", "incerta", "non trovata")
+FIDUCIA = {"verificata": "alta", "sostenuta": "media", "contestata": "bassa", "incerta": "bassa"}
+
+
+def stato(c: dict) -> tuple[str, list[str]]:
+    """Lo stato della risposta dagli esiti dei controlli (docs/solidita-e-validazione.md §4) e i motivi, in parole."""
+    if not c.get("valore"):
+        return "non trovata", []
+    esami = c.get("esami") or {}
+    lettura, riscontro, revisione = (esami.get(k) or {} for k in ("seconda_lettura", "riscontro", "revisione"))
+    incerta, contestata, limiti = [], [], []
+    if c.get("anelli_deboli"):
+        incerta.append(f"{c['anelli_deboli']} anelli della catena non confermati")
+    if c.get("fonte_valore") == "C":
+        incerta.append("il valore viene dall'estratto di una ricerca, da una pagina non letta")
+    for o in revisione.get("obiezioni") or []:
+        incerta.append(f"la revisione smentisce «{o['indizio']}» («{o['citazione']}»)")
+    for d in c.get("disaccordi") or []:
+        contestata.append(f"per «{d['relazione']}» la voce di {d['da']} indica {d['nome']}")
+    if lettura.get("esito") == "discordi":
+        contestata.append(f"una seconda lettura delle stesse righe dà {lettura.get('valore')}")
+    if riscontro.get("esito") == "discordi":
+        contestata.append(f"un'altra fonte dà {riscontro.get('valore')}")
+    if incerta:
+        return "incerta", incerta + contestata
+    if contestata:
+        return "contestata", contestata
+    if not esami:
+        return "sostenuta", ["controlli con il modello non fatti"]
+    if lettura.get("esito") not in ("concordi", "non serve"):
+        limiti.append("la seconda lettura non ha ritrovato il valore")
+    if riscontro.get("esito") != "concordi":
+        limiti.append("il valore viene da una sola fonte")
+    if revisione.get("esito") != "fatta":
+        limiti.append("revisione non fatta")
+    elif revisione.get("regge") != "sì":
+        limiti.append(f"la revisione non trova provati {revisione.get('non_provati', 0)} indizi della domanda")
+    return ("sostenuta", limiti) if limiti else ("verificata", [])

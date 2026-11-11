@@ -942,3 +942,136 @@ def test_il_candidato_del_riquadro_scartato_resta_nel_registro(catena, monkeypat
         ("Michael Stonebraker", "Newburyport, Massachusetts", ["comune del New Hampshire"])]
     catena._verifica([newburyport], controlli)
     assert len(catena.conflitti) == 1  # una volta sola
+
+
+# --- controlli con il modello sulla soluzione (seconda lettura, altre fonti, revisione) ----------------------------
+
+def _strada_forte(catena) -> None:
+    """Nella catena finta di Galileo un anello resta debole (le pagine finte non provano tutti i controlli): qui si
+    provano gli esami, quindi la strada si dà per confermata."""
+    a = (catena.valore or {}).get("anello")
+    while a is not None:
+        a.debole = False
+        a = a.da
+
+
+def _con_revisione(catena, monkeypatch, revisione: dict, seconda: str = "6 dicembre 1586", budget: float = 1.0):
+    """La catena di Galileo con un modello finto che fa anche la revisione; `seconda` è il valore che il modello dà
+    quando rilegge (dalla seconda chiamata «valore» in poi)."""
+    chiamate = {"valore": 0, "revisione": []}
+
+    def modello(punto: str, dati: dict, predefinito, **altri):
+        if punto == "revisione":
+            chiamate["revisione"].append((dati, altri.get("modello")))
+            return revisione, "claude"
+        if punto == "valore" and "6 dicembre 1586" in dati["prove"]:
+            chiamate["valore"] += 1
+            if chiamate["valore"] > 1:
+                return {"valore": seconda, "prova": _riga(dati["prove"], seconda) if seconda else 0, "motivo": ""}, "claude"
+        return _decidi(punto, dati, predefinito)
+
+    monkeypatch.setattr(catena.r.pensatore, "decidi", modello)
+    catena.r.pensatore.bilancio.budget_usd = budget
+    catena.percorri()
+    _strada_forte(catena)
+    catena.revisione_finale()
+    return chiamate
+
+
+_REGGE = {"regge": "sì", "motivo": "", "indizi": []}
+
+
+def test_esami_senza_obiezioni_una_sola_fonte(catena, monkeypatch: pytest.MonkeyPatch) -> None:
+    chiamate = _con_revisione(catena, monkeypatch, _REGGE)
+    esito = catena.controlli()
+    assert esito["esami"]["seconda_lettura"] == {"esito": "concordi"}
+    assert esito["esami"]["riscontro"]["esito"] == "sola fonte" and esito["esami"]["revisione"]["esito"] == "fatta"
+    assert esito["stato"] == "sostenuta" and esito["confermata"] and "una sola fonte" in " ".join(esito["motivi"])
+    dati, modello = chiamate["revisione"][0]
+    assert modello == "sonnet" and "Galileo Galilei → [allievi] Giuseppe Biancani → [allievi] Niccolò Zucchi" in dati["strada"]
+    assert "6 dicembre 1586" in dati["risposta"] and "[1] " in dati["righe"]
+    testo = catena._fiducia_dal_programma("**Risposta:** 6 dicembre 1586.\n\n**Fiducia:** alta, tutto torna.")
+    assert "**Fiducia:** media — risposta sostenuta: " in testo and "tutto torna" not in testo
+    assert "CONTROLLI DEL PROGRAMMA SULLA RISPOSTA" in catena.materiale()
+    catena.revisione_finale()
+    assert len(chiamate["revisione"]) == 1  # una volta sola
+
+
+def test_seconda_lettura_diversa_risposta_contestata(catena, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setitem(PAGINE, "Niccolò Zucchi", [(
+        "https://it.wikipedia.org/wiki/Niccol%C3%B2_Zucchi", "Niccolò Zucchi (Parma, 6 dicembre 1586 – Roma, 1670) "
+        "è stato un gesuita, rettore del Collegio Romano. Altre fonti danno per Zucchi la nascita al 7 dicembre 1586.")])
+    _con_revisione(catena, monkeypatch, _REGGE, seconda="7 dicembre 1586")
+    esito = catena.controlli()
+    assert esito["esami"]["seconda_lettura"]["esito"] == "discordi" and esito["esami"]["seconda_lettura"]["valore"] == "7 dicembre 1586"
+    assert esito["stato"] == "contestata" and not esito["confermata"]
+    assert "altro valore: 7 dicembre 1586" in catena.materiale()
+    assert "**Fiducia:** bassa — risposta contestata" in catena._fiducia_dal_programma("**Fiducia:** alta")
+
+
+def test_seconda_lettura_con_un_valore_che_non_e_nella_riga_non_conta(catena, monkeypatch: pytest.MonkeyPatch) -> None:
+    def bugiardo(revisione):
+        return revisione
+    _con_revisione(catena, monkeypatch, bugiardo(_REGGE), seconda="")
+    assert catena.controlli()["esami"]["seconda_lettura"] == {"esito": "non ritrovato"}
+    assert catena.controlli()["stato"] == "sostenuta"
+
+
+@pytest.mark.parametrize("citazione,stato", [("rettore del Collegio Romano", "incerta"), ("parole inventate", "sostenuta")])
+def test_obiezione_della_revisione(catena, monkeypatch: pytest.MonkeyPatch, citazione: str, stato: str) -> None:
+    """Un «no» della revisione conta solo se cita parole che stanno davvero in una delle righe date."""
+    def revisione(dati: dict) -> dict:
+        return {"regge": "no", "motivo": "m", "indizi": [{"indizio": "laico", "esito": "no", "citazione": citazione,
+                                                          "riga": _riga(dati["righe"], "Collegio Romano")}]}
+
+    chiamate = {"n": 0}
+
+    def modello(punto: str, dati: dict, predefinito, **_altri):
+        if punto == "revisione":
+            chiamate["n"] += 1
+            return revisione(dati), "claude"
+        return _decidi(punto, dati, predefinito)
+
+    monkeypatch.setattr(catena.r.pensatore, "decidi", modello)
+    catena.r.pensatore.bilancio.budget_usd = 1.0
+    catena.percorri()
+    _strada_forte(catena)
+    catena.revisione_finale()
+    esito = catena.controlli()
+    assert chiamate["n"] == 1 and esito["stato"] == stato and esito["confermata"] is (stato == "sostenuta")
+    assert len(esito["esami"]["revisione"]["obiezioni"]) == (1 if stato == "incerta" else 0)
+
+
+def test_senza_budget_gli_esami_non_partono(catena, monkeypatch: pytest.MonkeyPatch) -> None:
+    chiamate = _con_revisione(catena, monkeypatch, _REGGE, budget=0.01)
+    assert chiamate["revisione"] == [] and catena.esami["motivo"] == "budget di Claude quasi finito"
+    assert catena.controlli()["stato"] == "sostenuta" and catena._fiducia_dal_programma("**Fiducia:** alta").startswith("**Fiducia:** media")
+
+
+def test_senza_valore_niente_esami(catena, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(catena, "_cerca_e_leggi", lambda ricerche, pagine, scopo="": [])
+    catena.percorri()
+    catena.revisione_finale()
+    assert catena.esami is None and catena.controlli()["stato"] == "non trovata"
+
+
+def test_seconda_lettura_che_cambia_il_valore_della_riga_non_e_un_disaccordo(catena, monkeypatch) -> None:
+    """Rileggendo, il modello cita la riga giusta ma scrive un altro giorno: non è un'altra fonte, è un errore di
+    lettura. Il programma lo scarta (valore non nella riga): «non ritrovato», non «discordi»."""
+    chiamate = {"valore": 0}
+
+    def modello(punto: str, dati: dict, predefinito, **_altri):
+        if punto == "revisione":
+            return _REGGE, "claude"
+        if punto == "valore" and "6 dicembre 1586" in dati["prove"]:
+            chiamate["valore"] += 1
+            if chiamate["valore"] > 1:
+                return {"valore": "9 dicembre 1586", "prova": _riga(dati["prove"], "6 dicembre 1586"), "motivo": ""}, "claude"
+        return _decidi(punto, dati, predefinito)
+
+    monkeypatch.setattr(catena.r.pensatore, "decidi", modello)
+    catena.r.pensatore.bilancio.budget_usd = 1.0
+    catena.percorri()
+    _strada_forte(catena)
+    catena.revisione_finale()
+    assert catena.esami["seconda_lettura"] == {"esito": "non ritrovato"} and catena.controlli()["stato"] == "sostenuta"

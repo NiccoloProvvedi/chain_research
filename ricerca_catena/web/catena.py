@@ -204,6 +204,7 @@ class Catena:
         self._registrate: set[tuple[str, str, str]] = set()  # legami scritti da _registra: mai prove
         self._estratti: list[Prova] = []  # estratti dei risultati dell'ultima ricerca (pagine non lette)
         self.conflitti: list[dict] = []  # candidati scartati che avevano una fonte forte (validazione.disaccordi)
+        self.esami: dict | None = None  # controlli con il modello sulla soluzione (revisione_finale)
         self._pagine_aggiunte = 0  # pagine concesse oltre il tetto per cercare il valore
 
     # --- chiamate al modello ------------------------------------------------------------------------------------
@@ -813,16 +814,111 @@ class Catena:
         return bool(strada) and min(a.qualita for a in strada) >= 0.5
 
     def controlli(self) -> dict:
-        """L'esito dei controlli del programma sulla soluzione (docs/solidita-e-validazione.md §4). «Confermata»: un
-        valore, nessun anello debole, il valore preso da una pagina letta e nessuna fonte forte che indichi un'altra
-        strada."""
+        """L'esito dei controlli sulla soluzione e lo stato della risposta (docs/solidita-e-validazione.md §4).
+        «Confermata»: stato `verificata` o `sostenuta`, cioè un valore, nessun anello debole, il valore preso da una
+        pagina letta, nessuna fonte che indichi un'altra strada o un altro valore, nessuna obiezione della revisione."""
+        esami = getattr(self, "esami", None)
         if not self.valore:
-            return {"confermata": False, "anelli_deboli": 0, "fonte_valore": "", "disaccordi": []}
-        deboli = self._anelli_deboli()
-        fonte = validazione.livello(self.valore["prova"])
-        contrari = validazione.disaccordi_sulla_strada(self.conflitti, self.valore["anello"])
-        return {"confermata": deboli == 0 and fonte != "C" and not contrari, "anelli_deboli": deboli,
-                "fonte_valore": fonte, "disaccordi": contrari}
+            return {"confermata": False, "stato": "non trovata", "motivi": [], "anelli_deboli": 0, "fonte_valore": "",
+                    "disaccordi": [], "esami": esami}
+        esito = {"valore": self.valore["valore"], "anelli_deboli": self._anelli_deboli(),
+                 "fonte_valore": validazione.livello(self.valore["prova"]),
+                 "disaccordi": validazione.disaccordi_sulla_strada(self.conflitti, self.valore["anello"]), "esami": esami}
+        esito["stato"], esito["motivi"] = validazione.stato(esito)
+        esito["confermata"] = esito["stato"] in ("verificata", "sostenuta")
+        return esito
+
+    # Sotto questa cifra residua i controlli con il modello non partono: la scrittura della risposta viene prima.
+    MINIMO_PER_GLI_ESAMI = 0.06
+
+    def revisione_finale(self) -> None:
+        """I controlli con il modello sulla soluzione trovata, prima di scrivere la risposta: seconda lettura del valore
+        (G2), lo stesso dato in un'altra fonte (G5), revisione contraria della catena con un altro modello (G6). Non
+        cambiano la risposta: ne decidono lo stato. Gli esiti restano in `self.esami`."""
+        if not self.valore or self.esami is not None:
+            return
+        self.esami = {k: {"esito": "non fatta"} for k in ("seconda_lettura", "riscontro", "revisione")}
+        if self.r.pensatore.bilancio.disponibile("revisione") < self.MINIMO_PER_GLI_ESAMI:
+            self.esami["motivo"] = "budget di Claude quasi finito"
+            return
+        self.r._fase("Controllo la risposta: seconda lettura, altre fonti, revisione…")
+        if (self.piano.get("risposta") or {}).get("e_entita") or "prove" not in self.valore:
+            # il valore è l'entità dell'ultimo passo: non c'è un dato da rileggere o da ritrovare altrove
+            self.esami["seconda_lettura"] = self.esami["riscontro"] = {"esito": "non serve"}
+        else:
+            self.esami["seconda_lettura"] = self._seconda_lettura()
+            self.esami["riscontro"] = self._riscontro()
+        self.esami["revisione"] = self._revisione_contraria()
+
+    def _richiesta_valore(self, a: Anello, prove: list[Prova]) -> dict:
+        risposta = self.piano.get("risposta") or {}
+        return {"domanda": self.r.argomento[:1000], "entita": a.nome, "cosa": risposta.get("cosa", ""),
+                "controlli": risposta.get("controlli", []), **self._vincoli_valore(risposta),
+                "prove": self._numera(prove)}
+
+    def _valore_letto(self, a: Anello, prove: list[Prova]) -> tuple[str, Prova | None]:
+        """Una lettura del valore sulle `prove`, con gli stessi controlli del programma della prima: tipo e intervallo,
+        valore scritto nella riga, riga che parla dell'entità."""
+        esito = self._decidi("valore", self._richiesta_valore(a, prove), {"valore": "", "prova": 0})
+        valore, prova = str(esito.get("valore") or ""), self._prova(prove, esito.get("prova"))
+        if not valore or prova is None or valore_ammesso(valore, self.piano.get("risposta") or {}) \
+                or not validazione.valore_nella_riga(valore, prova.testo) \
+                or not (prova.url in {v.url for v in a.voci.values()} or _chiave_nome(a.nome) in _norma(prova.testo)):
+            return "", None
+        return valore, prova
+
+    def _seconda_lettura(self) -> dict:
+        """G2. Le stesse righe in ordine inverso, lette un'altra volta: il valore deve tornare uguale."""
+        valore, prova = self._valore_letto(self.valore["anello"], self.valore["prove"][::-1])
+        if not valore:
+            return {"esito": "non ritrovato"}
+        if validazione.stesso_valore(valore, self.valore["valore"]):
+            return {"esito": "concordi"}
+        return {"esito": "discordi", "valore": valore, "url": prova.url, "riga": " ".join(prova.testo.split())[:300]}
+
+    def _riscontro(self) -> dict:
+        """G5. Lo stesso dato cercato nelle altre fonti già disponibili sull'entità finale: le sue voci di Wikipedia in
+        altre lingue e le altre pagine lette (non gli estratti delle ricerche). Mai la pagina del valore."""
+        a, prima = self.valore["anello"], self.valore["prova"]
+        risposta = self.piano.get("risposta") or {}
+        parole = list(risposta.get("parole") or []) + [risposta.get("cosa", "")] + list(risposta.get("controlli") or [])
+        altre_voci = [v for v in self._voci(a, altre=2) if v.url != prima.url]
+        prove = self._righe_wiki(altre_voci, parole, massimo=40, caratteri=9000, bonus=self._bonus_valore(risposta)) \
+            if altre_voci else []
+        prove += [p for p in self._prove_entita(a.nome, segmenti=self._segmenti_su(a.nome), massimo=20)
+                  if p.url != prima.url and validazione.livello(p) != "C"]
+        if not prove:
+            return {"esito": "sola fonte", "fonti_guardate": 0}
+        fonti = len({p.url for p in prove})
+        valore, prova = self._valore_letto(a, prove)
+        if not valore:
+            return {"esito": "sola fonte", "fonti_guardate": fonti}
+        if validazione.stesso_valore(valore, self.valore["valore"]):
+            return {"esito": "concordi", "url": prova.url, "fonti_guardate": fonti}
+        return {"esito": "discordi", "valore": valore, "url": prova.url, "fonti_guardate": fonti,
+                "riga": " ".join(prova.testo.split())[:300]}
+
+    def _revisione_contraria(self) -> dict:
+        """G6. Un altro modello rilegge la domanda, la strada e le righe usate, cercando l'indizio che non torna."""
+        from .. import configurazione
+        strada = self._percorso(self.valore["anello"])
+        radice = self._radice(self.valore["anello"])
+        righe: list[Prova] = []
+        for a in strada:
+            righe += [p for p in [a.prova_legame, a.inizio] + [e["prova"] for e in a.esiti] if p is not None]
+        righe.append(self.valore["prova"])
+        righe = list({(p.url, p.testo): p for p in righe}.values())[:60]
+        dati = {"domanda": self.r.argomento[:1500],
+                "strada": " → ".join([radice.nome] + [f"[{a.relazione}] {a.nome}" for a in strada]),
+                "risposta": f"{self.valore['valore']} ({(self.piano.get('risposta') or {}).get('cosa', '')} di "
+                            f"{self.valore['anello'].nome})",
+                "righe": "\n".join(f"[{i}] {p.testo[:700]}" for i, p in enumerate(righe, start=1))}
+        modello = str(self.o.get("modello_revisione") or configurazione.carica()["modello_revisione"])
+        esito, da = self.r.pensatore.decidi("revisione", dati, lambda: {}, modello=modello)
+        self.r.costo = max(self.r.costo, self.r.pensatore.bilancio.speso)
+        if da != "claude":
+            return {"esito": "non fatta"}
+        return {**validazione.esamina_revisione(esito, righe), "modello": modello}
 
     def _anelli_deboli(self) -> int:
         a, deboli = (self.valore or {}).get("anello"), 0
@@ -1872,7 +1968,7 @@ class Catena:
                 prova = None
             if esito.get("valore") and prova:
                 self.valore = {"valore": esito["valore"], "prova": prova, "anello": a,
-                               "motivo": esito.get("motivo", "")}
+                               "motivo": esito.get("motivo", ""), "prove": prove}
                 self.motivo = f"catena completa: {a.nome} → {esito['valore']}"
                 return True
             self.storia.append({"passo": -1, "relazione": "valore non trovato", "tentativo": tentativo,
@@ -1997,6 +2093,15 @@ class Catena:
                          "**Fiducia**):")
             righe += [f"- [{numero(x['url'])}] per «{x['relazione']}» di {x['da']} la fonte indica {x['nome']}: "
                       f"{x['riga']} — scartato perché non rispetta: {'; '.join(x['contro'])}" for x in contrari]
+        if self.valore and self.esami:
+            esito = self.controlli()
+            if esito["motivi"]:
+                righe.append("\nCONTROLLI DEL PROGRAMMA SULLA RISPOSTA (riportali nei **Limiti**; se una fonte dà un altro "
+                             "valore, anche in **Fonti in disaccordo**): " + "; ".join(esito["motivi"]))
+            for nome in ("seconda_lettura", "riscontro"):
+                esame = self.esami.get(nome) or {}
+                if esame.get("esito") == "discordi":
+                    righe.append(f"- [{numero(esame['url'])}] altro valore: {esame['valore']} — {esame['riga']}")
         altri = [x for fascio in self.anelli[-1:] for x in fascio if not catena or x is not catena[0]]
         if altri:
             righe.append("\nALTRI CANDIDATI DELL'ULTIMO PASSO: " + "; ".join(f"{x.nome} ({x.punti} controlli sì)"
@@ -2024,7 +2129,20 @@ class Catena:
         self.r.costo = max(self.r.costo, self.r.pensatore.bilancio.speso)
         if not isinstance(testo, str) or not testo.strip():
             return None
-        return self._valore_in_testa(testo.strip())
+        return self._fiducia_dal_programma(self._valore_in_testa(testo.strip()))
+
+    def _fiducia_dal_programma(self, testo: str) -> str:
+        """La riga **Fiducia:** la scrive il programma dallo stato dei controlli, non il modello che scrive (11/11,
+        domande di controllo: risposte sbagliate con fiducia «alta» e «media»). Solo se i controlli con il modello sono
+        stati fatti: altrimenti resta quella del modello."""
+        if not self.valore or not self.esami:
+            return testo
+        esito = self.controlli()
+        riga = (f"**Fiducia:** {validazione.FIDUCIA[esito['stato']]} — risposta {esito['stato']}"
+                + (": " + "; ".join(esito["motivi"][:4]) if esito["motivi"] else
+                   ": valore letto due volte, ritrovato in un'altra fonte, catena riletta senza obiezioni") + ".")
+        trovata = re.search(r"\*\*Fiducia:?\*\*:?[^\n]*", testo)
+        return testo[:trovata.start()] + riga + testo[trovata.end():] if trovata else f"{testo}\n\n{riga}"
 
     def _valore_in_testa(self, testo: str) -> str:
         """La riga **Risposta:** la scrive il programma con il valore trovato e la sua fonte; quello che Haiku aveva

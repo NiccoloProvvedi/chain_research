@@ -145,6 +145,8 @@ class Raccolta:
         try:
             self.catena = Catena(self)
             self.catena.percorri()
+            if self.o.get("controlli_modello", True):
+                self.catena.revisione_finale()
             self.motivo_fine = self.catena.motivo or "catena percorsa"
             self._fase(f"Raccolta conclusa: {self.motivo_fine}.")
         finally:
@@ -156,7 +158,7 @@ class Raccolta:
         self.costo = max(self.costo, self.pensatore.bilancio.speso)
         esito = {"domanda": self.argomento, "risposta": risposta, "fonti": self._elenco_fonti(),
                  "valore": (self.catena.valore or {}).get("valore"), "trovata": bool(self.catena.valore),
-                 "confermata": self.catena.controlli()["confermata"],
+                 "confermata": self.catena.controlli()["confermata"], "stato": self.catena.controlli()["stato"],
                  "secondi": round(self._trascorsi()), "costo_usd": round(self.costo, 4),
                  "motivo_fine": self.motivo_fine, "ricerche": self.ricerche_fatte, "autore": self.autore,
                  "pagine_lette": len(self.pagine_lette), "pezzi": str(self.cartella_pezzi / f"{self.id_piano}.sqlite"),

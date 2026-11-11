@@ -152,6 +152,18 @@ SCHEMI: dict[str, dict] = {
         "properties": {"scelta": {"type": "integer", "minimum": 0, "maximum": 6},
                        "motivo": {"type": "string", "maxLength": 300}},
     },
+    "revisione": {
+        "type": "object", "additionalProperties": False, "required": ["indizi", "regge", "motivo"],
+        "properties": {
+            "indizi": {"type": "array", "maxItems": 20, "items": {
+                "type": "object", "additionalProperties": False, "required": ["indizio", "esito", "riga", "citazione"],
+                "properties": {"indizio": {"type": "string", "maxLength": 200},
+                               "esito": {"type": "string", "enum": ["sì", "no", "non provato"]},
+                               "riga": {"type": "integer", "minimum": 0},
+                               "citazione": {"type": "string", "maxLength": 200}}}},
+            "regge": {"type": "string", "enum": ["sì", "no", "non provato"]},
+            "motivo": {"type": "string", "maxLength": 300}},
+    },
 }
 
 
@@ -231,11 +243,13 @@ class Pensatore:
         self.pubblica(voce)
 
     def decidi(self, punto: str, oggetto: Any, predefinito: Callable[[], Any],
-               valida: Callable[[Any], list[str]] | None = None) -> tuple[Any, str]:
-        """Chiede a Claude la decisione `punto` sui dati `oggetto`; altrimenti il predefinito. Restituisce (dati, da)."""
+               valida: Callable[[Any], list[str]] | None = None, modello: str | None = None) -> tuple[Any, str]:
+        """Chiede a Claude la decisione `punto` sui dati `oggetto`; altrimenti il predefinito. Restituisce (dati, da).
+        `modello` solo per i punti che vogliono un modello diverso da quello del piano (la revisione)."""
         testo = pulizia.dati(oggetto)
         regole = istruzioni(punto)
-        if not self.bilancio.basta(punto, len(regole) + len(testo), self.modello):
+        modello = modello or self.modello
+        if not self.bilancio.basta(punto, len(regole) + len(testo), modello):
             self.esaurito = True
             self._evento(punto, "locale", f"budget di Claude esaurito ({self.bilancio.speso:.3f} $ su "
                                            f"{self.bilancio.budget_usd:.2f} $)")
@@ -244,7 +258,7 @@ class Pensatore:
         richiesta = testo
         for tentativo in (1, 2):
             try:
-                dati, consumo = claude_json.chiedi(regole, richiesta, schema, punto, modello=self.modello,
+                dati, consumo = claude_json.chiedi(regole, richiesta, schema, punto, modello=modello,
                                                    max_budget_usd=max(0.01, self.bilancio.disponibile(punto)),
                                                    piano=self.id_piano)
             except claude_json.LimiteSessione:
@@ -263,7 +277,7 @@ class Pensatore:
             if not problemi:
                 self._evento(punto, "claude", dati.get("motivo", "") if isinstance(dati, dict) else "", dati)
                 return dati, "claude"
-            if tentativo == 2 or not self.bilancio.basta(punto, len(regole) + len(richiesta), self.modello):
+            if tentativo == 2 or not self.bilancio.basta(punto, len(regole) + len(richiesta), modello):
                 break
             richiesta = f"{testo}\n\nLA RISPOSTA PRECEDENTE NON ERA VALIDA:\n- " + "\n- ".join(problemi[:8])
         self._evento(punto, "locale", "risposta di Claude non valida: " + "; ".join(problemi[:3]))

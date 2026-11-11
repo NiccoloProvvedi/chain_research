@@ -103,6 +103,10 @@ def main() -> None:
     altre = [e for e in contano(tutte) if not e.get("confermata")]
     print(f"  catena tutta confermata: {riassunto(confermate)}")
     print(f"  catena non confermata: {riassunto(altre)}")
+    for stato in ("verificata", "sostenuta", "contestata", "incerta"):
+        con_stato = [e for e in contano(tutte) if e.get("stato") == stato]
+        if con_stato:
+            print(f"  stato {stato}: {riassunto(con_stato)}")
 
 
 if __name__ == "__main__":

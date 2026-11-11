@@ -62,3 +62,46 @@ def test_limite_di_minuti_arrotondato() -> None:
     r = Raccolta("domanda", opzioni={"minuti_catena": 5.003691091149818})
     r._attesa_iniziale, r._inizio = 0.0, -1e9
     assert r._limite_raggiunto() == "raggiunto il limite di sicurezza di 5 minuti"
+
+
+# --- revisione dell'11/11/2026: l'esito della domanda porta lo stato deciso dai controlli --------------------------
+
+@pytest.mark.parametrize("opzioni,attesi", [({}, 1), ({"controlli_modello": False}, 0)])
+def test_esegui_fa_gli_esami_e_riporta_lo_stato(tmp_path, monkeypatch, opzioni: dict, attesi: int) -> None:
+    from ricerca_catena.web import catena as modulo_catena
+    from ricerca_catena.web import raccolta
+
+    class CatenaFinta:
+        esami_fatti = 0
+
+        def __init__(self, r) -> None:
+            self.valore, self.motivo = {"valore": "56 m"}, "catena completa"
+
+        def percorri(self) -> None:
+            pass
+
+        def revisione_finale(self) -> None:
+            CatenaFinta.esami_fatti += 1
+
+        def controlli(self) -> dict:
+            return {"confermata": False, "stato": "contestata"}
+
+        def scrivi(self, _compito: str) -> str:
+            return "**Risposta:** 56 m."
+
+        def riepilogo(self) -> dict:
+            return {}
+
+    class BrowserFinto:
+        def __init__(self, *_a, **_k) -> None:
+            pass
+
+        def close(self) -> None:
+            pass
+
+    monkeypatch.setattr(modulo_catena, "Catena", CatenaFinta)
+    monkeypatch.setattr(raccolta, "Browser", BrowserFinto)
+    r = raccolta.Raccolta("domanda", opzioni=opzioni, cartella_pezzi=tmp_path / "pezzi", profilo=tmp_path / "profilo")
+    esito = r.esegui()
+    assert CatenaFinta.esami_fatti == attesi
+    assert (esito["stato"], esito["confermata"], esito["valore"], esito["trovata"]) == ("contestata", False, "56 m", True)

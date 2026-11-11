@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from .. import RADICE, configurazione
 
 PUNTI = ("lettura", "interpreta", "catena", "passo", "candidati", "verifica", "valore", "voce", "finale",
-         "scrittura", "regia", "documento", "giudice")
+         "scrittura", "regia", "documento", "giudice", "revisione")
 
 
 class _Base(BaseModel):

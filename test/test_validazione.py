@@ -205,3 +205,58 @@ def test_caso_cpp_la_catena_non_torna_su_wheeler() -> None:
     burrows = Anello("Michael Burrows (computer scientist)", da=Anello("Roger Needham", da=wheeler))
     assert v.ripete_un_antenato(Anello("David Wheeler", titolo=("en", "David Wheeler (computer scientist)")), burrows)
     assert not v.ripete_un_antenato(Anello("David Wheeler"), burrows)  # senza la voce, un omonimo resta possibile
+
+
+# --- controlli con il modello: decide il programma ------------------------------------------------------------------
+
+@pytest.mark.parametrize("a,b,uguali", [
+    ("56 m s.l.m.", "56 metri", True), ("21 giugno 1886", "June 21, 1886", True), ("1 gennaio 2015", "1º gennaio 2015", True),
+    ("20,65 km²", "20.65 km2", True), ("Novara di Sicilia", "novara di sicilia", True), ("1886", "1886", True),
+    ("−2 m", "2 m", False), ("21 giugno 1886", "21 giugno 1885", False), ("21 giugno 1886", "21 luglio 1886", False),
+    ("56 m", "58 m", False), ("Novara di Sicilia", "Capri Leone", False), ("", "", False), ("21 giugno 1886", "1886", False),
+])
+def test_stesso_valore(a: str, b: str, uguali: bool) -> None:
+    assert v.stesso_valore(a, b) is uguali and v.stesso_valore(b, a) is uguali
+
+
+def test_la_revisione_vale_solo_con_la_riga() -> None:
+    righe = [Prova("David Wheeler was a British computer scientist", "u1"), Prova("Maurice Wilkes supervised Wheeler", "u2")]
+    risposta = {"regge": "no", "motivo": "non è un fisico", "indizi": [
+        {"indizio": "fisico britannico", "esito": "no", "riga": 1, "citazione": "British computer scientist"},
+        {"indizio": "relatore di", "esito": "no", "riga": 2, "citazione": "parole che nella riga non ci sono"},
+        {"indizio": "inventato", "esito": "no", "riga": 9, "citazione": "British"},
+        {"indizio": "relatore", "esito": "sì", "riga": 2, "citazione": "supervised Wheeler"},
+        {"indizio": "nato nel 1927", "esito": "non provato", "riga": 0, "citazione": ""}]}
+    esito = v.esamina_revisione(risposta, righe)
+    assert [o["indizio"] for o in esito["obiezioni"]] == ["fisico britannico"] and esito["obiezioni"][0]["url"] == "u1"
+    assert (esito["provati"], esito["non_provati"], esito["regge"]) == (1, 3, "no")
+    assert v.esamina_revisione({}, righe)["obiezioni"] == []
+
+
+_BUONI = {"seconda_lettura": {"esito": "concordi"}, "riscontro": {"esito": "concordi"},
+          "revisione": {"esito": "fatta", "regge": "sì", "obiezioni": [], "non_provati": 0}}
+_OBIEZIONE = {"esito": "fatta", "regge": "no", "obiezioni": [{"indizio": "fisico", "citazione": "computer scientist"}]}
+
+
+@pytest.mark.parametrize("cambi,atteso", [
+    ({}, "verificata"),
+    ({"valore": ""}, "non trovata"),
+    ({"anelli_deboli": 1}, "incerta"),
+    ({"fonte_valore": "C"}, "incerta"),
+    ({"esami": {**_BUONI, "revisione": _OBIEZIONE}}, "incerta"),
+    ({"esami": {**_BUONI, "riscontro": {"esito": "discordi", "valore": "21 giugno 1885"}}}, "contestata"),
+    ({"esami": {**_BUONI, "seconda_lettura": {"esito": "discordi", "valore": "58 m"}}}, "contestata"),
+    ({"disaccordi": [{"relazione": "nato a", "da": "S", "nome": "Newburyport"}]}, "contestata"),
+    ({"anelli_deboli": 1, "disaccordi": [{"relazione": "nato a", "da": "S", "nome": "N"}]}, "incerta"),
+    ({"esami": {**_BUONI, "riscontro": {"esito": "sola fonte"}}}, "sostenuta"),
+    ({"esami": {**_BUONI, "seconda_lettura": {"esito": "non ritrovato"}}}, "sostenuta"),
+    ({"esami": {**_BUONI, "seconda_lettura": {"esito": "non serve"}}}, "verificata"),
+    ({"esami": {**_BUONI, "revisione": {"esito": "fatta", "regge": "non provato", "obiezioni": [], "non_provati": 2}}}, "sostenuta"),
+    ({"esami": {**_BUONI, "revisione": {"esito": "non fatta"}}}, "sostenuta"),
+    ({"esami": None}, "sostenuta"),
+])
+def test_stato_della_risposta(cambi: dict, atteso: str) -> None:
+    base = {"valore": "56 m", "anelli_deboli": 0, "fonte_valore": "A", "disaccordi": [], "esami": _BUONI}
+    stato, motivi = v.stato({**base, **cambi})
+    assert stato == atteso and stato in v.STATI
+    assert bool(motivi) == (stato not in ("verificata", "non trovata"))
