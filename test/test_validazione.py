@@ -1,0 +1,207 @@
+"""Controlli del programma sui risultati (docs/solidita-e-validazione.md §4): senza rete né Claude."""
+import pytest
+
+from ricerca_catena.web import validazione as v
+from ricerca_catena.web.catena import Anello, Catena, Prova
+
+
+@pytest.mark.parametrize("valore,riga", [
+    ("21 giugno 1886", "Hoshiyar died at her palace on June 21, 1886 and was buried in Cairo"),
+    ("11 ottobre 1943", "[Michael Stonebraker (en)] Born: (1943-10-11) October 11, 1943"),
+    ("11 ottobre 1943", "Born: 1943-10-11 (age 82)"),
+    ("1º gennaio 2015", "Istituzione: 1º gennaio 2015"),
+    ("1 gennaio 2015", "istituita il 1º gennaio 2015 dalla legge n. 56"),
+    ("15. Dezember 1941", "geboren am 15. Dezember 1941 in Wien"),
+    ("56 m s.l.m.", "Altitudine: 56 m s.l.m."),
+    ("−2 m s.l.m.", "Altitudine: −2 m s.l.m."),
+    ("20,65 km²", "Superficie: 20.65 km²"),
+    ("1234 abitanti", "Abitanti: 1 234 (2019)"),
+    ("36 metri", "Elevation: 118 ft (36 m)"),
+    ("00118–00199", "CAP: 00118–00199"),
+    ("43010", "Codice postale 43010"),
+    ("Novara di Sicilia", "Il simulacro si trova a Novara di Sicilia, in provincia di Messina"),
+    ("44 a.C.", "morì nel 44 a.C. a Roma"),
+    ("26 luglio 1985", "[Υπουργείο Πολιτισμού (el)] συγκροτήθηκε στις 26 Ιουλίου 1985 από την κυβέρνηση"),
+])
+def test_valore_scritto_nella_riga(valore: str, riga: str) -> None:
+    assert v.valore_nella_riga(valore, riga)
+
+
+@pytest.mark.parametrize("valore,riga", [
+    ("21 giugno 1885", "Hoshiyar died at her palace on June 21, 1886"),
+    ("21 luglio 1886", "Hoshiyar died at her palace on June 21, 1886"),
+    ("21 luglio 1886", "Morta il 21 giugno 1886; ebbe 7 figli"),
+    ("56 m s.l.m.", "Altitudine: 58 m s.l.m."),
+    ("5 m", "Altitudine: 56 m, superficie 15 km²"),
+    ("13 dicembre 2004", "David Wheeler was a computer scientist at Cambridge"),
+    ("Capri Leone", "Il simulacro si trova a Novara di Sicilia"),
+    ("", "qualunque riga"),
+])
+def test_valore_che_non_e_nella_riga(valore: str, riga: str) -> None:
+    assert not v.valore_nella_riga(valore, riga)
+
+
+@pytest.mark.parametrize("testo,url,atteso", [
+    ("[Amsterdam (it)] Altitudine: −2 m", "https://it.wikipedia.org/wiki/Amsterdam", "A"),
+    ("Michael Stonebraker was born in Milton", "https://example.org/bio", "B"),
+    ("[risultato di ricerca: Michael Stonebraker | Aubrey Research] born in Milton", "https://example.org/bio", "C"),
+    ("[risultato di ricerca: Wikipedia] nato a Milton", "https://en.wikipedia.org/wiki/X", "C"),
+])
+def test_livello_della_fonte(testo: str, url: str, atteso: str) -> None:
+    assert v.livello(Prova(testo, url)) == atteso
+
+
+def test_un_antenato_non_torna_nella_strada() -> None:
+    stroustrup = Anello("Bjarne Stroustrup")
+    wheeler = Anello("David Wheeler", da=stroustrup)
+    burrows = Anello("Michael Burrows (computer scientist)", da=wheeler)
+    assert v.ripete_un_antenato(Anello("David Wheeler"), burrows)
+    assert v.ripete_un_antenato(Anello("David  wheeler"), burrows)
+    assert not v.ripete_un_antenato(Anello("Maurice Wilkes"), burrows)
+    assert v.ripete_un_antenato(Anello("Bjarne Stroustrup"), burrows)
+    assert v.ripete_un_antenato(Anello("Burrows", titolo=("en", "Michael Burrows (computer scientist)")), burrows)
+    romanzo = Anello("I promessi sposi")
+    assert not v.ripete_un_antenato(Anello("I promessi sposi (Petrella)"), romanzo)
+    assert not v.ripete_un_antenato(Anello("Solférino (Landes)"), Anello("Solferino"))
+
+
+def _si(controllo: str, prova: Prova) -> dict:
+    return {"controllo": controllo, "esito": "sì", "prova": prova, "peso": 1}
+
+
+def test_legame_provato_solo_da_un_estratto() -> None:
+    estratto = Prova("[risultato di ricerca: Aubrey Research] Stonebraker was born in Milton", "https://x.org/a")
+    letta = Prova("Stonebraker was born in Milton, New Hampshire", "https://x.org/a")
+    assert v.legame_solo_da_estratti(Anello("Milton", da=Anello("S"), esiti=[_si("è in relazione «nato a»", estratto)]))
+    assert not v.legame_solo_da_estratti(Anello("Milton", da=Anello("S"), esiti=[_si("è in relazione «nato a»", letta)]))
+    assert not v.legame_solo_da_estratti(Anello("Milton", esiti=[]))  # partenza: nessun legame da provare
+
+
+def test_registro_dei_disaccordi() -> None:
+    stonebraker = Anello("Michael Stonebraker")
+    riquadro = Prova("[Michael Stonebraker (en)] Born: Newburyport, Massachusetts", "https://en.wikipedia.org/wiki/MS")
+    scartato = Anello("Newburyport, Massachusetts", da=stonebraker, prova_legame=riquadro, esiti=[
+        {"controllo": "comune del New Hampshire", "esito": "no", "prova": riquadro, "peso": 2}])
+    senza_fonte = Anello("Derry", da=stonebraker, esiti=[{"controllo": "c", "esito": "no", "prova": riquadro}])
+    no = [{"controllo": "c", "esito": "no", "prova": riquadro}]
+    sua_voce = Anello("Hassan", da=stonebraker, esiti=no, prova_legame=Prova(
+        "[Hassan (nome) (it)] Hassan è un nome proprio di persona", "https://it.wikipedia.org/wiki/Hassan"))
+    frase = Anello("Freeduino", da=stonebraker, esiti=no, prova_legame=Prova(
+        "[Michael Stonebraker (en) § Derivati] Quale conseguenza, un gruppo ha fatto Freeduino", "https://en.wikipedia.org/wiki/MS"))
+    voci = v.disaccordi([scartato, senza_fonte, sua_voce, frase], "luogo di nascita di")
+    assert len(voci) == 1 and voci[0]["nome"] == "Newburyport, Massachusetts" and voci[0]["da"] == "Michael Stonebraker"
+    assert voci[0]["url"].endswith("/MS") and voci[0]["contro"] == ["comune del New Hampshire"]
+    milton = Anello("Milton", da=stonebraker)
+    dover = Anello("Dover", da=Anello("Strafford County", da=milton))
+    assert v.disaccordi_sulla_strada(voci, dover) == voci
+    assert v.disaccordi_sulla_strada(voci, Anello("Roma", da=Anello("Italia"))) == []
+    assert v.disaccordi_sulla_strada(voci, scartato) == []  # la strada passa dal candidato della fonte forte
+    fratello = Anello("Milton", da=stonebraker, prova_legame=Prova("[MS (en)] Born: Milton", "https://en.wikipedia.org/wiki/MS"))
+    assert v.disaccordi_sulla_strada(voci, fratello) == []  # anche lo scelto ha una fonte forte: sono fratelli
+
+
+def test_confermata_vuole_tutti_i_controlli() -> None:
+    wiki = Prova("[Dover (en)] Elevation: 36 m", "https://en.wikipedia.org/wiki/Dover")
+    estratto = Prova("[risultato di ricerca: x] Elevation 36 m", "https://x.org")
+    a = Anello("Dover", da=Anello("Contea"), esiti=[_si("è in relazione «capoluogo»", wiki)])
+    c = Catena.__new__(Catena)
+    c.conflitti = []
+    c.valore = {"valore": "36 m", "prova": wiki, "anello": a}
+    assert c.controlli()["confermata"]
+    c.valore["prova"] = estratto
+    assert not c.controlli()["confermata"] and c.controlli()["fonte_valore"] == "C"
+    c.valore["prova"] = wiki
+    a.debole = True
+    assert not c.controlli()["confermata"]
+    a.debole = False
+    a.esiti = [_si("è in relazione «capoluogo»", Prova("Dover is the county seat", "https://x.org/contea"))]
+    c.conflitti = [{"da": "Contea", "nome": "Altro", "url": "u", "riga": "r", "contro": ["c"], "relazione": "capoluogo"}]
+    assert not c.controlli()["confermata"] and len(c.controlli()["disaccordi"]) == 1
+    c.valore = None
+    assert not c.controlli()["confermata"]
+
+
+# --- prove a tappeto: ogni data in ogni lingua si ritrova, ogni data cambiata di poco no --------------------------
+
+_LINGUE = {
+    "it": ("{g} {m} {a}", "gennaio febbraio marzo aprile maggio giugno luglio agosto settembre ottobre novembre dicembre"),
+    "en": ("{m} {g}, {a}", "January February March April May June July August September October November December"),
+    "de": ("{g}. {m} {a}", "Januar Februar März April Mai Juni Juli August September Oktober November Dezember"),
+    "fr": ("{g} {m} {a}", "janvier février mars avril mai juin juillet août septembre octobre novembre décembre"),
+    "es": ("{g} de {m} de {a}", "enero febrero marzo abril mayo junio julio agosto septiembre octubre noviembre diciembre"),
+    "pt": ("{g} de {m} de {a}", "janeiro fevereiro março abril maio junho julho agosto setembro outubro novembro dezembro"),
+}
+_ITALIANI = _LINGUE["it"][1].split()
+_DATE = [(g, m, a) for g in (1, 9, 15, 28) for m in range(1, 13) for a in (476, 1703, 1886, 2015)]
+
+
+@pytest.mark.parametrize("lingua", sorted(_LINGUE))
+def test_ogni_data_tradotta_si_ritrova(lingua: str) -> None:
+    forma, mesi = _LINGUE[lingua][0], _LINGUE[lingua][1].split()
+    for g, m, a in _DATE:
+        valore = f"{g} {_ITALIANI[m - 1]} {a}"
+        riga = "[Voce (xx)] Evento avvenuto: " + forma.format(g=g, m=mesi[m - 1], a=a) + ", secondo le cronache."
+        assert v.valore_nella_riga(valore, riga), (valore, riga)
+        assert v.valore_nella_riga(valore, f"Born: {a:04d}-{m:02d}-{g:02d} (aged 70)"), valore
+
+
+@pytest.mark.parametrize("lingua", sorted(_LINGUE))
+def test_ogni_data_cambiata_di_poco_e_rifiutata(lingua: str) -> None:
+    forma, mesi = _LINGUE[lingua][0], _LINGUE[lingua][1].split()
+    for g, m, a in _DATE:
+        riga = "[Voce (xx)] Evento avvenuto: " + forma.format(g=g, m=mesi[m - 1], a=a) + ", secondo le cronache."
+        for g2, m2, a2 in ((g + 1, m, a), (g, m % 12 + 1, a), (g, m, a + 1), (g, m, a - 1)):
+            valore = f"{g2} {_ITALIANI[m2 - 1]} {a2}"
+            assert not v.valore_nella_riga(valore, riga), (valore, riga)
+
+
+def test_ogni_numero_cambiato_e_rifiutato() -> None:
+    for n in (2, 15, 56, 68, 138, 312, 4810, 43010):
+        riga = f"[Comune (it)] Altitudine: {n} m s.l.m.; abitanti: 7 (2019)"
+        assert v.valore_nella_riga(f"{n} m s.l.m.", riga)
+        for altro in (n + 1, n - 1, n * 10, int(str(n)[::-1]) if str(n)[::-1] != str(n) else n + 2):
+            if altro != n:
+                assert not v.valore_nella_riga(f"{altro} m s.l.m.", riga), (altro, riga)
+
+
+def test_mesi_senza_doppioni_tra_i_numeri() -> None:
+    """Ogni nome di mese sta in un solo numero, tranne quelli uguali in più lingue con lo stesso numero."""
+    assert set(v.MESE.values()) == set(range(1, 13))
+    for numero, nomi in enumerate(v._MESI, start=1):
+        assert all(v.MESE[n] == numero for n in nomi.split())
+
+
+# --- i casi veri delle domande di controllo (11/11), come li ha visti la catena ------------------------------------
+
+def test_caso_postgresql_estratto_contro_riquadro() -> None:
+    """Il riquadro di Wikipedia dice Newburyport; la catena teneva Milton da un estratto, «forte» e «confermata»."""
+    stonebraker = Anello("Michael Stonebraker")
+    riquadro = Prova("[Michael Stonebraker (en)] Born: (1943-10-11) October 11, 1943 Newburyport, Massachusetts, U.S.",
+                     "https://en.wikipedia.org/wiki/Michael_Stonebraker")
+    estratto = Prova("[risultato di ricerca: Michael Stonebraker | Computer scientist - Aubrey Research] Michael "
+                     "Stonebraker was born in Milton, New Hampshire in 1943.", "https://aubrey.example/stonebraker")
+    newburyport = Anello("Newburyport, Massachusetts", da=stonebraker, prova_legame=riquadro, esiti=[
+        {"controllo": "comune del New Hampshire", "esito": "no", "prova": riquadro, "peso": 2}])
+    milton = Anello("Milton", da=stonebraker, prova_legame=estratto, qualita=0.9,
+                    esiti=[_si("è in relazione «luogo di nascita di» con Michael Stonebraker", estratto)])
+    assert v.legame_solo_da_estratti(milton)
+    dover = Anello("Dover, New Hampshire", da=Anello("Strafford County", da=milton))
+    c = Catena.__new__(Catena)
+    c.conflitti = v.disaccordi([newburyport], "è in relazione «luogo di nascita di» con Michael Stonebraker")
+    c.valore = {"valore": "36 metri", "anello": dover,
+                "prova": Prova("[Dover, New Hampshire (en)] Elevation: 118 ft (36 m)", "https://en.wikipedia.org/wiki/Dover")}
+    esito = c.controlli()
+    assert not esito["confermata"] and [x["nome"] for x in esito["disaccordi"]] == ["Newburyport, Massachusetts"]
+
+
+def test_caso_aida_il_valore_e_quello_della_riga() -> None:
+    riga = "[Hoshiyar Qadin (en)] Hoshiyar died at her palace on 21 June 1886 and was buried in the Khedival Mausoleum"
+    assert v.valore_nella_riga("21 giugno 1886", riga) and not v.valore_nella_riga("21 giugno 1885", riga)
+
+
+def test_caso_cpp_la_catena_non_torna_su_wheeler() -> None:
+    stroustrup = Anello("Bjarne Stroustrup")
+    wheeler = Anello("David Wheeler (computer scientist)", da=stroustrup, titolo=("en", "David Wheeler (computer scientist)"))
+    burrows = Anello("Michael Burrows (computer scientist)", da=Anello("Roger Needham", da=wheeler))
+    assert v.ripete_un_antenato(Anello("David Wheeler", titolo=("en", "David Wheeler (computer scientist)")), burrows)
+    assert not v.ripete_un_antenato(Anello("David Wheeler"), burrows)  # senza la voce, un omonimo resta possibile

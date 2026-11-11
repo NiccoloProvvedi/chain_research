@@ -27,6 +27,7 @@ from urllib.parse import unquote, urlsplit
 
 from ..modello.pensatore import istruzioni
 from ..prove.triple import citazione_presente
+from . import validazione
 
 from .fonti.wikipedia_grafo import (GRADI, LINGUA, Riga, Voce, WikipediaGrafo, _piano, corrisponde,
                                     senza_suffisso_societario)
@@ -202,6 +203,7 @@ class Catena:
         self.azioni: list[str] = []  # frontiera: azioni fatte, in ordine (per le diagnosi)
         self._registrate: set[tuple[str, str, str]] = set()  # legami scritti da _registra: mai prove
         self._estratti: list[Prova] = []  # estratti dei risultati dell'ultima ricerca (pagine non lette)
+        self.conflitti: list[dict] = []  # candidati scartati che avevano una fonte forte (validazione.disaccordi)
         self._pagine_aggiunte = 0  # pagine concesse oltre il tetto per cercare il valore
 
     # --- chiamate al modello ------------------------------------------------------------------------------------
@@ -810,6 +812,18 @@ class Catena:
         strada = self._percorso((self.valore or {}).get("anello"))
         return bool(strada) and min(a.qualita for a in strada) >= 0.5
 
+    def controlli(self) -> dict:
+        """L'esito dei controlli del programma sulla soluzione (docs/solidita-e-validazione.md §4). «Confermata»: un
+        valore, nessun anello debole, il valore preso da una pagina letta e nessuna fonte forte che indichi un'altra
+        strada."""
+        if not self.valore:
+            return {"confermata": False, "anelli_deboli": 0, "fonte_valore": "", "disaccordi": []}
+        deboli = self._anelli_deboli()
+        fonte = validazione.livello(self.valore["prova"])
+        contrari = validazione.disaccordi_sulla_strada(self.conflitti, self.valore["anello"])
+        return {"confermata": deboli == 0 and fonte != "C" and not contrari, "anelli_deboli": deboli,
+                "fonte_valore": fonte, "disaccordi": contrari}
+
     def _anelli_deboli(self) -> int:
         a, deboli = (self.valore or {}).get("anello"), 0
         while a is not None:
@@ -1094,7 +1108,14 @@ class Catena:
                 azioni.append((nodo, "web"))  # il web resta come riserva, con la sua penalità
             gia = {k for x in livelli.get(chiave, []) for k in (self._chiave_canonica(x), _chiave_entita(x.nome))}
             nuovi = []
+            tornati = [a for a in figli if validazione.ripete_un_antenato(a, nodo)]
+            if tornati:  # una catena non torna su un'entità già attraversata (relazione letta al contrario)
+                self.storia.append({"passo": profondita + 1, "relazione": "già nella strada", "tentativo": 0,
+                                    "candidati": [a.nome for a in tornati], "tenuti": [],
+                                    "scartati": [(a.nome, ["entità già attraversata dalla catena"]) for a in tornati]})
             for a in figli:
+                if a in tornati:
+                    continue
                 if self._chiave_canonica(a) not in gia and _chiave_entita(a.nome) not in gia:
                     nuovi.append(a)
                     gia |= {self._chiave_canonica(a), _chiave_entita(a.nome)}
@@ -1533,8 +1554,14 @@ class Catena:
         con_legame = any(str(c.get("descrizione", "")).startswith("è in relazione «") for c in controlli)
         legato = lambda a: not con_legame or any(  # noqa: E731
             e["esito"] == "sì" and e["prova"] and str(e["controllo"]).startswith("è in relazione") for e in a.esiti)
+        # Un legame provato solo dall'estratto di una ricerca (pagina mai letta) non fa un anello forte.
         forti = [a for a in ordinati if a.qualita > 0.5 and legato(a) and not self._decisivo_ignoto(a)
-                 and self._identificato(a)]
+                 and self._identificato(a) and not validazione.legame_solo_da_estratti(a)]
+        relazione = next((str(c.get("descrizione", "")) for c in controlli
+                          if str(c.get("descrizione", "")).startswith("è in relazione «")), "")
+        for voce in validazione.disaccordi([a for a in candidati if a not in vivi], relazione):
+            if voce not in self.conflitti:
+                self.conflitti.append(voce)
         if forti:
             # Dietro ai forti restano i non smentiti, segnati deboli: se dal forte non si arriva al valore, la catena
             # prova loro (16/10, Linux kernel: Islene Calciolari Garcia senza data di nascita, Alexandre Oliva dietro).
@@ -1832,6 +1859,12 @@ class Catena:
                                     "candidati": [a.nome], "tenuti": [],
                                     "scartati": [(f"{esito.get('valore')}", [rifiuto])]})
                 prova = None
+            # Il valore deve essere scritto nella riga citata: il modello può tradurre una data, non cambiarla.
+            if prova is not None and not validazione.valore_nella_riga(esito.get("valore", ""), prova.testo):
+                self.storia.append({"passo": -1, "relazione": "valore non nella riga", "tentativo": tentativo,
+                                    "candidati": [a.nome], "tenuti": [],
+                                    "scartati": [(str(esito.get("valore")), [prova.testo[:200]])]})
+                prova = None
             # La riga del valore deve parlare dell'entità: sua voce o suo nome (16/10, Ducato di Milano:
             # l'altitudine di Bereguardo presa dalla voce di Vigevano).
             if prova is not None and not (prova.url in {v.url for v in a.voci.values()}
@@ -1958,6 +1991,12 @@ class Catena:
             righe.append(f"\nVALORE CERCATO ({self.piano.get('risposta', {}).get('cosa', '')}): "
                          f"{self.valore['valore']} [{numero(self.valore['prova'].url)}] "
                          f"{self.valore['prova'].testo[:600]}")
+        contrari = validazione.disaccordi_sulla_strada(self.conflitti, self.valore["anello"]) if self.valore else []
+        if contrari:
+            righe.append("\nFONTI IN DISACCORDO CON LA CATENA (scrivile nella riga **Fonti in disaccordo** e abbassa la "
+                         "**Fiducia**):")
+            righe += [f"- [{numero(x['url'])}] per «{x['relazione']}» di {x['da']} la fonte indica {x['nome']}: "
+                      f"{x['riga']} — scartato perché non rispetta: {'; '.join(x['contro'])}" for x in contrari]
         altri = [x for fascio in self.anelli[-1:] for x in fascio if not catena or x is not catena[0]]
         if altri:
             righe.append("\nALTRI CANDIDATI DELL'ULTIMO PASSO: " + "; ".join(f"{x.nome} ({x.punti} controlli sì)"
@@ -2009,7 +2048,8 @@ class Catena:
     def riepilogo(self) -> dict:
         return {"interpretazione": self.interpretazione, "piano": self.piano, "storia": self.storia,
                 "valore": {"valore": self.valore["valore"], "di": self.valore["anello"].nome,
-                           "url": self.valore["prova"].url} if self.valore else None,
-                "motivo": self.motivo, "azioni": self.azioni,
+                           "url": self.valore["prova"].url,
+                           "riga": " ".join(str(self.valore["prova"].testo).split())[:600]} if self.valore else None,
+                "motivo": self.motivo, "azioni": self.azioni, "controlli": self.controlli(),
                 "wikipedia": {"voci": self.wiki.lette, "richieste": self.wiki.richieste, "tetto": self.wiki.esaurite}
                 if self.wiki is not None else None}

@@ -23,6 +23,10 @@ Sigle: **D** = visto nei dati delle corse, **R** = visto leggendo il codice, **I
 | Stesso valore ripetendo | — | 11/14 = 79% | ≥ 85% |
 | Stesso «confermata» ripetendo | — | **8/14 = 57%** | ≥ 85% |
 
+Con il metro corretto (fase A, fatta): corsa 1 di controllo 25/35 = 71% (95%: 55–84%), una da giudicare; corsa 2
+10/12. Sulle due corse insieme le «confermate» sono giuste 13/17 = 76%, le non confermate 22/30 = 73%: **il sigillo
+oggi non dice niente.**
+
 1. **«Confermata» non è un sigillo affidabile.** Perfetta sulle domande regolate, 83% e 57% su quelle nuove; ripetendo
    la corsa cambia quasi una volta su due. Oggi vuol dire solo «nessun anello della strada vincente è segnato debole»
    (`raccolta.py:159`).
@@ -202,7 +206,57 @@ giuste non scendono oltre il rumore (McNemar, `banco/statistiche.py`).
 Le domande di controllo servono nei giri 3 e 5 per *accettare o rifiutare* un controllo, mai per scrivere regole su
 una domanda. Dopo il giro 5 sono consumate: il giro 9 vuole un insieme nuovo.
 
-## 8. Decisioni aperte
+## 8. Piano dei test dei controlli
+
+Ogni controllo passa da sei livelli, dal meno caro al più caro. Un controllo entra nel codice dopo i livelli 1–4
+(gratis); resta nel codice solo se passa il 5 e il 6.
+
+| Livello | Che cosa prova | Come | Criterio | Stato all'11/11 |
+|---|---|---|---|---|
+| 1 Tabelle | la regola, caso per caso | `test/test_validazione.py`: valori e righe scritti a mano, giusti e sbagliati | tutti | fatto per G1, G3, G4, G7 |
+| 2 A tappeto | la regola su centinaia di casi generati | ogni data (192) in 6 lingue e in forma numerica si ritrova; la stessa data con giorno, mese o anno cambiato di uno è rifiutata; ogni numero cambiato è rifiutato | 0 errori | fatto per G1 (2.300 date giuste, 4.600 cambiate) |
+| 3 Casi veri | i difetti visti nelle corse | un test per caso, con le righe vere: PostgreSQL (estratto contro riquadro), Aida (1885 e 1886), C++ (ritorno su Wheeler), Python (−2 e 2 m), Ducato di Savoia e Presa di Roma (valore giusto contato sbagliato) | tutti | fatto |
+| 4 Rigioco | il controllo non cambia le catene che non deve cambiare | le 39 catene registrate, senza rete né Claude: ogni catena che cambia va guardata e spiegata | ogni differenza spiegata e scritta in `da_registrare.txt` | 37 uguali, 2 cambiate apposta (sotto) |
+| 5 Corse salvate | quante risposte tocca, giuste e sbagliate | il controllo ricalcolato sugli esiti salvati (`esiti_rigiudicati.json`) | toglie il sigillo a più sbagliate che giuste | G4: 1 sbagliata e 1 giusta su 87 risposte |
+| 6 Dal vivo, a coppie | l'effetto vero | stesse domande di controllo con il controllo acceso e spento; McNemar | `confermata` giuste in salita, giuste totali non in calo | da fare (a pagamento) |
+
+**Che cosa ha già trovato il livello 4** (tre regole sbagliate, corrette prima di qualunque corsa a pagamento):
+- G7 nella prima forma segnava «disaccordo» in 33 catene su 39: ogni candidato scartato con una riga di Wikipedia
+  (i fratelli di una relazione uno-a-molti: gli allievi, i derivati). Ora vale solo il riquadro della voce di prima
+  contro un candidato scelto con una fonte più debole.
+- G3 senza le parentesi prendeva «I promessi sposi (Petrella)» per il romanzo e «Solférino (Landes)» per Solferino.
+  Ora conta il nome intero o la stessa voce di Wikipedia.
+- G1 rifiutava «26 Ιουλίου 1985» (mese in greco). Ora una riga senza mesi riconosciuti non si può smentire: bastano
+  giorno e anno.
+
+Le due catene cambiate apposta: Divina Commedia (la registrazione finiva il budget girando tra Kyparissia e Tripyla:
+G3 ferma il giro) e Penicillina (un anello forte solo per un estratto: G4 lo rende debole e la catena cerca ancora).
+
+**Test ancora da scrivere, in ordine:**
+
+| # | Test | Che cosa dimostra | Costo |
+|---|---|---|---|
+| T1 | **Sabotaggio:** spento un controllo alla volta, almeno un test deve fallire (script `banco/sabotaggio.py` su una copia del codice) | nessun controllo è senza test | 0 |
+| T2 | **Pagina avvelenata** (`test_browser.py`, server locale): una pagina che dà un valore diverso dal riquadro; un estratto che contraddice la pagina letta; una riga che nomina il valore di un'altra entità | G1, G4 e G7 tengono con pagine vere, non solo con oggetti finti | 0 |
+| T3 | **Catena finta intera** (`test_catena.py`, modello finto): il modello dà un valore che non è nella riga; dà una riga di un altro candidato; torna su un antenato; in tutti i casi la risposta finale non è «confermata» | i controlli sono collegati alla risposta, non solo scritti | 0 |
+| T4 | **Domande senza risposta** (20, scritte a mano: entità inventate, relazioni che non esistono, valore mai pubblicato) | lo strumento dice «non trovata» invece di inventare | circa 2 $ |
+| T5 | **Seconda lettura (G2):** modello finto che dà due valori diversi nelle due letture → `contestata`; uguali → passa | G2 | 0 |
+| T6 | **Revisione contraria (G6):** strade vere sbagliate delle corse (C++, Ducato di Savoia, ENIAC, Marignano) e 10 giuste, date al revisore | quante sbagliate ferma e quante giuste lascia passare, prima di collegarlo | centesimi |
+| T7 | **Riscontro (G5):** voci registrate in due lingue che concordano, discordano (Aida) o mancano | G5 | 0 con il rigioco |
+| T8 | **Giudice:** 50 verdetti del giudice riletti a mano; le coppie attesa/risposta diventano test del confronto | errori del giudice ≤ 2% | tempo di una persona |
+| T9 | **Risposte attese:** ogni risposta attesa confrontata con il riquadro di it.wiki ed en.wiki; quelle che non coincidono segnate | il metro misura lo strumento, non Wikidata | 0 e tempo di una persona |
+| T10 | **Stato e documento:** una risposta `incerta` non compare mai come fatto nella sintesi; `contestata` ha le due versioni; la copertina conta gli stati | lo strato del documento | 0 |
+| T11 | **Stabilità:** stessa domanda tre volte: stesso valore e stesso stato | il sigillo non dipende dal caso | nei dati del giro 3 |
+| T12 | **Due persone** rileggono 40 risposte `verificata` con le fonti aperte; accordo tra loro (kappa) | la misura finale non dipende da un solo lettore né dal giudice | tempo di due persone |
+
+Regole dei test:
+- Il test si scrive prima del controllo e deve fallire sul codice di prima.
+- Ogni rifiuto di un controllo lascia una riga in `storia` (`valore non nella riga`, `già nella strada`) e l'esito in
+  `catena.controlli`: senza traccia un controllo non si può misurare.
+- I casi veri restano nei test anche quando il difetto è corretto.
+- Un controllo che sul rigioco cambia una catena giusta senza spiegazione non entra.
+
+## 9. Decisioni aperte
 
 1. **Wikidata** come riscontro facoltativo (G5) e per i nuovi insiemi di domande (giri 4 e 9): vuole un indirizzo di
    contatto. Scelte: l'e-mail dell'account Claude, un altro indirizzo, oppure niente Wikidata (G5 solo con Wikipedia in

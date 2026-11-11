@@ -25,6 +25,9 @@ CATENE = sorted((RADICE / "risultati" / "rigioco").glob("*/atteso.json"))
 def test_catena_ripercorsa_uguale(file: Path | None, tmp_path: Path) -> None:
     if file is None:
         pytest.skip("nessuna catena registrata")
+    superata = file.parent / "da_registrare.txt"
+    if superata.is_file():  # il codice è cambiato apposta su questa catena: va registrata di nuovo (costa)
+        pytest.skip(f"da registrare di nuovo: {superata.read_text(encoding='utf-8').strip()[:200]}")
     atteso = json.loads(file.read_text(encoding="utf-8"))
     richiesta = {"domanda": atteso["domanda"], "opzioni": atteso["opzioni"], "cartella_pezzi": str(tmp_path / "pezzi"),
                  "profilo": str(tmp_path / "profilo")}
