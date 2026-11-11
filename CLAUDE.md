@@ -7,6 +7,9 @@ Indagini sul web guidate da Claude: vedi `README.md` per il funzionamento e la s
 ```bash
 venv/bin/python -m pytest -q -m "not rete and not claude"   # test senza Internet e senza Claude
 venv/bin/python -m pytest -q -m browser                     # solo quelli con Chromium
+venv/bin/python -m pytest -q -m rigioco                     # le catene registrate (se ci sono), senza rete né Claude
+venv/bin/python banco/sabotaggio.py                         # ogni controllo spento deve far fallire un test
+venv/bin/python banco/rigiudica.py <corsa>                  # nuovo giudizio di una corsa salvata, senza Claude
 ```
 
 Il banco (`banco/banco.py`) e ogni corsa con il Claude vero consumano l'abbonamento: chiedi prima di lanciarli.
@@ -19,3 +22,5 @@ Il banco (`banco/banco.py`) e ogni corsa con il Claude vero consumano l'abboname
 - `catena.py` è regolato sulle 40 domande di `banco/domande.json`: i risultati su quelle domande non misurano domande
   nuove.
 - Ogni difetto corretto ha il suo test, scritto prima della correzione.
+- I controlli sui risultati stanno in `web/validazione.py` (piano e stato in `docs/solidita-e-validazione.md`): un controllo
+  nuovo entra in `banco/sabotaggio.py` e, se cambia una catena registrata, il motivo va in `da_registrare.txt`.

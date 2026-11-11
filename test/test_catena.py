@@ -854,3 +854,91 @@ def test_stesso_passo_con_controlli_diversi_si_rifa_su_wikipedia() -> None:
     assert Catena._gia_fatta(("wiki", "galileo", 0, "allievi"), "wiki", "A", gia, segni) == "riusa"
     assert Catena._gia_fatta(("web", "galileo", 0), "web", "B", gia, segni) == "salta"
     assert Catena._gia_fatta(("wiki", "altro", 0, "allievi"), "wiki", "A", gia, segni) == "nuova"
+
+
+# --- revisione dell'11/11/2026: i controlli sono collegati alla risposta (docs/solidita-e-validazione.md, T3) ------
+
+def test_valore_cambiato_dal_modello_non_passa(catena, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Il modello cita la riga giusta ma dà un altro anno: il programma rifiuta il valore, la risposta non c'è."""
+    def bugiardo(punto: str, dati: dict, predefinito):
+        if punto == "valore" and "6 dicembre 1586" in dati["prove"]:
+            return {"valore": "6 dicembre 1587", "prova": _riga(dati["prove"], "6 dicembre 1586"), "motivo": ""}, "claude"
+        return _decidi(punto, dati, predefinito)
+
+    monkeypatch.setattr(catena.r.pensatore, "decidi", bugiardo)
+    catena.percorri()
+    assert catena.valore is None and not catena.controlli()["confermata"]
+    rifiuti = [s for s in catena.storia if s["relazione"] == "valore non nella riga"]
+    assert rifiuti and rifiuti[0]["scartati"][0][0] == "6 dicembre 1587"
+    assert catena.r.scrivi().startswith("**Risposta:** Non trovata")
+
+
+def test_valore_giusto_porta_l_esito_dei_controlli(catena) -> None:
+    catena.percorri()
+    esito = catena.riepilogo()
+    assert esito["controlli"]["fonte_valore"] == "A" and esito["controlli"]["disaccordi"] == []
+    assert "6 dicembre 1586" in esito["valore"]["riga"]
+    assert esito["controlli"]["confermata"] == (esito["controlli"]["anelli_deboli"] == 0)
+
+
+def test_la_catena_non_torna_sulla_partenza(catena, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tra i «discepoli» di Biancani il modello propone Galileo, da cui la catena è partita: scartato, con traccia."""
+    def circolare(punto: str, dati: dict, predefinito):
+        esito, chi = _decidi(punto, dati, predefinito)
+        if punto == "candidati" and dati.get("entita") == "Giuseppe Biancani":
+            esito["candidati"].append({"nome": "Galileo Galilei", "prova": _riga(dati["prove"], "lettori di Galileo")})
+        return esito, chi
+
+    monkeypatch.setitem(PAGINE, "Giuseppe Biancani allievi", [(
+        "https://it.wikipedia.org/wiki/Giuseppe_Biancani", "Giuseppe Biancani (Bologna, 8 marzo 1566) è stato un "
+        "gesuita. Tra suoi discepoli figurano Giovanni Riccioli, Mario Bettini, Niccolò Zucchi e Niccolò Cabeo, tutti "
+        "lettori di Galileo Galilei.")])
+    monkeypatch.setattr(catena.r.pensatore, "decidi", circolare)
+    catena.percorri()
+    tornati = [s for s in catena.storia if s["relazione"] == "già nella strada"]
+    assert tornati and tornati[0]["candidati"] == ["Galileo Galilei"]
+    assert all(a.nome != "Galileo Galilei" for fascio in catena.anelli for a in fascio)
+    assert catena.valore["valore"] == "6 dicembre 1586"
+
+
+@pytest.mark.parametrize("testo,forte", [
+    ("[risultato di ricerca: Aubrey Research] Stonebraker was born in Milton, New Hampshire", False),
+    ("Michael Stonebraker was born in Milton, New Hampshire in 1943", True)])
+def test_un_estratto_non_fa_un_anello_forte(catena, monkeypatch: pytest.MonkeyPatch, testo: str, forte: bool) -> None:
+    from ricerca_catena.web.catena import Anello, Prova, qualita
+    prova = Prova(testo, "https://esempio.org/stonebraker")
+    controlli = [{"descrizione": "è in relazione «luogo di nascita di» con Michael Stonebraker", "letture": [], "peso": 2}]
+    milton = Anello("Milton", da=Anello("Michael Stonebraker"))
+
+    def esiti(candidati, _controlli) -> None:
+        for a in candidati:
+            a.esiti = [{"controllo": controlli[0]["descrizione"], "esito": "sì", "prova": prova, "peso": 2}]
+            a.qualita, a.punti = qualita(a.esiti), 1
+
+    monkeypatch.setattr(catena, "_esiti", esiti)
+    tenuti = catena._verifica([milton], controlli)
+    assert tenuti == [milton] and milton.debole is (not forte)
+
+
+def test_il_candidato_del_riquadro_scartato_resta_nel_registro(catena, monkeypatch: pytest.MonkeyPatch) -> None:
+    from ricerca_catena.web.catena import Anello, Prova, qualita
+    stonebraker = Anello("Michael Stonebraker")
+    riquadro = Prova("[Michael Stonebraker (en)] Born: Newburyport, Massachusetts, U.S.",
+                     "https://en.wikipedia.org/wiki/Michael_Stonebraker")
+    legame = "è in relazione «luogo di nascita di» con Michael Stonebraker"
+    controlli = [{"descrizione": legame, "letture": [], "peso": 1},
+                 {"descrizione": "comune del New Hampshire", "letture": [], "peso": 2}]
+    newburyport = Anello("Newburyport, Massachusetts", da=stonebraker, prova_legame=riquadro)
+
+    def esiti(candidati, _controlli) -> None:
+        for a in candidati:
+            a.esiti = [{"controllo": legame, "esito": "sì", "prova": riquadro, "peso": 1},
+                       {"controllo": "comune del New Hampshire", "esito": "no", "prova": riquadro, "peso": 2}]
+            a.qualita, a.punti = qualita(a.esiti), 0
+
+    monkeypatch.setattr(catena, "_esiti", esiti)
+    assert newburyport not in [a for a in catena._verifica([newburyport], controlli) if not a.debole]
+    assert [(x["da"], x["nome"], x["contro"]) for x in catena.conflitti] == [
+        ("Michael Stonebraker", "Newburyport, Massachusetts", ["comune del New Hampshire"])]
+    catena._verifica([newburyport], controlli)
+    assert len(catena.conflitti) == 1  # una volta sola

@@ -236,9 +236,9 @@ G3 ferma il giro) e Penicillina (un anello forte solo per un estratto: G4 lo ren
 
 | # | Test | Che cosa dimostra | Costo |
 |---|---|---|---|
-| T1 | **Sabotaggio:** spento un controllo alla volta, almeno un test deve fallire (script `banco/sabotaggio.py` su una copia del codice) | nessun controllo è senza test | 0 |
+| T1 | **Sabotaggio (fatto):** spento un controllo alla volta, almeno un test deve fallire (`banco/sabotaggio.py`, su una copia del codice). 17 sabotaggi, 17 scoperti; alla prima corsa ne mancava uno (il registro dei disaccordi non collegato): test aggiunto | nessun controllo è senza test | 0 |
 | T2 | **Pagina avvelenata** (`test_browser.py`, server locale): una pagina che dà un valore diverso dal riquadro; un estratto che contraddice la pagina letta; una riga che nomina il valore di un'altra entità | G1, G4 e G7 tengono con pagine vere, non solo con oggetti finti | 0 |
-| T3 | **Catena finta intera** (`test_catena.py`, modello finto): il modello dà un valore che non è nella riga; dà una riga di un altro candidato; torna su un antenato; in tutti i casi la risposta finale non è «confermata» | i controlli sono collegati alla risposta, non solo scritti | 0 |
+| T3 | **Catena finta intera (fatto)** (`test_catena.py`, modello finto): il modello dà un valore che non è nella riga; torna sulla partenza; un legame da un estratto; il candidato del riquadro scartato; in tutti i casi la risposta finale non è «confermata» o il candidato è scartato con traccia | i controlli sono collegati alla risposta, non solo scritti | 0 |
 | T4 | **Domande senza risposta** (20, scritte a mano: entità inventate, relazioni che non esistono, valore mai pubblicato) | lo strumento dice «non trovata» invece di inventare | circa 2 $ |
 | T5 | **Seconda lettura (G2):** modello finto che dà due valori diversi nelle due letture → `contestata`; uguali → passa | G2 | 0 |
 | T6 | **Revisione contraria (G6):** strade vere sbagliate delle corse (C++, Ducato di Savoia, ENIAC, Marignano) e 10 giuste, date al revisore | quante sbagliate ferma e quante giuste lascia passare, prima di collegarlo | centesimi |
