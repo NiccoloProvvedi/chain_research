@@ -28,7 +28,10 @@ def test_wikipedia_voce_con_riquadro_e_collegamenti() -> None:
     wiki = WikipediaGrafo(intervallo_s=6.5)
     voce = wiki.voce("Galileo Galilei", "it")
     assert voce is not None and voce.lingue.get("en") == "Galileo Galilei" and voce.categorie
-    assert voce.riquadro() and any(r.collegamenti for r in voce.righe) and "1564" in voce.inizio
+    assert any(r.collegamenti for r in voce.righe) and "1564" in voce.inizio
+    # le biografie di it.wiki non hanno il riquadro (12/11: prima corsa di questo test): lo si guarda su un comune
+    comune = wiki.voce("Amsterdam", "it")
+    assert comune is not None and any(r.testo.startswith("Altitudine") for r in comune.riquadro())
 
 
 @pytest.mark.rete
