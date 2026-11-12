@@ -299,3 +299,49 @@ Aggiornato al 12/11/2026. I risultati delle corse a pagamento si aggiungono qui 
 - B7 («confermato da N strade» con le fonti diverse): cambia il motivo finale scritto nelle catene registrate, si fa
   insieme alla nuova registrazione.
 - Codice morto ancora da togliere; `test_contratti.py` e la CI mai eseguiti.
+
+### Risultati delle corse (12/11/2026)
+
+**Risposte attese** (`banco/verifica_riferimenti.py`, poi a mano): su 36 domande di controllo 27 buone, 6 contestate
+(Wikipedia dà un altro valore o un altro passaggio: per il luogo di nascita di Guido van Rossum, Haarlem per Wikidata,
+Amsterdam per it.wiki, L'Aia per en.wiki), 3 ambigue (calendario giuliano o gregoriano; istituito o operativo). Le
+note stanno in `banco/domande_holdout.json`. I numeri si danno sempre nei due modi: togliere domande dopo aver visto
+gli errori può far sembrare lo strumento migliore.
+
+| Corsa | Codice | Giuste, tutte | Giuste, risposte attese buone |
+|---|---|---|---|
+| `holdout-1` | prima dei controlli | 25/35 = 71% | 24/27 = 89% (95%: 72–96%) |
+| `controllo-c1` | tutti i controlli | 24/33 | 22/26 = 85% (95%: 67–94%) |
+| `controllo-d1` | la revisione vede le altre voci | 24/36 | 22/27 = 81% (95%: 63–92%) |
+
+Le risposte giuste non cambiano oltre il rumore (McNemar p = 1,0 nei due confronti): i controlli non guidano la
+ricerca, danno lo stato. Il calo sulle domande nuove visto all'inizio (69%) veniva per la maggior parte dalle risposte
+attese sbagliate, non dallo strumento.
+
+**Stato della risposta, c1 e d1 insieme, risposte attese buone:**
+
+| Stato | Giuste | Sbagliate |
+|---|---|---|
+| verificata | 9 | 0 |
+| sostenuta | 11 | 0 |
+| contestata | 2 | 0 |
+| incerta | 22 | 9 |
+
+- **Nessuna risposta sbagliata è stata data come fatto**: 20 su 20 tra verificata e sostenuta. Con il vecchio
+  «confermata» erano 13 su 17.
+- Regola di decisione: passa «verificata e sostenuta più giuste di contestata e incerta» (20/20 contro 24/33); non
+  passa ancora «verificata ≥ 95% con limite inferiore ≥ 85%»: 9 su 9 sono troppo poche (limite inferiore 70%).
+- **`incerta` è troppo larga**: 22 risposte giuste. La causa è l'«anello debole», che da solo porta a `incerta` ed è un
+  segnale povero (21 giuste, 7 sbagliate). Il segnale forte è la revisione: «regge: sì» 29 giuste e 0 sbagliate;
+  obiezione con riga 4 e 4.
+- Ripetendo (c1 e d1, 33 domande): stesso valore 25, stesso stato 19. Delle 8 domande che cambiano valore, 7 sono
+  `incerta` in tutte e due le corse: l'instabilità sta dove lo stato già avverte.
+- Il caso che ha portato a d1 (luogo di nascita conteso, risposta `verificata` in c1) in d1 è `incerta`, con la riga
+  dell'altra voce come motivo.
+- Costo: 4,4 e 5,4 $ per corsa, circa 8 minuti a domanda (prima 16).
+
+**Difetti trovati dalle corse e corretti:** tre domande perse dal banco a 3 ore mentre aspettavano il rinnovo del
+limite di sessione; due valori uguali segnati «discordi» perché uno aveva una nota dietro.
+
+**Prossimo passo:** restringere `incerta` (anello debole ma revisione «regge: sì» e riscontro concorde) usando solo
+la corsa di taratura sulle 40 domande, poi una corsa di conferma sulle domande di controllo.
