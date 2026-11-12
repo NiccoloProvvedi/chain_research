@@ -1075,3 +1075,88 @@ def test_seconda_lettura_che_cambia_il_valore_della_riga_non_e_un_disaccordo(cat
     _strada_forte(catena)
     catena.revisione_finale()
     assert catena.esami["seconda_lettura"] == {"esito": "non ritrovato"} and catena.controlli()["stato"] == "sostenuta"
+
+
+def test_la_revisione_vede_le_altre_voci_di_ogni_anello(catena, monkeypatch: pytest.MonkeyPatch) -> None:
+    """12/11, domande di controllo (Python): il luogo di nascita preso da una voce, un'altra lingua ne dava un altro e
+    la risposta era «verificata». La revisione riceve anche le righe delle altre voci dell'anello di prima: un «no» con
+    quelle parole rende la risposta incerta."""
+    from types import SimpleNamespace
+
+    from ricerca_catena.web.catena import Prova
+    altra = Prova("[Giuseppe Biancani (en)] Notable students: Giovanni Battista Riccioli", "https://en.wikipedia.org/wiki/Biancani")
+    viste: list[dict] = []
+
+    def modello(punto: str, dati: dict, predefinito, **_altri):
+        if punto == "revisione":
+            viste.append(dati)
+            return {"regge": "no", "motivo": "m", "indizi": [{
+                "indizio": "allievo di Biancani", "esito": "no", "riga": _riga(dati["righe"], "Notable students"),
+                "citazione": "Notable students: Giovanni Battista Riccioli"}]}, "claude"
+        return _decidi(punto, dati, predefinito)
+
+    monkeypatch.setattr(catena.r.pensatore, "decidi", modello)
+    catena.r.pensatore.bilancio.budget_usd = 1.0
+    catena.percorri()
+    _strada_forte(catena)
+    chieste: list[tuple[str, list[str]]] = []
+
+    def voci(a, altre=2):
+        return [SimpleNamespace(url="https://en.wikipedia.org/wiki/Biancani", titolo="Giuseppe Biancani", lingua="en",
+                                lingue={})] if a.nome == "Giuseppe Biancani" else []
+
+    def righe_wiki(voci, parole, **_k):
+        chieste.append((voci[0].titolo, parole))
+        return [altra]
+
+    monkeypatch.setattr(catena, "_voci", voci)
+    monkeypatch.setattr(catena, "_righe_wiki", righe_wiki)
+    catena.revisione_finale()
+    assert "Notable students: Giovanni Battista Riccioli" in viste[0]["righe"]
+    assert ("Giuseppe Biancani", ["allievi", "Niccolò Zucchi"]) in chieste  # la relazione e il nome dell'anello scelto
+    esito = catena.controlli()
+    assert esito["stato"] == "incerta" and esito["esami"]["revisione"]["obiezioni"][0]["url"].endswith("/Biancani")
+
+
+# --- revisione dell'11/11/2026, difetti B5 e B6: gli esiti vanno al candidato e al controllo giusti ----------------
+
+def _catena_nuda():
+    c = Catena.__new__(Catena)
+    c.o = {}
+    return c
+
+
+def test_due_candidati_con_lo_stesso_cognome_non_si_scambiano_gli_esiti() -> None:
+    """Il modello riscrive i nomi («G. Verdi», «Verdi Carlo»): con due candidati con lo stesso cognome l'esito di uno
+    non deve finire all'altro. Senza un nome uguale e con il cognome ambiguo, nessun esito («non so»)."""
+    from ricerca_catena.web.catena import Anello, Prova
+    c = _catena_nuda()
+    giuseppe, carlo = Anello("Giuseppe Verdi"), Anello("Carlo Verdi")
+    prove = [Prova("Giuseppe Verdi fu un compositore", "u1"), Prova("Carlo Verdi fu un oste", "u2")]
+    controlli = [{"descrizione": "compositore", "letture": [], "peso": 2}]
+    esito = {"candidati": [
+        {"nome": "Verdi Carlo", "controlli": [{"controllo": "C1", "esito": "no", "prova": 2, "citazione": "fu un oste"}]},
+        {"nome": "G. Verdi", "controlli": [{"controllo": "C1", "esito": "sì", "prova": 1, "citazione": "fu un compositore"}]}]}
+    c._applica_esiti([giuseppe, carlo], prove, {id(giuseppe): range(1, 2), id(carlo): range(2, 3)}, esito, controlli)
+    assert [e["esito"] for e in giuseppe.esiti] == ["non so"] and [e["esito"] for e in carlo.esiti] == ["non so"]
+    # con un solo candidato con quel cognome l'abbinamento per cognome resta (16/10: nomi riscritti dal modello)
+    solo = Anello("Giuseppe Verdi")
+    c._applica_esiti([solo], prove, {id(solo): range(1, 2)}, {"candidati": [esito["candidati"][1]]}, controlli)
+    assert [e["esito"] for e in solo.esiti] == ["sì"]
+
+
+def test_due_controlli_che_cominciano_uguale_restano_due() -> None:
+    from ricerca_catena.web.catena import Anello, Prova
+    c = _catena_nuda()
+    inizio = "è stato rettore di un collegio della Compagnia di Gesù nella città di "
+    controlli = [{"descrizione": inizio + "Roma", "letture": [], "peso": 1},
+                 {"descrizione": inizio + "Parma", "letture": [], "peso": 1}]
+    a = Anello("Niccolò Zucchi")
+    prove = [Prova("Niccolò Zucchi fu rettore del Collegio Romano a Roma", "u1")]
+    esito = {"candidati": [{"nome": "Niccolò Zucchi", "controlli": [
+        {"controllo": "C1", "esito": "sì", "prova": 1, "citazione": "rettore del Collegio Romano"},
+        {"controllo": "C2", "esito": "no", "prova": 1, "citazione": "a Roma"}]}]}
+    c._applica_esiti([a], prove, {id(a): range(1, 2)}, esito, controlli)
+    assert [(e["controllo"][-5:].strip(), e["esito"]) for e in a.esiti] == [("Roma", "sì"), ("Parma", "no")]
+    uniti = Catena._unisci_esiti(a.esiti, a.esiti)
+    assert [e["esito"] for e in uniti] == ["sì", "no"]

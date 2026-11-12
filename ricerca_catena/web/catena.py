@@ -898,6 +898,28 @@ class Catena:
         return {"esito": "discordi", "valore": valore, "url": prova.url, "fonti_guardate": fonti,
                 "riga": " ".join(prova.testo.split())[:300]}
 
+    _RIGA_DI_RIQUADRO = re.compile(r"[^.:]{1,40}:\s")
+
+    def _righe_delle_altre_voci(self, strada: list[Anello]) -> list[Prova]:
+        """Per ogni anello, le righe che parlano della sua relazione nelle voci dell'anello di prima, comprese le altre
+        lingue e senza la pagina da cui il legame è stato preso: se un'altra voce dà un'altra entità (un altro luogo di
+        nascita, un altro relatore), chi rivede la catena deve poterlo vedere. Il riscontro del valore (G5) guarda solo
+        l'ultimo dato; qui si guardano i passaggi (12/11, domande di controllo, Python: luogo di nascita diverso tra
+        due voci, risposta «verificata»)."""
+        righe: list[Prova] = []
+        for a in strada:
+            if a.da is None:
+                continue
+            usata = a.prova_legame.url if a.prova_legame is not None else ""
+            voci = [v for v in self._voci(a.da, altre=2) if v.url != usata]
+            if not voci:
+                continue
+            mia = next(iter(a.voci.values()), None)
+            nomi = [a.nome] + [mia.lingue[v.lingua] for v in voci if mia is not None and v.lingua in mia.lingue]
+            righe += self._righe_wiki(voci, [a.relazione] + list(dict.fromkeys(nomi)), massimo=8, caratteri=1800,
+                                      bonus=lambda testo: 40 if self._RIGA_DI_RIQUADRO.match(testo) else 0)
+        return righe
+
     def _revisione_contraria(self) -> dict:
         """G6. Un altro modello rilegge la domanda, la strada e le righe usate, cercando l'indizio che non torna."""
         from .. import configurazione
@@ -907,7 +929,8 @@ class Catena:
         for a in strada:
             righe += [p for p in [a.prova_legame, a.inizio] + [e["prova"] for e in a.esiti] if p is not None]
         righe.append(self.valore["prova"])
-        righe = list({(p.url, p.testo): p for p in righe}.values())[:60]
+        righe += self._righe_delle_altre_voci(strada)
+        righe = list({(p.url, p.testo): p for p in righe}.values())[:90]
         dati = {"domanda": self.r.argomento[:1500],
                 "strada": " → ".join([radice.nome] + [f"[{a.relazione}] {a.nome}" for a in strada]),
                 "risposta": f"{self.valore['valore']} ({(self.piano.get('risposta') or {}).get('cosa', '')} di "
@@ -1833,7 +1856,7 @@ class Catena:
 
     @staticmethod
     def _unisci_esiti(primi: list[dict], secondi: list[dict]) -> list[dict]:
-        chiave = lambda e: _norma(e["controllo"])[:50]  # noqa: E731
+        chiave = lambda e: _norma(e["controllo"])  # noqa: E731
         altri = {chiave(e): e for e in secondi}
         uniti = []
         for e in primi:
@@ -1870,10 +1893,14 @@ class Catena:
         for c in controlli:
             testo = str(c.get("descrizione") or "")
             if not re.search(r"\b(anni|circa|metà|inizio|fine|primi|ultimi|secolo|tra|decennio)\b", testo, re.I):
-                anni_precisi[_norma(testo)[:50]] = set(re.findall(r"\b1[0-9]{3}\b|\b20[0-9]{2}\b", testo))
+                anni_precisi[_norma(testo)] = set(re.findall(r"\b1[0-9]{3}\b|\b20[0-9]{2}\b", testo))
         for a in candidati:
-            risposta = per_nome.get(_norma(a.nome)) or next(
-                (x for k, x in per_nome.items() if _chiave_nome(a.nome) in k.split()), {"controlli": []})
+            # Il modello a volte riscrive il nome: allora vale il cognome, ma solo se in questo gruppo lo porta un solo
+            # candidato e una sola risposta (due «Verdi»: nessun esito, meglio «non so» che l'esito dell'altro).
+            cognome = _chiave_nome(a.nome)
+            stesse = [x for k, x in per_nome.items() if cognome in k.split()]
+            unico = len(stesse) == 1 and sum(_chiave_nome(b.nome) == cognome for b in candidati) == 1
+            risposta = per_nome.get(_norma(a.nome)) or (stesse[0] if unico else {"controlli": []})
             # Controllo del programma: la prova di un "sì" o di un "no" deve stare nel blocco DEL candidato (16/10,
             # Galileo: Viviani e Guiducci "gesuiti di Bologna" con le righe di altri candidati).
             mie = intervalli.get(id(a), range(0))
@@ -1888,8 +1915,8 @@ class Catena:
                 risposte.append({**e, "controllo": c["descrizione"] if c else e.get("controllo", ""),
                                  "peso": c.get("peso") if c else None})
             # Ogni controllo ha un esito, anche quelli su cui Haiku tace: "non so" (pesano nel conto della qualità).
-            dati = {_norma(e["controllo"])[:50]: e for e in risposte}
-            risposte = [dati.get(_norma(c["descrizione"])[:50]) or {"controllo": c["descrizione"], "esito": "non so",
+            dati = {_norma(e["controllo"]): e for e in risposte}
+            risposte = [dati.get(_norma(c["descrizione"])) or {"controllo": c["descrizione"], "esito": "non so",
                                                                       "prova": 0, "peso": c.get("peso")}
                         for c in controlli] if controlli else risposte
             for e in risposte:
@@ -1902,7 +1929,7 @@ class Catena:
                     # 2009" con una riga che non ne parla)
                     valida = valida and citazione_presente(str(e.get("citazione") or ""), p.testo)
                     # un anno preciso nel controllo deve stare nelle parole citate (Bobrow "premiato nel 2009")
-                    anni = anni_precisi.get(_norma(e.get("controllo", ""))[:50], set())
+                    anni = anni_precisi.get(_norma(e.get("controllo", "")), set())
                     valida = valida and (not anni or any(x in str(e.get("citazione") or "") for x in anni))
                 a.esiti.append({"controllo": e.get("controllo", ""), "peso": e.get("peso") or 1,
                                 "esito": e.get("esito", "non so") if valida or e.get("esito") == "non so" else "non so",

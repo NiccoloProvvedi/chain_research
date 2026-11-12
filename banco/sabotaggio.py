@@ -73,6 +73,8 @@ SABOTAGGI = [
      "                \"stato\": stato_di(d) or esito,", "                \"stato\": riga(risposta, \"Fiducia\"),"),
     ("indagine: lo stato della domanda non si salva", "ricerca_catena/indagine.py",
      "stato_risposta=esito.get(\"stato\"),", "stato_risposta=None,"),
+    ("G6 la revisione non vede le altre voci degli anelli", "ricerca_catena/web/catena.py",
+     "        righe += self._righe_delle_altre_voci(strada)\n", ""),
     ("giudice: il segno non conta", "banco/giudice.py",
      "    return all((n in _negativi(attesa)) == (n in sotto)", "    return True or all((n in _negativi(attesa)) == (n in sotto)"),
     ("giudice: l'errore vale risposta sbagliata", "banco/giudice.py",
