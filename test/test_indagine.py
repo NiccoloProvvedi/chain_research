@@ -89,7 +89,7 @@ def test_indagine_completa_fino_al_pdf(finti, tmp_path: Path) -> None:
     assert [e["tipo"] for e in eventi][-1] == "fine" and any(e["tipo"] == "valutazione" for e in eventi)
     # la regia riceve le risposte ripulite e in breve
     valutate = next(o for p, o in finti if p == "regia_valuta")["domande"]
-    assert {"id", "sezione", "domanda", "esito", "risposta", "fiducia", "fonti"} <= set(valutate[0])
+    assert {"id", "sezione", "domanda", "esito", "risposta", "stato", "limiti_dei_controlli", "fonti"} <= set(valutate[0])
 
 
 def test_rinumera_e_fonti_globali() -> None:

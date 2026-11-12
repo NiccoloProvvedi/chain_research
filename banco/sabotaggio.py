@@ -13,7 +13,7 @@ from pathlib import Path
 
 RADICE = Path(__file__).resolve().parents[1]
 TEST = ["test/test_validazione.py", "test/test_catena.py", "test/test_banco.py", "test/test_regressioni.py",
-        "test/test_raccolta.py"]
+        "test/test_raccolta.py", "test/test_ciclo_vita.py", "test/test_indagine.py"]
 # (nome, file, testo da trovare una sola volta, testo che lo sostituisce)
 SABOTAGGI = [
     ("G1 il valore non si confronta più con la riga", "ricerca_catena/web/catena.py",
@@ -63,6 +63,16 @@ SABOTAGGI = [
      "        if self.r.pensatore.bilancio.disponibile(\"revisione\") < self.MINIMO_PER_GLI_ESAMI:", "        if False:"),
     ("la revisione usa il modello della catena", "ricerca_catena/web/catena.py",
      "lambda: {}, modello=modello)", "lambda: {})"),
+    ("documento: le incerte arrivano a chi scrive", "ricerca_catena/documento.py",
+     "    risolte = [d for d in con_testo if stato_di(d) != \"incerta\"]", "    risolte = list(con_testo)"),
+    ("documento: niente riquadro dei punti aperti", "ricerca_catena/documento.py",
+     "                f\"non vanno prese come fatti.</p><ul>{voci}</ul></aside>\") if voci else \"\"", "                f\"\") if False else \"\""),
+    ("documento: una catena non confermata di prima vale sostenuta", "ricerca_catena/documento.py",
+     "    return \"incerta\" if d.get(\"confermata\") is False else \"sostenuta\"", "    return \"sostenuta\""),
+    ("regia: riceve la fiducia del modello invece dello stato", "ricerca_catena/indagine.py",
+     "                \"stato\": stato_di(d) or esito,", "                \"stato\": riga(risposta, \"Fiducia\"),"),
+    ("indagine: lo stato della domanda non si salva", "ricerca_catena/indagine.py",
+     "stato_risposta=esito.get(\"stato\"),", "stato_risposta=None,"),
     ("giudice: il segno non conta", "banco/giudice.py",
      "    return all((n in _negativi(attesa)) == (n in sotto)", "    return True or all((n in _negativi(attesa)) == (n in sotto)"),
     ("giudice: l'errore vale risposta sbagliata", "banco/giudice.py",

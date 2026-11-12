@@ -47,6 +47,7 @@ def test_domanda_finita_con_modello_e_conferma(ind: Indagine) -> None:
     ind.esegui()
     d = ind.stato["domande"][0]
     assert d["stato"] == "risposta" and d["confermata"] and d["modelli"] == ["claude-finto-1"] and ind.speso() == 0.02
+    assert (d["stato_risposta"], d["motivi_stato"]) == ("sostenuta", ["il valore viene da una sola fonte"])
 
 
 def test_domanda_morta_conta_il_costo(ind: Indagine) -> None:
@@ -179,7 +180,7 @@ def _per_documento(ind: Indagine) -> None:
     ind.stato["piano"] = {**PIANO, "sezioni": [{"id": "s1", "titolo": "Uno", "scopo": "x"},
                                                {"id": "s2", "titolo": "Due", "scopo": "y"}]}
     ind.stato["domande"] = [
-        {"id": f"d{n}", "giro": 1, "sezione": s, "domanda": f"Domanda {n}", "stato": "risposta", "confermata": n == 1,
+        {"id": f"d{n}", "giro": 1, "sezione": s, "domanda": f"Domanda {n}", "stato": "risposta", "confermata": True,
          "risposta": "**Risposta:** dato [1].\n\n**Fiducia:** alta", "costo_usd": 0.1,
          "fonti": [{"numero": 1, "url": f"https://esempio.org/{n}", "titolo": f"F{n}"},
                    {"numero": 2, "url": f"https://altro.org/{n}", "titolo": f"G{n}"}]}
@@ -214,9 +215,95 @@ def test_documento_non_rifa_le_sezioni_gia_pagate(ind: Indagine, monkeypatch: py
     documento.scrivi(ind)
     assert chiamate == []  # niente è cambiato, niente si riscrive
     pagina = Path(esito["html"]).read_text()
-    assert "2 con risposta, 1 confermate da tutta la catena" in pagina and "verificata" not in pagina
+    # risposte di prima dei controlli con il modello: «sostenute», mai «verificate»
+    assert "2 con risposta (2 sostenute)" in pagina and ">verificata<" not in pagina
     assert "Fonti citate" in pagina and "Altre fonti consultate" in pagina and "</p></li>" not in pagina
     assert 'value="3"' in pagina
+
+
+def _risposta(n: int, sezione: str, valore: str, **altro) -> dict:
+    return {"id": f"d{n}", "giro": 1, "sezione": sezione, "domanda": f"Domanda {n}", "stato": "risposta", "costo_usd": 0.1,
+            "valore": valore, "risposta": f"**Risposta:** {valore} [1].\n\n**Fiducia:** alta — tutto bene.",
+            "fonti": [{"numero": 1, "url": f"https://esempio.org/{n}", "titolo": f"F{n}"}], **altro}
+
+
+def test_il_documento_segue_lo_stato_delle_risposte(ind: Indagine, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """T10 (docs/solidita-e-validazione.md): una risposta «incerta» non arriva mai a chi scrive le sezioni né alla
+    sintesi, sta in un riquadro scritto dal programma; una «contestata» arriva con i motivi; la copertina conta gli stati."""
+    monkeypatch.undo()
+    monkeypatch.setenv("RICERCA_LOG", str(tmp_path / "log"))
+    _per_documento(ind)
+    ind.stato["domande"] = [
+        _risposta(1, "s1", "ANNO-VERIFICATO", stato_risposta="verificata", motivi_stato=[], confermata=True),
+        _risposta(2, "s1", "NOME-INCERTO", stato_risposta="incerta", confermata=False,
+                  motivi_stato=["1 anelli della catena non confermati"]),
+        _risposta(3, "s2", "DATA-CONTESTATA", stato_risposta="contestata", confermata=False,
+                  motivi_stato=["un'altra fonte dà 21 giugno 1885"]),
+        _risposta(4, "s2", "VECCHIA-DEBOLE", confermata=False),          # indagine di prima: catena non confermata
+        {"id": "d5", "giro": 1, "sezione": "s2", "domanda": "Domanda 5", "stato": "non_trovata", "fonti": [],
+         "risposta": "**Risposta:** Non trovata: catena interrotta."},
+    ]
+    ricevuti: list[tuple[str, dict]] = []
+
+    def chiedi(self, punto, oggetto, schema, **_k):
+        ricevuti.append((punto, oggetto))
+        if punto == "documento_sezione":
+            return "Sezione: " + " | ".join(r["risposta"].splitlines()[0] for r in oggetto["risposte"])
+        return {"sintesi": "Sintesi dalle sezioni: " + " ".join(x["testo"] for x in oggetto["sezioni"]),
+                "punti_chiave": ["Punto [1]."], "conclusioni": "Fine.", "limiti": "Nessuno."}
+    monkeypatch.setattr(modulo.Regia, "chiedi", chiedi)
+    monkeypatch.setattr(documento, "stampa_pdf", lambda _h, pdf: pdf.write_bytes(b"%PDF-"))
+    pagina = Path(documento.scrivi(ind)["html"]).read_text()
+
+    al_modello = json.dumps([o for _p, o in ricevuti], ensure_ascii=False)
+    assert "NOME-INCERTO" not in al_modello and "VECCHIA-DEBOLE" not in al_modello  # nemmeno nei fatti brevi
+    s1 = next(o for p, o in ricevuti if p == "documento_sezione" and o["sezione"]["id"] == "s1")
+    s2 = next(o for p, o in ricevuti if p == "documento_sezione" and o["sezione"]["id"] == "s2")
+    assert [r["stato"] for r in s1["risposte"]] == ["verificata"]
+    contestata = next(r for r in s2["risposte"] if r["stato"] == "contestata")
+    assert contestata["limiti_dei_controlli"] == ["un'altra fonte dà 21 giugno 1885"]
+    assert any(r["stato"] == "non trovata" for r in s2["risposte"])
+
+    def pezzo(inizio: str, fine: str) -> str:
+        return pagina[pagina.index(inizio):pagina.index(fine, pagina.index(inizio))]
+    sintesi, uno, due = pezzo('<section id="sintesi"', "</section>"), pezzo('<section id="s1"', "</section>"), pezzo('<section id="s2"', "</section>")
+    assert "ANNO-VERIFICATO" in sintesi and "NOME-INCERTO" not in sintesi and "VECCHIA-DEBOLE" not in sintesi
+    aperti = uno[uno.index('class="aperti"'):]
+    assert "Punti aperti" in aperti and "NOME-INCERTO" in aperti and "1 anelli della catena non confermati" in aperti
+    assert 'href="#fonte-' in aperti and "NOME-INCERTO" not in uno[:uno.index('class="aperti"')]
+    assert "VECCHIA-DEBOLE" in due[due.index('class="aperti"'):] and "DATA-CONTESTATA" in due[:due.index('class="aperti"')]
+    assert "4 con risposta (1 verificata, 1 contestata, 2 incerte)" in pagina
+    tabella = pezzo('<section id="domande"', "</section>")
+    assert all(x in tabella for x in ("<th>Stato</th>", ">verificata<", ">contestata<", ">incerta<")) and "tutto bene" not in tabella
+
+
+def test_sezione_con_sole_risposte_incerte(ind: Indagine, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.undo()
+    monkeypatch.setenv("RICERCA_LOG", str(tmp_path / "log"))
+    _per_documento(ind)
+    ind.stato["domande"] = [_risposta(1, "s1", "A", stato_risposta="sostenuta"),
+                            _risposta(2, "s2", "B-INCERTO", stato_risposta="incerta", motivi_stato=["m"])]
+    sezioni_scritte: list[str] = []
+
+    def chiedi(self, punto, oggetto, schema, **_k):
+        if punto == "documento_sezione":
+            sezioni_scritte.append(oggetto["sezione"]["id"])
+            return "Testo."
+        return {"sintesi": "Sintesi abbastanza lunga da passare il controllo dei cinquanta caratteri.",
+                "punti_chiave": ["Punto."], "conclusioni": "Fine.", "limiti": "Nessuno."}
+    monkeypatch.setattr(modulo.Regia, "chiedi", chiedi)
+    monkeypatch.setattr(documento, "stampa_pdf", lambda _h, pdf: pdf.write_bytes(b"%PDF-"))
+    pagina = Path(documento.scrivi(ind)["html"]).read_text()
+    assert sezioni_scritte == ["s1"] and "Nessuna risposta confermata" in pagina and "B-INCERTO" in pagina
+
+
+def test_la_regia_riceve_lo_stato(ind: Indagine) -> None:
+    breve = Indagine.in_breve(_risposta(1, "s1", "X", stato_risposta="contestata", motivi_stato=["un'altra fonte dà Y"]))
+    assert breve["stato"] == "contestata" and breve["limiti_dei_controlli"] == ["un'altra fonte dà Y"]
+    assert "tutto bene" not in json.dumps(breve, ensure_ascii=False)
+    vecchia = Indagine.in_breve(_risposta(2, "s1", "X", confermata=False))
+    assert vecchia["stato"] == "incerta"
+    assert Indagine.in_breve({"id": "d3", "sezione": "s1", "domanda": "D", "stato": "non_trovata", "risposta": ""})["stato"] == "non trovata"
 
 
 # --- processi e server ------------------------------------------------------------------------------------------

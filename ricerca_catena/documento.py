@@ -39,6 +39,26 @@ ESITI = {"risposta": "trovata", "non_trovata": "non trovata", "errore": "errore"
 _md = MarkdownIt("commonmark", {"html": False, "typographer": False}).enable("table")
 
 
+NOMI_STATI = {"verificata": ("verificata", "verificate"), "sostenuta": ("sostenuta", "sostenute"),
+              "contestata": ("contestata", "contestate"), "incerta": ("incerta", "incerte")}
+
+
+def stato_di(d: dict) -> str:
+    """Lo stato di una risposta trovata (web/validazione.py): quello deciso dai controlli; per le indagini di prima
+    (11/11/2026) «incerta» se la catena non era tutta confermata, altrimenti «sostenuta». Vuoto senza risposta."""
+    if d.get("stato") != "risposta":
+        return ""
+    if d.get("stato_risposta") in NOMI_STATI:
+        return d["stato_risposta"]
+    return "incerta" if d.get("confermata") is False else "sostenuta"
+
+
+def conta_stati(domande: list[dict]) -> str:
+    """«1 verificata, 2 incerte»: solo gli stati presenti."""
+    quanti = {s: sum(stato_di(d) == s for d in domande) for s in NOMI_STATI}
+    return ", ".join(f"{n} {NOMI_STATI[s][n != 1]}" for s, n in quanti.items() if n)
+
+
 def _chiave_url(url: str) -> str:
     parti = urlsplit(url)
     return urlunsplit((parti.scheme.lower(), parti.netloc.lower().removeprefix("www."), parti.path.rstrip("/"),
@@ -100,16 +120,24 @@ def scrivi(indagine: "Indagine") -> dict:
     piano = stato["piano"]
     domande = stato["domande"]
     fonti, mappe = fonti_globali(domande)
-    risolte = [d for d in domande if d["stato"] in ("risposta", "non_trovata") and d.get("risposta")]
+    con_testo = [d for d in domande if d["stato"] in ("risposta", "non_trovata") and d.get("risposta")]
+    # Le risposte «incerte» non arrivano a chi scrive (né alle sezioni né, attraverso di loro, alla sintesi): le mette
+    # il programma in un riquadro «Punti aperti» della loro sezione, con il motivo.
+    risolte = [d for d in con_testo if stato_di(d) != "incerta"]
+    incerte = [d for d in con_testo if stato_di(d) == "incerta"]
     brevi = [{"sezione": d["sezione"], "domanda": d["domanda"], "esito": ESITI.get(d["stato"]),
               "risposta": pulizia.testo(rinumera(_riga(d, "Risposta"), mappe[d["id"]]), origine="risposta")[:300]}
              for d in risolte]
 
     def sezione(s: dict) -> dict:
         proprie = [{"domanda": d["domanda"], "esito": ESITI.get(d["stato"]),
+                    "stato": stato_di(d) or ESITI.get(d["stato"]),
+                    "limiti_dei_controlli": [pulizia.testo(str(m), origine="risposta") for m in d.get("motivi_stato") or []],
                     "risposta": _risposta_pulita(d, mappe[d["id"]])} for d in risolte if d["sezione"] == s["id"]]
+        s = {**s, "aperti": [d["id"] for d in incerte if d["sezione"] == s["id"]]}
         if not proprie:
-            return {**s, "testo": "*Nessuna domanda di questa sezione ha trovato una risposta.*"}
+            return {**s, "testo": "*Nessuna risposta confermata per questa sezione: vedi i punti aperti.*" if s["aperti"]
+                    else "*Nessuna domanda di questa sezione ha trovato una risposta.*"}
         ingresso = {"titolo": piano["titolo"], "obiettivo": piano["obiettivo"], "sezione": s, "risposte": proprie,
                     "fatti_brevi_altre_sezioni": [b for b in brevi if b["sezione"] != s["id"]]}
 
@@ -187,19 +215,32 @@ def componi(stato: dict, sezioni: list[dict], cornice: dict, fonti: list[dict], 
     trovate = sum(d["stato"] == "risposta" for d in domande)
     e = html.escape
     indice = "".join(f'<li><a href="#{e(s["id"])}">{e(s["titolo"])}</a></li>' for s in sezioni)
+    per_id = {d["id"]: d for d in domande}
+
+    def punti_aperti(s: dict) -> str:
+        """Le risposte incerte della sezione: domanda, valore con la fonte e il motivo, scritti dal programma."""
+        voci = "".join(
+            f"<li><strong>{e(d['domanda'])}</strong> "
+            f"{_in_linea(pulizia.testo(rinumera(_riga(d, 'Risposta'), mappe.get(d['id'], {})), origine='risposta'), numeri_validi)}"
+            f" <span class='motivo'>Non confermata: "
+            f"{e('; '.join(str(m) for m in d.get('motivi_stato') or []) or 'la catena non è tutta confermata')}.</span></li>"
+            for d in (per_id[i] for i in s.get("aperti") or [] if i in per_id))
+        return (f'<aside class="aperti"><h3>Punti aperti</h3><p>Risposte trovate ma non confermate dai controlli: '
+                f"non vanno prese come fatti.</p><ul>{voci}</ul></aside>") if voci else ""
     corpo_sezioni = "".join(f'<section id="{e(s["id"])}"><h2>{e(s["titolo"])}</h2>{_html(s["testo"], numeri_validi)}'
-                            f"</section>" for s in sezioni)
+                            f"{punti_aperti(s)}</section>" for s in sezioni)
     punti = "".join(f"<li>{_in_linea(p, numeri_validi)}</li>" for p in cornice["punti_chiave"])
     titoli_sezioni = {s["id"]: s["titolo"] for s in sezioni}
     righe_domande = "".join(
         f"<tr><td>{e(d['id'])}</td><td>{d['giro']}</td><td>{e(titoli_sezioni.get(d['sezione'], d['sezione']))}</td>"
         f"<td>{e(d['domanda'])}</td><td class='esito-{e(d['stato'])}'>{e(ESITI.get(d['stato'], d['stato']))}</td>"
         f"<td>{_html(rinumera(_riga(d, 'Risposta'), mappe.get(d['id'], {})), numeri_validi)}</td>"
-        f"<td>{e(_livello(_riga(d, 'Fiducia')))}</td></tr>" for d in domande)
+        f"<td>{e(stato_di(d))}</td></tr>" for d in domande)
     sintesi, conclusioni, limiti = (_html(cornice[k], numeri_validi) for k in ("sintesi", "conclusioni", "limiti"))
     citate = {int(n) for n in re.findall(r'href="#fonte-(\d+)"',
                                          corpo_sezioni + punti + sintesi + conclusioni + limiti + righe_domande)}
-    confermate = sum(bool(d.get("confermata")) for d in domande)
+    stati = conta_stati(domande)
+    con_risposta = f"{trovate} con risposta" + (f" ({stati})" if stati else "")
 
     def voci_fonti(scelte: list[dict]) -> str:
         return "".join(f'<li id="fonte-{f["numero"]}" value="{f["numero"]}"><span class="titolo-fonte">{e(f["titolo"])}'
@@ -216,10 +257,11 @@ def componi(stato: dict, sezioni: list[dict], cornice: dict, fonti: list[dict], 
         f"Ogni domanda è stata risolta dalla ricerca a catena: un programma che parte da cose certe, segue i "
         f"collegamenti tra le pagine di Wikipedia e del web, e usa Claude ({e(stato['modello_catena'])}) solo per "
         f"leggere poche righe alla volta; ogni prova citata è stata controllata dal programma nella pagina da cui "
-        f"viene. Dopo ogni giro Claude ha valutato quanto ogni sezione fosse coperta e ha aggiunto domande sui buchi "
+        f"viene; alla fine il valore è riletto, cercato in un'altra fonte e la catena è rivista da un secondo modello: da "
+        f"questi controlli viene lo stato di ogni risposta (verificata, sostenuta, contestata, incerta). Dopo ogni giro Claude ha valutato quanto ogni sezione fosse coperta e ha aggiunto domande sui buchi "
         f"e sui nomi emersi. Il testo delle sezioni è scritto da Claude a partire dalle risposte: le sue citazioni non "
-        f"sono ricontrollate dal programma.</p><p>Giri di domande: {stato['giro']} · domande: {len(domande)}, con risposta "
-        f"{trovate}, confermate da tutta la catena {confermate} · fonti citate: {len(citate)}, consultate: {len(fonti)} · durata: {_durata(stato.get('secondi', 0))} · costo di Claude: "
+        f"sono ricontrollate dal programma; le risposte incerte non entrano nel testo, stanno nei riquadri «Punti "
+        f"aperti».</p><p>Giri di domande: {stato['giro']} · domande: {len(domande)}, {con_risposta} · fonti citate: {len(citate)}, consultate: {len(fonti)} · durata: {_durata(stato.get('secondi', 0))} · costo di Claude: "
         f"{sum(d.get('costo_usd') or 0 for d in domande) + stato.get('speso_regia_usd', 0):.2f} $ · conclusione "
         f"dell'indagine: {e(stato.get('motivo_fine') or '')}.</p>"
         + (f"<p>Ultima valutazione di Claude: {e(ultima['motivo'])}</p>" if ultima else ""))
@@ -233,7 +275,7 @@ def componi(stato: dict, sezioni: list[dict], cornice: dict, fonti: list[dict], 
 <div class="sopra">Documento di ricerca · {data}</div>
 <h1>{e(piano['titolo'])}</h1>
 <p class="obiettivo">{e(piano['obiettivo'])}</p>
-<p class="dati">{len(domande)} domande · {trovate} con risposta, {confermate} confermate da tutta la catena ·
+<p class="dati">{len(domande)} domande · {con_risposta} ·
 {len(citate)} fonti citate su {len(fonti)} consultate · {stato['giro']} giri di indagine</p>
 </header>
 <nav class="indice"><h2>Indice</h2><ol><li><a href="#sintesi">Sintesi</a></li>{indice}
@@ -247,7 +289,7 @@ def componi(stato: dict, sezioni: list[dict], cornice: dict, fonti: list[dict], 
 <section id="limiti"><h2>Limiti</h2>{limiti}</section>
 <section id="domande" class="appendice"><h2>Appendice A · Domande e risposte</h2>
 <div class="tabella"><table><thead><tr><th>#</th><th>Giro</th><th>Sezione</th><th>Domanda</th><th>Esito</th>
-<th>Risposta</th><th>Fiducia</th></tr></thead><tbody>{righe_domande}</tbody></table></div></section>
+<th>Risposta</th><th>Stato</th></tr></thead><tbody>{righe_domande}</tbody></table></div></section>
 <section id="metodo" class="appendice"><h2>Appendice B · Metodo</h2>{metodo}</section>
 <section id="fonti" class="appendice"><h2>Fonti</h2>{elenco_fonti}</section>
 </main></body></html>
@@ -282,6 +324,10 @@ td p { margin: 0; }
 .tabella { overflow-x: auto; }
 .esito-risposta { color: var(--ok); font-weight: 600; }
 .esito-non_trovata, .esito-errore { color: var(--ko); }
+.aperti { border-left: 3px solid var(--ko); background: var(--pannello); padding: .1rem 1rem .6rem; margin: 1.2rem 0;
+  font-size: .92rem; break-inside: avoid; }
+.aperti h3 { margin-top: .8rem; }
+.aperti .motivo { color: var(--ko); }
 ol.fonti { font-size: .85rem; padding-left: 1.8rem; }
 ol.fonti li { margin: .35rem 0; }
 .titolo-fonte { font-weight: 600; }

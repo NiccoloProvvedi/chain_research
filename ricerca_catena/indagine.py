@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Any
 
 from . import RADICE, configurazione
+from .documento import stato_di
 from .modello import claude_json, pulizia
 from .modello import query as query_doppie
 from .modello.pensatore import errori_schema, istruzioni
@@ -441,11 +442,15 @@ class Indagine:
     def in_breve(d: dict) -> dict:
         """Una domanda e la sua risposta in breve, per la regia (il testo viene dal web: ripulito)."""
         risposta = d.get("risposta") or ""
-        return {"id": d["id"], "sezione": d["sezione"], "domanda": d["domanda"],
-                "esito": {"risposta": "trovata", "non_trovata": "non trovata"}.get(d["stato"], d["stato"]),
+        esito = {"risposta": "trovata", "non_trovata": "non trovata"}.get(d["stato"], d["stato"])
+        # Lo stato lo decidono i controlli del programma (web/validazione.py), non la «Fiducia» scritta dal modello.
+        return {"id": d["id"], "sezione": d["sezione"], "domanda": d["domanda"], "esito": esito,
                 "risposta": pulizia.testo(riga(risposta, "Risposta"), origine="risposta")[:400],
                 "spiegazione": pulizia.testo(riga(risposta, "Spiegazione"), origine="risposta")[:400],
-                "fiducia": riga(risposta, "Fiducia")[:120], "fonti": len(d.get("fonti") or [])}
+                "stato": stato_di(d) or esito,
+                "limiti_dei_controlli": [pulizia.testo(str(m), origine="risposta")[:200]
+                                         for m in (d.get("motivi_stato") or [])[:4]],
+                "fonti": len(d.get("fonti") or [])}
 
     # --- risposte con la catena ---------------------------------------------------------------------------------
 
@@ -564,7 +569,8 @@ class Indagine:
             else:
                 d.update(stato="risposta" if esito.get("trovata") else "non_trovata", risposta=esito["risposta"],
                          valore=esito.get("valore"), fonti=esito["fonti"], costo_usd=esito["costo_usd"],
-                         confermata=bool(esito.get("confermata")),
+                         confermata=bool(esito.get("confermata")), stato_risposta=esito.get("stato"),
+                         motivi_stato=((esito.get("catena") or {}).get("controlli") or {}).get("motivi") or [],
                          modelli=(esito.get("pensatore") or {}).get("modelli"),
                          secondi=esito["secondi"], pagine_lette=esito.get("pagine_lette"),
                          motivo_catena=esito.get("motivo_fine"))
