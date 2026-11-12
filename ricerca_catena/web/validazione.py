@@ -175,12 +175,14 @@ def _interi(testo: str) -> set[str]:
 def stesso_valore(a: str, b: str) -> bool:
     """Due valori dicono la stessa cosa: stessi numeri, stesso segno e stesso mese (in qualunque lingua); senza numeri,
     stesso testo. «56 m s.l.m.» = «56 metri»; «21 giugno 1886» = «June 21, 1886»; «−2 m» ≠ «2 m»."""
-    numeri_a, numeri_b = _interi(a), _interi(b)
+    # Il valore è quello scritto prima di una nota («10 marzo 1682 (data di istituzione); alcune fonti…»).
+    breve_a, breve_b = (re.split(r"\s*[(;]|\s+[—–-]\s+", str(x or "").strip(), maxsplit=1)[0] for x in (a, b))
+    numeri_a, numeri_b = _interi(breve_a), _interi(breve_b)
     if numeri_a or numeri_b:
-        mesi_a, mesi_b = _mesi(a), _mesi(b)
+        mesi_a, mesi_b = _mesi(breve_a), _mesi(breve_b)
         return (numeri_a == numeri_b and bool(_MENO.search(str(a))) == bool(_MENO.search(str(b)))
                 and (not mesi_a or not mesi_b or mesi_a == mesi_b))
-    return bool(_chiave(a)) and _chiave(a) == _chiave(b)
+    return bool(_chiave(breve_a)) and _chiave(breve_a) == _chiave(breve_b)
 
 
 def esamina_revisione(risposta: dict, righe: list) -> dict:

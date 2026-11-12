@@ -169,3 +169,8 @@ def test_riscontro_delle_risposte_attese() -> None:
                     Riga("Nome abitanti: reggiani (altitudine media)", [], "riquadro")]
     assert vr.righe_del_dato(V(), "altitudine") == ["Altitudine: 58 m s.l.m."]
     assert vr.righe_del_dato(V(), "data di fondazione") == [V.inizio]
+
+
+def test_il_tempo_di_una_domanda_copre_l_attesa_del_limite() -> None:
+    import banco
+    assert banco.ATTESA_MASSIMA_S >= 2 * 6 * 3600   # due rinnovi del limite di sessione (6 ore al massimo ciascuno)

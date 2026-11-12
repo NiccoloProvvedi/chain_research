@@ -28,6 +28,9 @@ from ricerca_catena.modello import claude_json  # noqa: E402
 from ricerca_catena.web.fonti.wikipedia_grafo import intervallo_per  # noqa: E402
 
 
+ATTESA_MASSIMA_S = 14 * 3600
+
+
 def una_domanda(d: dict, profilo: str, parallelo: int, registra: Path | None = None) -> dict:
     opzioni = {"senza_wikidata": True, "wikipedia_intervallo": intervallo_per(parallelo), "controlli_modello": True}
     richiesta = {"domanda": d["domanda"], "profilo": str(configurazione.cartella("cartella_profili") / profilo),
@@ -39,7 +42,9 @@ def una_domanda(d: dict, profilo: str, parallelo: int, registra: Path | None = N
         ambiente.update(RICERCA_REGISTRA=str(cartella), RICERCA_OGGI=oggi, PYTHONHASHSEED="0")
     uscita = subprocess.run([str(RADICE / "venv" / "bin" / "python"), "-m", "ricerca_catena.domanda"], cwd=RADICE,
                             input=json.dumps(richiesta, ensure_ascii=False) + "\n", capture_output=True, text=True,
-                            timeout=3 * 3600, env=ambiente)
+                            # l'attesa del limite di sessione (fino a 6 ore) sta dentro questo tempo: 12/11, tre
+                            # domande di controllo perse a 3 ore mentre aspettavano il rinnovo
+                            timeout=ATTESA_MASSIMA_S, env=ambiente)
     for riga in reversed(uscita.stdout.splitlines()):
         messaggio = json.loads(riga)
         if "esito" in messaggio:

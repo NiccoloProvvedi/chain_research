@@ -213,7 +213,11 @@ def test_caso_cpp_la_catena_non_torna_su_wheeler() -> None:
     ("56 m s.l.m.", "56 metri", True), ("21 giugno 1886", "June 21, 1886", True), ("1 gennaio 2015", "1º gennaio 2015", True),
     ("20,65 km²", "20.65 km2", True), ("Novara di Sicilia", "novara di sicilia", True), ("1886", "1886", True),
     ("−2 m", "2 m", False), ("21 giugno 1886", "21 giugno 1885", False), ("21 giugno 1886", "21 luglio 1886", False),
-    ("56 m", "58 m", False), ("Novara di Sicilia", "Capri Leone", False), ("", "", False), ("21 giugno 1886", "1886", False),
+    ("56 m", "58 m", False), ("Novara di Sicilia", "Capri Leone", False), ("", "", False),
+    # 12/11, domande di controllo (Fortran): il valore scritto con una nota dietro è lo stesso valore
+    ("10 marzo 1682 (data di istituzione); alcune fonti indicano novembre 1682 per la divisione in tre contee", "10 marzo 1682", True),
+    ("138 m s.l.m. (453 ft)", "138 m", True), ("120 m s.l.m.", "138 m s.l.m.", False), ("320 m", "274 m s.l.m.", False),
+    ("10 marzo 1682 (alcune fonti: novembre 1682)", "10 novembre 1683", False), ("−2 m (2 metri sotto)", "2 m", False),
 ])
 def test_stesso_valore(a: str, b: str, uguali: bool) -> None:
     assert v.stesso_valore(a, b) is uguali and v.stesso_valore(b, a) is uguali

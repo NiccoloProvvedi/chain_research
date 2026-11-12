@@ -68,7 +68,7 @@ def main() -> None:
         (cartella / "esiti_rigiudicati.json").write_text(json.dumps(nuovi, ensure_ascii=False, indent=1), encoding="utf-8")
         for chiave, voce in nuovi.items():
             prima, dopo = esiti[chiave].get("corretta"), voce.get("corretta", "da giudicare")
-            if prima != dopo:
+            if prima != dopo and "errore" not in voce:
                 print(f"{corsa} {chiave}: {prima} → {dopo} (attesa «{voce.get('attesa')}», valore «{voce.get('valore')}»)")
         giudicate = [v for v in nuovi.values() if "corretta" in v]
         print(f"{corsa}: {sum(v['corretta'] for v in giudicate)}/{len(giudicate)} giuste, "
