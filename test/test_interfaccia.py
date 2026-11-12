@@ -132,3 +132,33 @@ def test_impostazioni_avanzate_salvate(app: App) -> None:
     app.pagina.click("#i-salva")
     expect(app.pagina.locator("#impostazioni")).to_be_hidden()
     assert configurazione.carica()["pagine_domanda"] == 12 and app.problemi == []
+
+
+def test_modello_della_revisione_nelle_impostazioni(app: App) -> None:
+    app.apri()
+    app.pagina.click("#apri-impostazioni")
+    expect(app.pagina.locator("#i-modello-revisione")).to_have_value("sonnet")
+    app.pagina.select_option("#i-modello-revisione", "opus")
+    app.pagina.click("#i-salva")
+    expect(app.pagina.locator("#impostazioni")).to_be_hidden()
+    assert configurazione.carica()["modello_revisione"] == "opus" and app.problemi == []
+
+
+def test_lo_stato_di_ogni_risposta_si_vede(app: App) -> None:
+    def d(n: int, **altro) -> dict:
+        return {"id": f"d{n}", "giro": 1, "sezione": "s1", "domanda": f"Domanda {n}", "stato": "risposta",
+                "risposta": f"**Risposta:** valore {n} [1].\n\n**Fiducia:** alta — dal modello", "fonti": [], **altro}
+    app.nuova(stato="finita", piano={"titolo": "T", "obiettivo": "O", "sezioni": [{"id": "s1", "titolo": "Uno", "scopo": "x"}]},
+              domande=[d(1, stato_risposta="verificata", motivi_stato=[]),
+                       d(2, stato_risposta="incerta", motivi_stato=["1 anelli della catena non confermati"]),
+                       d(3)])
+    app.apri()
+    app.pagina.click("#elenco li")
+    righe = app.pagina.locator("#v-domande .domanda")
+    expect(righe).to_have_count(3)
+    expect(righe.nth(0).locator(".chip.verificata")).to_have_text("verificata")
+    expect(righe.nth(1).locator(".chip.incerta")).to_have_text("incerta")
+    expect(righe.nth(1).locator(".info")).to_contain_text("1 anelli della catena non confermati")
+    expect(righe.nth(1).locator(".info")).not_to_contain_text("fiducia")
+    expect(righe.nth(2).locator(".info")).to_contain_text("fiducia alta")  # indagine di prima: resta la riga del modello
+    assert app.problemi == []

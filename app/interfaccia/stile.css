@@ -46,7 +46,8 @@ label.spunta input { width: auto; margin: 0; }
 .chip { font: 600 .72rem var(--sans); letter-spacing: .04em; text-transform: uppercase; padding: .2rem .5rem;
   border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
 .chip.in_corso, .chip.in_attesa { color: var(--attesa); }
-.chip.finita, .chip.risposta { color: var(--ok); }
+.chip.finita, .chip.risposta, .chip.verificata, .chip.sostenuta { color: var(--ok); }
+.chip.contestata, .chip.incerta { color: var(--attesa); }
 .chip.fermata, .chip.interrotta, .chip.errore, .chip.non_trovata { color: var(--pericolo); }
 .vuoto { padding: 2rem 1rem; color: var(--tenue); max-width: 40rem; }
 .vuoto h1 { color: var(--testo); }

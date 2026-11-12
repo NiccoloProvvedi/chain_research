@@ -84,3 +84,31 @@ def test_riferimento_non_ok_fuori_dal_conto() -> None:
     import statistiche
     esiti = [{"corretta": True}, {"corretta": False, "stato_riferimento": "contestata"}, {"corretta": False}]
     assert statistiche.riassunto(esiti).startswith("1/2 ")
+
+
+def _esito(corretta: bool, stato: str, valore: str = "v", **controlli) -> dict:
+    return {"corretta": corretta, "stato": stato, "valore": valore, "catena": {"controlli": controlli}}
+
+
+def test_rapporto_segnali_e_regola() -> None:
+    import rapporto
+    buoni = {"seconda_lettura": {"esito": "concordi"}, "riscontro": {"esito": "concordi"},
+             "revisione": {"esito": "fatta", "regge": "sì", "obiezioni": []}}
+    obiezione = {**buoni, "revisione": {"esito": "fatta", "regge": "no", "obiezioni": [{"indizio": "x"}]}}
+    esiti = ([_esito(True, "verificata", esami=buoni)] * 19 + [_esito(False, "verificata", esami=buoni)]
+             + [_esito(False, "incerta", esami=obiezione, anelli_deboli=1)] * 3 + [_esito(True, "incerta", anelli_deboli=1)]
+             + [_esito(False, "contestata", esami={**buoni, "riscontro": {"esito": "discordi"}})]
+             + [{"corretta": False, "stato": "non trovata", "valore": None, "catena": {"controlli": {}}}]
+             + [_esito(True, "verificata", esami=buoni) | {"stato_riferimento": "contestata"}])
+    assert rapporto.per_stato(esiti) == {"verificata": (19, 20), "sostenuta": (0, 0), "contestata": (0, 1), "incerta": (1, 4)}
+    tabella = rapporto.tabella_segnali(esiti)
+    assert tabella["revisione: obiezione con riga"] == (0, 3) and tabella["anello debole"] == (1, 3)
+    assert tabella["altre fonti: discordi"] == (0, 1) and tabella["altre fonti: concordi"] == (19, 4)
+    assert tabella["esami non fatti"] == (1, 0) and tabella["revisione: regge sì"] == (19, 2)
+    primo, secondo = rapporto.regola(esiti)
+    assert not primo[1] and "19/20" in primo[2]            # 95% ma il limite inferiore è sotto l'85%
+    assert secondo[1] and "19/20 contro 1/5" in secondo[2]
+    assert rapporto.regola([_esito(True, "verificata", esami=buoni)] * 40)[0][1]
+    a = {"x": _esito(True, "verificata", "1 m"), "y": _esito(True, "incerta", "2 m")}
+    b = {"x": _esito(True, "verificata", "1  M"), "y": _esito(False, "sostenuta", "3 m")}
+    assert rapporto.ripetizioni([a, b]) == "2 domande in tutte le corse: stesso valore 1, stesso stato 1"

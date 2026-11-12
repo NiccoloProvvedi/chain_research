@@ -2,6 +2,7 @@
 // Interfaccia della Ricerca a catena: nuova indagine, elenco, indagine scelta con eventi in diretta, impostazioni.
 
 const $ = (id) => document.getElementById(id);
+const STATI_RISPOSTA = ["verificata", "sostenuta", "contestata", "incerta"];
 const ETICHETTE = { in_attesa: "in attesa", in_corso: "in corso", finita: "finita", fermata: "fermata",
   interrotta: "interrotta", errore: "errore", risposta: "trovata", non_trovata: "non trovata" };
 let scelta = null;      // id dell'indagine mostrata
@@ -224,11 +225,15 @@ function elencoDomande(s) {
     box.append(crea("h3", `Giro ${giro}`));
     for (const d of perGiro[giro]) {
       const r = crea("div", null, "domanda");
-      r.append(crea("span", d.domanda, "testo"), crea("span", ETICHETTE[d.stato] || d.stato, `chip ${d.stato}`));
+      // Lo stato della risposta lo decidono i controlli del programma; senza (indagini di prima) resta l'esito.
+      const stato = d.stato === "risposta" && STATI_RISPOSTA.includes(d.stato_risposta) ? d.stato_risposta : "";
+      r.append(crea("span", d.domanda, "testo"),
+        crea("span", stato || ETICHETTE[d.stato] || d.stato, `chip ${stato || d.stato}`));
       const risposta = riga(d.risposta, "Risposta");
       if (risposta) r.append(conGrassetto(risposta));
       const info = [titoli[d.sezione], d.costo_usd ? dollari(d.costo_usd) : "", d.secondi ? durata(d.secondi) : "",
-        riga(d.risposta, "Fiducia") ? `fiducia ${riga(d.risposta, "Fiducia").split(/[,.]/)[0]}` : "",
+        stato ? (d.motivi_stato || []).join("; ")
+          : riga(d.risposta, "Fiducia") ? `fiducia ${riga(d.risposta, "Fiducia").split(/[,.—]/)[0].trim()}` : "",
         d.errore || ""].filter(Boolean).join(" · ");
       if (info) r.append(crea("div", info, "info"));
       box.append(r);
@@ -293,6 +298,7 @@ $("apri-impostazioni").addEventListener("click", async () => {
   $("i-senza-limiti").checked = impostazioni.senza_limiti;
   $("i-parallelo").value = impostazioni.domande_in_parallelo;
   $("i-modello-catena").value = impostazioni.modello_catena;
+  $("i-modello-revisione").value = impostazioni.modello_revisione;
   $("i-budget-domanda").value = impostazioni.budget_domanda_usd;
   $("i-pagine-domanda").value = impostazioni.pagine_domanda;
   $("i-minuti-domanda").value = impostazioni.minuti_domanda;
@@ -308,7 +314,8 @@ $("form-impostazioni").addEventListener("submit", async (e) => {
   const esito = await prova(() => api("/api/impostazioni", {
     modello_regia: $("i-modello").value, budget_usd: $("i-budget").value, max_minuti: $("i-minuti").value,
     senza_limiti: $("i-senza-limiti").checked, domande_in_parallelo: $("i-parallelo").value,
-    modello_catena: $("i-modello-catena").value, budget_domanda_usd: $("i-budget-domanda").value,
+    modello_catena: $("i-modello-catena").value, modello_revisione: $("i-modello-revisione").value,
+    budget_domanda_usd: $("i-budget-domanda").value,
     pagine_domanda: $("i-pagine-domanda").value, minuti_domanda: $("i-minuti-domanda").value,
     wikipedia: { attivo: $("i-wiki-attivo").checked, contatto: $("i-wiki-contatto").value },
   }), "Impostazioni salvate.");

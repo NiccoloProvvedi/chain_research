@@ -323,7 +323,8 @@ def leggi_impostazioni() -> dict:
     segreti = config_fonti.segreti()
     contatto, origine = contatto_wikipedia()
     return {"modello_regia": imp["modello_regia"], "modelli": list(configurazione.MODELLI),
-            "modello_catena": imp["modello_catena"], "budget_domanda_usd": imp["budget_domanda_usd"],
+            "modello_catena": imp["modello_catena"], "modello_revisione": imp["modello_revisione"],
+            "budget_domanda_usd": imp["budget_domanda_usd"],
             "pagine_domanda": imp["pagine_domanda"], "minuti_domanda": imp["minuti_domanda"],
             "budget_usd": imp["budget_usd"], "max_minuti": imp["max_minuti"], "senza_limiti": imp["senza_limiti"],
             "domande_in_parallelo": imp["domande_in_parallelo"],
@@ -334,7 +335,7 @@ def leggi_impostazioni() -> dict:
 
 def salva_impostazioni(dati: dict) -> dict:
     modifiche: dict[str, Any] = {}
-    for chiave in ("modello_regia", "modello_catena"):
+    for chiave in ("modello_regia", "modello_catena", "modello_revisione"):
         if chiave in dati:
             if dati[chiave] not in configurazione.MODELLI:
                 raise ValueError("Modello non valido.")

@@ -41,7 +41,8 @@ MINUTI_MINIMI_DOMANDA = 10      # sotto, una domanda non fa in tempo (mediana 5 
 MARGINE_GUARDIA_S = 600         # oltre i minuti della domanda (per scrivere la risposta): poi il processo si chiude
 MIGLIORAMENTO_MINIMO = 0.05     # copertura media (0-3) che un giro deve aggiungere perché ne serva un altro
 FILE_BLOCCO = "processo.lock"
-IMPOSTAZIONI_DELLA_CORSA = ("domande_in_parallelo", "budget_domanda_usd", "pagine_domanda", "minuti_domanda")
+IMPOSTAZIONI_DELLA_CORSA = ("domande_in_parallelo", "budget_domanda_usd", "pagine_domanda", "minuti_domanda",
+                            "modello_revisione")
 # Costo stimato di una chiamata di scrittura del documento per modello (una per sezione, più la cornice).
 STIMA_SCRITTURA_USD = {"haiku": 0.03, "sonnet": 0.06, "opus": 0.40}
 SCHEMA_DOMANDE = {"type": "array", "maxItems": 16, "items": {
@@ -510,6 +511,7 @@ class Indagine:
         richiesta = {"domanda": d["domanda"], "profilo": str(configurazione.cartella("cartella_profili") / profilo),
                      "cartella_pezzi": str(self.cartella / "pezzi"),
                      "opzioni": {"modello_claude": self.stato["modello_catena"],
+                                 "modello_revisione": impostazioni["modello_revisione"],
                                  "budget_claude": float(impostazioni["budget_domanda_usd"]),
                                  "pagine_catena": int(impostazioni["pagine_domanda"]),
                                  "minuti_catena": minuti,
