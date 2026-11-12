@@ -1161,3 +1161,42 @@ def test_due_controlli_che_cominciano_uguale_restano_due() -> None:
     assert [(e["controllo"][-5:].strip(), e["esito"]) for e in a.esiti] == [("Roma", "sì"), ("Parma", "no")]
     uniti = Catena._unisci_esiti(a.esiti, a.esiti)
     assert [e["esito"] for e in uniti] == ["sì", "no"]
+
+
+@pytest.mark.parametrize("riga,valore,esito,stato", [
+    ("[Niccolò Zucchi (en)] Niccolò Zucchi (December 6, 1586 – May 21, 1670) was an Italian Jesuit", "6 dicembre 1586", "concordi", "verificata"),
+    ("[Niccolò Zucchi (en)] Niccolò Zucchi (December 16, 1586 – May 21, 1670) was an Italian Jesuit", "16 dicembre 1586", "discordi", "contestata"),
+    ("[Niccolò Zucchi (en)] Niccolò Zucchi was an Italian Jesuit astronomer", "", "sola fonte", "sostenuta"),
+    # il modello dà una data che nella riga non c'è: per il programma non è un'altra fonte
+    ("[Niccolò Zucchi (en)] Niccolò Zucchi was an Italian Jesuit astronomer", "16 dicembre 1586", "sola fonte", "sostenuta"),
+    # una riga che parla di un altro (né la sua voce né il suo nome) non conta
+    ("[Giovanni Riccioli (en)] born December 16, 1586", "16 dicembre 1586", "sola fonte", "sostenuta"),
+])
+def test_riscontro_in_un_altra_voce(catena, monkeypatch: pytest.MonkeyPatch, riga: str, valore: str, esito: str, stato: str) -> None:
+    """T7: lo stesso dato cercato in un'altra voce dell'entità finale: uguale, diverso o assente."""
+    from types import SimpleNamespace
+
+    from ricerca_catena.web.catena import Prova
+    altra = Prova(riga, "https://en.wikipedia.org/wiki/Altra_voce")
+
+    def modello(punto: str, dati: dict, predefinito, **_altri):
+        if punto == "revisione":
+            return {"regge": "sì", "motivo": "", "indizi": []}, "claude"
+        if punto == "valore" and "[Voce (it)]" not in dati["prove"] and "Altra" not in dati["prove"] and riga in dati["prove"]:
+            return {"valore": valore, "prova": _riga(dati["prove"], riga[riga.index("]") + 2:][:30]) if valore else 0, "motivo": ""}, "claude"
+        return _decidi(punto, dati, predefinito)
+
+    monkeypatch.setattr(catena.r.pensatore, "decidi", modello)
+    catena.r.pensatore.bilancio.budget_usd = 1.0
+    catena.percorri()
+    _strada_forte(catena)
+    finale = catena.valore["anello"]
+    monkeypatch.setattr(catena, "_voci", lambda a, altre=2: [SimpleNamespace(
+        url=altra.url, titolo="Niccolò Zucchi", lingua="en", lingue={})] if a is finale else [])
+    monkeypatch.setattr(catena, "_righe_wiki", lambda voci, parole, **_k: [altra])
+    monkeypatch.setattr(catena, "_prove_entita", lambda *_a, **_k: [])
+    catena.revisione_finale()
+    riscontro = catena.esami["riscontro"]
+    assert riscontro["esito"] == esito and catena.controlli()["stato"] == stato
+    if esito == "discordi":
+        assert riscontro["valore"] == "16 dicembre 1586" and "altro valore: 16 dicembre 1586" in catena.materiale()
