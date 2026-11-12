@@ -60,6 +60,10 @@ def giudica_voce(voce: dict) -> None:
     """Aggiunge `finale`, `corretta` e `deciso_da`. Se il giudice non risponde la risposta trovata resta, segnata
     `da_giudicare`: alla ripresa si rifà solo il giudizio, non la domanda."""
     voce.pop("da_giudicare", None)
+    if voce.get("senza_risposta"):  # la domanda non ha risposta: giusto è non darne una (nessun modello a giudicare)
+        voce["finale"] = " ".join(str(voce.get("valore") or "").split())
+        voce["corretta"], voce["deciso_da"] = not voce.get("trovata"), "senza risposta"
+        return
     try:
         voce["finale"] = giudice.finale_di(voce, voce["domanda"])
         corretta, voce["deciso_da"] = giudice.giudica(voce["domanda"], voce["attesa"], voce["finale"])
@@ -114,7 +118,8 @@ def main() -> None:
         try:
             esito = una_domanda(d, profilo, arg.parallelo, registra)
             voce = {"tema": d["tema"], "seme": d["seme"], "domanda": d["domanda"], "attesa": d["risposta"],
-                    "stato_riferimento": d.get("stato_riferimento", "ok"), **esito}
+                    "stato_riferimento": d.get("stato_riferimento", "ok"),
+                    "senza_risposta": bool(d.get("senza_risposta")), **esito}
             giudica_voce(voce)
             print(f"{'?' if 'corretta' not in voce else '✓' if voce['corretta'] else '✗'} {chiave}: attesa "
                   f"«{d['risposta']}», finale «{voce['finale'][:80]}» ({esito['secondi']} s, {esito['costo_usd']} $)",

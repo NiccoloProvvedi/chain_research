@@ -112,3 +112,25 @@ def test_rapporto_segnali_e_regola() -> None:
     a = {"x": _esito(True, "verificata", "1 m"), "y": _esito(True, "incerta", "2 m")}
     b = {"x": _esito(True, "verificata", "1  M"), "y": _esito(False, "sostenuta", "3 m")}
     assert rapporto.ripetizioni([a, b]) == "2 domande in tutte le corse: stesso valore 1, stesso stato 1"
+
+
+def test_domanda_senza_risposta_giusta_solo_se_non_trovata(monkeypatch) -> None:
+    """T4: per una domanda che non ha risposta, giusto è dire «non trovata»; un valore qualunque è inventato."""
+    import banco
+    monkeypatch.setattr(giudice, "estrai", lambda *_a: pytest.fail("non serve il modello"))
+    monkeypatch.setattr(giudice, "giudica", lambda *_a: pytest.fail("non serve il giudice"))
+    onesta = {"domanda": "d", "attesa": "", "senza_risposta": True, "trovata": False, "valore": None, "risposta": "Non trovata"}
+    inventata = {"domanda": "d", "attesa": "", "senza_risposta": True, "trovata": True, "valore": "12 marzo 1850", "risposta": "x"}
+    banco.giudica_voce(onesta)
+    banco.giudica_voce(inventata)
+    assert (onesta["corretta"], onesta["deciso_da"]) == (True, "senza risposta")
+    assert (inventata["corretta"], inventata["finale"]) == (False, "12 marzo 1850")
+
+
+def test_le_domande_senza_risposta_sono_ben_fatte() -> None:
+    import json
+    from pathlib import Path
+    domande = json.loads((Path(__file__).resolve().parents[1] / "banco" / "domande_senza_risposta.json").read_text())["domande"]
+    assert len(domande) == 20 and len({d["seme"] for d in domande}) == 20
+    assert all(d["senza_risposta"] is True and d["risposta"] == "" and d["perche"] and d["domanda"].endswith("?") for d in domande)
+    assert {d["tema"] for d in domande} == {"entita_inventata", "relazione_inesistente", "dato_mai_esistito"}
