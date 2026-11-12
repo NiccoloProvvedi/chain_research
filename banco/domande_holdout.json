@@ -44,7 +44,10 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": ""
-   }
+   },
+   "riscontro_wikipedia": "uguale",
+   "stato_riferimento": "contestata",
+   "nota_riferimento": "Luogo di nascita di Guido van Rossum: Haarlem per Wikidata, Amsterdam per it.wiki, L'Aia per en.wiki."
   },
   {
    "tema": "informatica",
@@ -93,7 +96,10 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": ""
-   }
+   },
+   "riscontro_wikipedia": "senza voce",
+   "stato_riferimento": "contestata",
+   "nota_riferimento": "Luogo di nascita di Michael Stonebraker: Milton (New Hampshire) per Wikidata, Newburyport (Massachusetts) nel riquadro di en.wiki."
   },
   {
    "tema": "informatica",
@@ -142,7 +148,9 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": "25 maggio 1986"
-   }
+   },
+   "riscontro_wikipedia": "uguale",
+   "stato_riferimento": "ok"
   },
   {
    "tema": "informatica",
@@ -181,7 +189,9 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": ""
-   }
+   },
+   "riscontro_wikipedia": "uguale",
+   "stato_riferimento": "ok"
   },
   {
    "tema": "informatica",
@@ -225,7 +235,9 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": ""
-   }
+   },
+   "riscontro_wikipedia": "uguale",
+   "stato_riferimento": "ok"
   },
   {
    "tema": "informatica",
@@ -264,7 +276,9 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": "17 luglio 1868"
-   }
+   },
+   "riscontro_wikipedia": "diversa",
+   "stato_riferimento": "ok"
   },
   {
    "tema": "informatica",
@@ -308,7 +322,9 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": ""
-   }
+   },
+   "riscontro_wikipedia": "diversa",
+   "stato_riferimento": "ok"
   },
   {
    "tema": "informatica",
@@ -357,7 +373,9 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": ""
-   }
+   },
+   "riscontro_wikipedia": "uguale",
+   "stato_riferimento": "ok"
   },
   {
    "tema": "informatica",
@@ -401,7 +419,9 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": "25 agosto 1682"
-   }
+   },
+   "riscontro_wikipedia": "uguale",
+   "stato_riferimento": "ok"
   },
   {
    "tema": "storia",
@@ -440,7 +460,9 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": ""
-   }
+   },
+   "riscontro_wikipedia": "uguale",
+   "stato_riferimento": "ok"
   },
   {
    "tema": "storia",
@@ -489,7 +511,9 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": "00100"
-   }
+   },
+   "riscontro_wikipedia": "uguale",
+   "stato_riferimento": "ok"
   },
   {
    "tema": "storia",
@@ -533,7 +557,9 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": ""
-   }
+   },
+   "riscontro_wikipedia": "uguale",
+   "stato_riferimento": "ok"
   },
   {
    "tema": "storia",
@@ -572,7 +598,9 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": ""
-   }
+   },
+   "riscontro_wikipedia": "uguale",
+   "stato_riferimento": "ok"
   },
   {
    "tema": "storia",
@@ -611,7 +639,9 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": ""
-   }
+   },
+   "riscontro_wikipedia": "uguale",
+   "stato_riferimento": "ok"
   },
   {
    "tema": "storia",
@@ -655,7 +685,9 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": ""
-   }
+   },
+   "riscontro_wikipedia": "uguale",
+   "stato_riferimento": "ok"
   },
   {
    "tema": "storia",
@@ -699,7 +731,10 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": "1° gennaio 1861"
-   }
+   },
+   "riscontro_wikipedia": "diversa",
+   "stato_riferimento": "contestata",
+   "nota_riferimento": "Istituzione della provincia di Milano: 23 ottobre 1859 per Wikidata, 26 settembre 1786 per it.wiki ed en.wiki."
   },
   {
    "tema": "storia",
@@ -743,7 +778,10 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": "2 gennaio 1861"
-   }
+   },
+   "riscontro_wikipedia": "diversa",
+   "stato_riferimento": "contestata",
+   "nota_riferimento": "Istituzione della provincia di Napoli: 27 gennaio 1861 per Wikidata, 8 agosto 1806 per it.wiki."
   },
   {
    "tema": "storia",
@@ -792,7 +830,9 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": ""
-   }
+   },
+   "riscontro_wikipedia": "uguale",
+   "stato_riferimento": "ok"
   },
   {
    "tema": "scienze",
@@ -831,7 +871,9 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": "NG33 5NR (incerto)"
-   }
+   },
+   "riscontro_wikipedia": "uguale",
+   "stato_riferimento": "ok"
   },
   {
    "tema": "scienze",
@@ -875,7 +917,9 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": "1º gennaio 1870"
-   }
+   },
+   "riscontro_wikipedia": "uguale",
+   "stato_riferimento": "ok"
   },
   {
    "tema": "scienze",
@@ -919,7 +963,10 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": "58 m s.l.m."
-   }
+   },
+   "riscontro_wikipedia": "diversa",
+   "stato_riferimento": "contestata",
+   "nota_riferimento": "Altitudine di Reggio Emilia: 68 m per Wikidata, 56 m per it.wiki, 58 m per en.wiki."
   },
   {
    "tema": "scienze",
@@ -958,7 +1005,10 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": "4 aprile 1147"
-   }
+   },
+   "riscontro_wikipedia": "diversa",
+   "stato_riferimento": "ambigua",
+   "nota_riferimento": "Fondazione di San Pietroburgo: 16 maggio 1703 (calendario giuliano) o 27 maggio 1703 (gregoriano, it.wiki ed en.wiki)."
   },
   {
    "tema": "scienze",
@@ -1007,7 +1057,9 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": "1° maggio 1808"
-   }
+   },
+   "riscontro_wikipedia": "diversa",
+   "stato_riferimento": "ok"
   },
   {
    "tema": "scienze",
@@ -1046,7 +1098,9 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": ""
-   }
+   },
+   "riscontro_wikipedia": "uguale",
+   "stato_riferimento": "ok"
   },
   {
    "tema": "scienze",
@@ -1095,7 +1149,10 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": "1 gennaio 1801"
-   }
+   },
+   "riscontro_wikipedia": "diversa",
+   "stato_riferimento": "ambigua",
+   "nota_riferimento": "«Data di fondazione» del Regno Unito: più date difendibili (1707, 1801, 1921/1922); le voci non ne danno una sola."
   },
   {
    "tema": "scienze",
@@ -1134,7 +1191,10 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": ""
-   }
+   },
+   "riscontro_wikipedia": "uguale",
+   "stato_riferimento": "ambigua",
+   "nota_riferimento": "Ente di decentramento regionale di Gorizia: istituito nel 2019 (it.wiki), operativo dal 1 luglio 2020 (Wikidata)."
   },
   {
    "tema": "geografia_cultura",
@@ -1183,7 +1243,9 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": "12 dicembre 1866"
-   }
+   },
+   "riscontro_wikipedia": "uguale",
+   "stato_riferimento": "ok"
   },
   {
    "tema": "geografia_cultura",
@@ -1227,7 +1289,9 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": ""
-   }
+   },
+   "riscontro_wikipedia": "uguale",
+   "stato_riferimento": "ok"
   },
   {
    "tema": "geografia_cultura",
@@ -1271,7 +1335,9 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": ""
-   }
+   },
+   "riscontro_wikipedia": "uguale",
+   "stato_riferimento": "ok"
   },
   {
    "tema": "geografia_cultura",
@@ -1310,7 +1376,10 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": "1876"
-   }
+   },
+   "riscontro_wikipedia": "diversa",
+   "stato_riferimento": "contestata",
+   "nota_riferimento": "Morte di Hoshiyar Qadin: 21 giugno 1885 per Wikidata, 21 giugno 1886 per it.wiki ed en.wiki."
   },
   {
    "tema": "geografia_cultura",
@@ -1349,7 +1418,9 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": ""
-   }
+   },
+   "riscontro_wikipedia": "uguale",
+   "stato_riferimento": "ok"
   },
   {
    "tema": "geografia_cultura",
@@ -1398,7 +1469,9 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": "120 m s.l.m."
-   }
+   },
+   "riscontro_wikipedia": "uguale",
+   "stato_riferimento": "ok"
   },
   {
    "tema": "geografia_cultura",
@@ -1437,7 +1510,9 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": "1425"
-   }
+   },
+   "riscontro_wikipedia": "senza voce",
+   "stato_riferimento": "ok"
   },
   {
    "tema": "geografia_cultura",
@@ -1476,7 +1551,9 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": "43011"
-   }
+   },
+   "riscontro_wikipedia": "senza voce",
+   "stato_riferimento": "ok"
   },
   {
    "tema": "geografia_cultura",
@@ -1520,7 +1597,9 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": "1772"
-   }
+   },
+   "riscontro_wikipedia": "senza voce",
+   "stato_riferimento": "ok"
   },
   {
    "tema": "geografia_cultura",
@@ -1559,7 +1638,10 @@
    "filtro": {
     "modello": "haiku",
     "a_memoria": "circa 20 m s.l.m."
-   }
+   },
+   "riscontro_wikipedia": "uguale",
+   "stato_riferimento": "ok"
   }
- ]
+ ],
+ "riferimenti_controllati_il": "2026-11-12 (banco/verifica_riferimenti.py, poi a mano): 27 ok, 6 contestate, 3 ambigue. I punteggi si danno su tutte e 36 e sulle 27 ok."
 }

@@ -152,3 +152,20 @@ def test_fedelta_prove_per_fonte() -> None:
     assert per_fonte == {1: ["Fondatore di X"], 2: ["Nato il 24 luglio 1973", "Vive a Roma"]}   # stesso indirizzo, stessa fonte
     per_risposta = fedelta.testi_per_fonte(domande, "risposte")
     assert set(per_risposta) == {1, 2, 3} and "DOMANDA: D1" in per_risposta[2][0] and "DOMANDA: D2" in per_risposta[2][1]
+
+
+def test_riscontro_delle_risposte_attese() -> None:
+    import verifica_riferimenti as vr
+    assert vr.riscontro("68 m", {"Reggio (it)": ["Altitudine: 58 m s.l.m."], "Reggio (en)": ["Elevation: 58 m (190 ft)"]}) == "diversa"
+    assert vr.riscontro("21 giugno 1885", {"H (en)": ["Died: 21 June 1886"], "H (it)": ["morta il 21 giugno 1885"]}) == "uguale"
+    assert vr.riscontro("68 m", {"X (it)": [], "X (en)": []}) == "senza righe" and vr.riscontro("68 m", {}) == "senza voce"
+
+    class V:
+        inizio = "Reggio nell'Emilia è un comune italiano."
+
+        def riquadro(self):
+            from ricerca_catena.web.fonti.wikipedia_grafo import Riga
+            return [Riga("Altitudine: 58 m s.l.m.", [], "riquadro"), Riga("Superficie: 230 km²", [], "riquadro"),
+                    Riga("Nome abitanti: reggiani (altitudine media)", [], "riquadro")]
+    assert vr.righe_del_dato(V(), "altitudine") == ["Altitudine: 58 m s.l.m."]
+    assert vr.righe_del_dato(V(), "data di fondazione") == [V.inizio]
