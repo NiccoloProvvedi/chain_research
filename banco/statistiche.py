@@ -45,7 +45,11 @@ def contano(esiti: list[dict]) -> list[dict]:
 
 
 def _uguale(a: object, b: object) -> bool:
-    return " ".join(str(a or "").lower().split()) == " ".join(str(b or "").lower().split())
+    """Lo stesso valore anche se scritto in un altro modo («−2 m s.l.m.», «−2 metri»); due «non trovata» sono uguali."""
+    import sys
+    sys.path.insert(0, str(RADICE))
+    from ricerca_catena.web.validazione import stesso_valore
+    return (not a and not b) or stesso_valore(str(a or ""), str(b or ""))
 
 
 def ripetizioni(corse: list[dict[str, dict]]) -> str:

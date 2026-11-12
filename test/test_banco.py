@@ -112,6 +112,8 @@ def test_rapporto_segnali_e_regola() -> None:
     a = {"x": _esito(True, "verificata", "1 m"), "y": _esito(True, "incerta", "2 m")}
     b = {"x": _esito(True, "verificata", "1  M"), "y": _esito(False, "sostenuta", "3 m")}
     assert rapporto.ripetizioni([a, b]) == "2 domande in tutte le corse: stesso valore 1, stesso stato 1"
+    c = {"x": _esito(True, "verificata", "1 metro (s.l.m.)"), "y": _esito(True, "incerta", "2 m s.l.m.")}
+    assert rapporto.ripetizioni([a, c]) == "2 domande in tutte le corse: stesso valore 2, stesso stato 2"
 
 
 def test_domanda_senza_risposta_giusta_solo_se_non_trovata(monkeypatch) -> None:
