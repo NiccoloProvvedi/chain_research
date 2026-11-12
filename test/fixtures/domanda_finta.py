@@ -22,5 +22,6 @@ scrivi({"evento": {"tipo": "costo", "speso_usd": 0.02}})
 scrivi({"esito": {"risposta": "**Risposta:** 1973 [1].\n\n**Fiducia:** alta", "valore": "1973", "trovata": True,
                   "confermata": True, "fonti": [{"numero": 1, "titolo": "A", "url": "https://esempio.org/a"}],
                   "costo_usd": 0.02, "secondi": 1, "pagine_lette": 1, "motivo_fine": "catena completa",
-                  "stato": "sostenuta", "catena": {"controlli": {"motivi": ["il valore viene da una sola fonte"]}},
+                  "stato": "sostenuta", "catena": {"controlli": {"motivi": ["il valore viene da una sola fonte"]},
+                             "prove": [{"url": "https://esempio.org/a", "riga": "Nato nel 1973"}]},
                   "pensatore": {"modelli": ["claude-finto-1"]}}})

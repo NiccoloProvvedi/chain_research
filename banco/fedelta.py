@@ -3,7 +3,8 @@
 La catena controlla le sue prove, ma il testo delle sezioni lo scrive Claude: qui si campionano le frasi con una citazione
 [n] e Claude (Sonnet) le confronta con le risposte delle domande che hanno quella fonte.
 
-Uso: venv/bin/python banco/fedelta.py <cartella indagine> [--frasi 40] [--soglia 0.9]   (esce con 1 sotto la soglia)
+Uso: venv/bin/python banco/fedelta.py <cartella indagine> [--frasi 40] [--soglia 0.9] [--su risposte|fonti]
+     (esce con 1 sotto la soglia; `--su fonti` confronta le frasi con le righe delle pagine citate)
 """
 import argparse
 import json
@@ -47,21 +48,41 @@ def frasi_citate(pagina: str) -> list[tuple[str, list[int]]]:
     return uscita
 
 
+def testi_per_fonte(domande: list[dict], su: str) -> dict[int, list[str]]:
+    """Numero della fonte nel documento → i testi con cui confrontare una frase che la cita. `su` = "risposte": le
+    risposte delle domande che hanno quella fonte (la frase dice quello che dice la risposta?); "fonti": le righe di
+    quella pagina su cui la catena ha poggiato la risposta (la frase dice quello che dice la pagina?)."""
+    from ricerca_catena.documento import _chiave_url
+    _, mappe = fonti_globali(domande)
+    testi: dict[int, list[str]] = {}
+    for d in domande:
+        if su == "risposte":
+            if d.get("risposta"):
+                testo = f"DOMANDA: {d['domanda']}\n{pulizia.testo(rinumera(d['risposta'], mappe[d['id']]), origine='risposta')}"
+                for numero in mappe[d["id"]].values():
+                    testi.setdefault(numero, []).append(testo)
+            continue
+        locale = {_chiave_url(str(f.get("url") or "")): int(f["numero"]) for f in d.get("fonti") or []}
+        for prova in d.get("prove") or []:
+            numero = mappe[d["id"]].get(locale.get(_chiave_url(str(prova.get("url") or "")), -1))
+            if numero and prova.get("riga") not in testi.setdefault(numero, []):
+                testi[numero].append(pulizia.testo(str(prova["riga"]), origine="pagina"))
+    return {n: t for n, t in testi.items() if t}
+
+
 def main() -> int:
     a = argparse.ArgumentParser(description=__doc__)
     a.add_argument("cartella", type=Path)
     a.add_argument("--frasi", type=int, default=40)
     a.add_argument("--soglia", type=float, default=0.9)
+    a.add_argument("--su", choices=["risposte", "fonti"], default="risposte",
+                   help="con che cosa confrontare le frasi: le risposte (predefinito) o le righe delle pagine citate")
     arg = a.parse_args()
     stato = json.loads((arg.cartella / "stato.json").read_text(encoding="utf-8"))
-    _, mappe = fonti_globali(stato["domande"])
-    risposte: dict[int, list[str]] = {}
-    for d in stato["domande"]:
-        if d.get("risposta"):
-            testo = f"DOMANDA: {d['domanda']}\n{pulizia.testo(rinumera(d['risposta'], mappe[d['id']]), origine='risposta')}"
-            for numero in mappe[d["id"]].values():
-                risposte.setdefault(numero, []).append(testo)
+    risposte = testi_per_fonte(stato["domande"], arg.su)
     frasi = frasi_citate((arg.cartella / "documento.html").read_text(encoding="utf-8"))
+    if arg.su == "fonti":  # solo le frasi di cui si hanno le righe (indagini fatte dopo il 12/11/2026)
+        frasi = [(f, numeri) for f, numeri in frasi if any(n in risposte for n in numeri)]
     campione = random.Random("fedelta").sample(frasi, min(arg.frasi, len(frasi)))
     conti = {"sostenuta": 0, "in parte": 0, "non sostenuta": 0}
     for frase, numeri in campione:
@@ -75,7 +96,7 @@ def main() -> int:
             print(f"[{esito['esito']}] {frase[:220]}\n    → {esito['motivo']}", flush=True)
     totale = sum(conti.values())
     quota = conti["sostenuta"] / max(1, totale)
-    print(f"{arg.cartella.name}: {len(frasi)} frasi citate, {totale} controllate: {conti}; sostenute {quota:.0%}")
+    print(f"{arg.cartella.name} (su {arg.su}): {len(frasi)} frasi citate, {totale} controllate: {conti}; sostenute {quota:.0%}")
     return 0 if quota >= arg.soglia else 1
 
 

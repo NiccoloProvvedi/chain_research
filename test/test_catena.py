@@ -878,6 +878,7 @@ def test_valore_giusto_porta_l_esito_dei_controlli(catena) -> None:
     esito = catena.riepilogo()
     assert esito["controlli"]["fonte_valore"] == "A" and esito["controlli"]["disaccordi"] == []
     assert "6 dicembre 1586" in esito["valore"]["riga"]
+    assert any("6 dicembre 1586" in p["riga"] and "Zucchi" in p["url"] for p in esito["prove"]) and len(esito["prove"]) >= 3
     assert esito["controlli"]["confermata"] == (esito["controlli"]["anelli_deboli"] == 0)
 
 

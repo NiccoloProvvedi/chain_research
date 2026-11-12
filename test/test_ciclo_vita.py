@@ -48,6 +48,7 @@ def test_domanda_finita_con_modello_e_conferma(ind: Indagine) -> None:
     d = ind.stato["domande"][0]
     assert d["stato"] == "risposta" and d["confermata"] and d["modelli"] == ["claude-finto-1"] and ind.speso() == 0.02
     assert (d["stato_risposta"], d["motivi_stato"]) == ("sostenuta", ["il valore viene da una sola fonte"])
+    assert d["prove"] == [{"url": "https://esempio.org/a", "riga": "Nato nel 1973"}]
 
 
 def test_domanda_morta_conta_il_costo(ind: Indagine) -> None:

@@ -898,6 +898,15 @@ class Catena:
         return {"esito": "discordi", "valore": valore, "url": prova.url, "fonti_guardate": fonti,
                 "riga": " ".join(prova.testo.split())[:300]}
 
+    def _righe_della_strada(self) -> list[Prova]:
+        """Le righe su cui poggia la soluzione: legami, controlli provati e valore, dalla partenza all'entità finale."""
+        if not self.valore:
+            return []
+        righe: list[Prova] = []
+        for a in self._percorso(self.valore["anello"]):
+            righe += [p for p in [a.prova_legame, a.inizio] + [e["prova"] for e in a.esiti] if p is not None]
+        return righe + [self.valore["prova"]]
+
     _RIGA_DI_RIQUADRO = re.compile(r"[^.:]{1,40}:\s")
 
     def _righe_delle_altre_voci(self, strada: list[Anello]) -> list[Prova]:
@@ -925,11 +934,7 @@ class Catena:
         from .. import configurazione
         strada = self._percorso(self.valore["anello"])
         radice = self._radice(self.valore["anello"])
-        righe: list[Prova] = []
-        for a in strada:
-            righe += [p for p in [a.prova_legame, a.inizio] + [e["prova"] for e in a.esiti] if p is not None]
-        righe.append(self.valore["prova"])
-        righe += self._righe_delle_altre_voci(strada)
+        righe = self._righe_della_strada() + self._righe_delle_altre_voci(strada)
         righe = list({(p.url, p.testo): p for p in righe}.values())[:90]
         dati = {"domanda": self.r.argomento[:1500],
                 "strada": " → ".join([radice.nome] + [f"[{a.relazione}] {a.nome}" for a in strada]),
@@ -2196,5 +2201,8 @@ class Catena:
                            "url": self.valore["prova"].url,
                            "riga": " ".join(str(self.valore["prova"].testo).split())[:600]} if self.valore else None,
                 "motivo": self.motivo, "azioni": self.azioni, "controlli": self.controlli(),
+                # le righe della soluzione con la loro pagina: per ricontrollare il documento sulle fonti (fedelta.py)
+                "prove": [{"url": p.url, "riga": " ".join(p.testo.split())[:500]}
+                          for p in {(p.url, p.testo): p for p in self._righe_della_strada()}.values()],
                 "wikipedia": {"voci": self.wiki.lette, "richieste": self.wiki.richieste, "tetto": self.wiki.esaurite}
                 if self.wiki is not None else None}

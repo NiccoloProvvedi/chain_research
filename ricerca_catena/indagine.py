@@ -573,6 +573,7 @@ class Indagine:
                          valore=esito.get("valore"), fonti=esito["fonti"], costo_usd=esito["costo_usd"],
                          confermata=bool(esito.get("confermata")), stato_risposta=esito.get("stato"),
                          motivi_stato=((esito.get("catena") or {}).get("controlli") or {}).get("motivi") or [],
+                         prove=(esito.get("catena") or {}).get("prove") or [],
                          modelli=(esito.get("pensatore") or {}).get("modelli"),
                          secondi=esito["secondi"], pagine_lette=esito.get("pagine_lette"),
                          motivo_catena=esito.get("motivo_fine"))

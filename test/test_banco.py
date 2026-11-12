@@ -134,3 +134,21 @@ def test_le_domande_senza_risposta_sono_ben_fatte() -> None:
     assert len(domande) == 20 and len({d["seme"] for d in domande}) == 20
     assert all(d["senza_risposta"] is True and d["risposta"] == "" and d["perche"] and d["domanda"].endswith("?") for d in domande)
     assert {d["tema"] for d in domande} == {"entita_inventata", "relazione_inesistente", "dato_mai_esistito"}
+
+
+def test_fedelta_prove_per_fonte() -> None:
+    """Secondo modo di fedelta.py: la frase si confronta con le righe delle fonti che cita, non con le risposte."""
+    import fedelta
+    domande = [
+        {"id": "d1", "domanda": "D1", "risposta": "**Risposta:** 1973 [2].",
+         "fonti": [{"numero": 1, "url": "https://a.org/x", "titolo": "A"}, {"numero": 2, "url": "https://b.org/y", "titolo": "B"}],
+         "prove": [{"url": "https://b.org/y", "riga": "Nato il 24 luglio 1973"}, {"url": "https://a.org/x", "riga": "Fondatore di X"},
+                   {"url": "https://mai.vista/z", "riga": "riga di una fonte non in elenco"}]},
+        {"id": "d2", "domanda": "D2", "risposta": "**Risposta:** Roma [1].",
+         "fonti": [{"numero": 1, "url": "https://b.org/y/", "titolo": "B"}], "prove": [{"url": "https://b.org/y", "riga": "Vive a Roma"}]},
+        {"id": "d3", "domanda": "D3", "risposta": "**Risposta:** vecchia [1].", "fonti": [{"numero": 1, "url": "https://c.org", "titolo": "C"}]},
+    ]
+    per_fonte = fedelta.testi_per_fonte(domande, "fonti")
+    assert per_fonte == {1: ["Fondatore di X"], 2: ["Nato il 24 luglio 1973", "Vive a Roma"]}   # stesso indirizzo, stessa fonte
+    per_risposta = fedelta.testi_per_fonte(domande, "risposte")
+    assert set(per_risposta) == {1, 2, 3} and "DOMANDA: D1" in per_risposta[2][0] and "DOMANDA: D2" in per_risposta[2][1]
