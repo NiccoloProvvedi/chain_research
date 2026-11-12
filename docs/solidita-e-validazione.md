@@ -265,3 +265,37 @@ Regole dei test:
 3. **Modello della revisione (G6):** Sonnet (consigliato, circa +0,02 $ a domanda) o lo stesso della catena.
 4. **Spesa:** fasi A e B centesimi; C, D e campagna circa 60–70 $ di abbonamento in più finestre. Ogni giro a pagamento
    parte solo dopo un sì.
+
+## 10. Stato dei lavori
+
+Aggiornato al 12/11/2026. I risultati delle corse a pagamento si aggiungono qui sotto quando arrivano.
+
+**Fatto e protetto dai test** (455 test senza rete, 35 sabotaggi su 35 scoperti):
+- Fase A, il metro: giudice con il segno, valore del programma, errori del giudice fuori dal conto, durate pulite,
+  `rigiudica.py`, `rapporto.py` (giuste per stato, che cosa segnala ogni controllo, regola di decisione).
+- Fase B, controlli del programma: G1 valore nella riga, G3 strada senza ritorni, G4 un estratto non conferma,
+  G7 registro dei disaccordi (solo riquadro della voce di prima contro un candidato con fonte più debole).
+- Fase C, controlli con il modello (`Catena.revisione_finale`): G2 seconda lettura, G5 riscontro in altre voci e
+  pagine, G6 revisione contraria con Sonnet, che riceve anche le righe delle altre voci di ogni anello. Non cambiano
+  la risposta: ne decidono lo stato (`validazione.stato`). La riga «Fiducia» la scrive il programma.
+- Fase D: stato e motivi salvati con ogni domanda; la regia riceve lo stato; nel documento le `incerta` stanno solo
+  nei riquadri «Punti aperti» scritti dal programma; interfaccia con lo stato accanto a ogni domanda; `fedelta.py
+  --su fonti` sulle righe delle pagine citate.
+- Difetti B5 e B6 corretti (esiti al candidato e al controllo giusti), con i test che li riproducevano.
+- T1, T3, T4 (domande scritte e punteggio), T5, T7, T10 del piano dei test.
+
+**Scelte fatte strada facendo:**
+- Niente Wikidata: il riscontro usa le altre voci di Wikipedia; gli insiemi nuovi di domande si scrivono a mano.
+- Il `verso` della relazione non entra nel piano della catena: il verso lo controlla la revisione (G6), senza
+  cambiare le istruzioni che guidano la ricerca.
+- I controlli con il modello non fermano né deviano la catena (prima versione): decidono solo lo stato. Farle
+  cercare un altro candidato dopo un'obiezione è il passo successivo, da misurare a parte.
+- Le corse del banco partono con `banco/corsa.sh`, staccate dalla sessione, da una copia ferma del codice.
+
+**Non fatto:**
+- T2 (pagina avvelenata con il browser vero): servirebbe un motore di ricerca finto e un lettore finto per tutta la
+  raccolta; i controlli sono provati sugli oggetti della catena e dal vivo.
+- T6, T8, T9, T11, T12 e i giri 4, 8 e 9 della campagna: dipendono dalle corse a pagamento o dal tempo di una persona.
+- B7 («confermato da N strade» con le fonti diverse): cambia il motivo finale scritto nelle catene registrate, si fa
+  insieme alla nuova registrazione.
+- Codice morto ancora da togliere; `test_contratti.py` e la CI mai eseguiti.
