@@ -1,0 +1,422 @@
+{
+ "nota": "Insieme di conferma, scritto a mano il 13/11/2026 e mai usato per regolare la catena: 13 domande con la risposta controllata sulle voci di Wikipedia in italiano e in inglese (sono rimaste solo quelle in cui le due lingue danno lo stesso valore), 10 domande senza risposta. Va usato una volta sola, sul codice finale. Le domande con risposta hanno 2 o 3 passi e partono da cose molto note: sono più facili delle domande di controllo generate da Wikidata.",
+ "domande": [
+  {
+   "tema": "informatica",
+   "seme": "Macchina di Turing",
+   "domanda": "Qual è la data di morte (giorno, mese e anno) del matematico statunitense che fu relatore di dottorato del logico statunitense a sua volta relatore di dottorato del matematico britannico che nel 1936 ideò la macchina astratta che porta il suo nome, modello teorico del calcolatore?",
+   "risposta": "10 agosto 1960",
+   "attributo": {
+    "relazione": "data di morte"
+   },
+   "percorso": [
+    {
+     "nome": "Macchina di Turing",
+     "relazione": null
+    },
+    {
+     "nome": "Alan Turing",
+     "relazione": "ideatore"
+    },
+    {
+     "nome": "Alonzo Church",
+     "relazione": "relatore di dottorato"
+    },
+    {
+     "nome": "Oswald Veblen",
+     "relazione": "relatore di dottorato"
+    }
+   ],
+   "fonte_risposta": "it.wiki ed en.wiki, voce Oswald Veblen: 10 agosto 1960",
+   "stato_riferimento": "ok"
+  },
+  {
+   "tema": "informatica",
+   "seme": "Macchina analitica",
+   "domanda": "Qual è la data di morte (giorno, mese e anno) del poeta britannico padre della matematica inglese considerata la prima programmatrice della storia per le sue note sulla macchina analitica di Charles Babbage?",
+   "risposta": "19 aprile 1824",
+   "attributo": {
+    "relazione": "data di morte"
+   },
+   "percorso": [
+    {
+     "nome": "Macchina analitica",
+     "relazione": null
+    },
+    {
+     "nome": "Ada Lovelace",
+     "relazione": "prima programmatrice"
+    },
+    {
+     "nome": "George Gordon Byron",
+     "relazione": "padre"
+    }
+   ],
+   "fonte_risposta": "it.wiki ed en.wiki, voce Lord Byron: 19 aprile 1824",
+   "stato_riferimento": "ok"
+  },
+  {
+   "tema": "scienze",
+   "seme": "Relatività ristretta",
+   "domanda": "Qual è la data di morte (giorno, mese e anno) della fisica serba che fu la prima moglie dello scienziato autore, nel 1905, della teoria della relatività ristretta?",
+   "risposta": "4 agosto 1948",
+   "attributo": {
+    "relazione": "data di morte"
+   },
+   "percorso": [
+    {
+     "nome": "Relatività ristretta",
+     "relazione": null
+    },
+    {
+     "nome": "Albert Einstein",
+     "relazione": "autore"
+    },
+    {
+     "nome": "Mileva Marić",
+     "relazione": "prima moglie"
+    }
+   ],
+   "fonte_risposta": "it.wiki ed en.wiki, voce Mileva Marić: 4 agosto 1948",
+   "stato_riferimento": "ok"
+  },
+  {
+   "tema": "scienze",
+   "seme": "Dinamite",
+   "domanda": "Qual è l'altitudine sul livello del mare della città svedese in cui è nato l'ingegnere e inventore padre del chimico che brevettò la dinamite nel 1867?",
+   "risposta": "8 m",
+   "attributo": {
+    "relazione": "altitudine"
+   },
+   "percorso": [
+    {
+     "nome": "Dinamite",
+     "relazione": null
+    },
+    {
+     "nome": "Alfred Nobel",
+     "relazione": "inventore"
+    },
+    {
+     "nome": "Immanuel Nobel",
+     "relazione": "padre"
+    },
+    {
+     "nome": "Gävle",
+     "relazione": "luogo di nascita"
+    }
+   ],
+   "fonte_risposta": "it.wiki ed en.wiki, riquadro di Gävle: 8 m",
+   "stato_riferimento": "ok"
+  },
+  {
+   "tema": "scienze",
+   "seme": "Leggi di Keplero",
+   "domanda": "Qual è l'altitudine sul livello del mare della città tedesca in cui è nato l'astronomo che formulò le tre leggi sul moto dei pianeti intorno al Sole?",
+   "risposta": "406 m",
+   "attributo": {
+    "relazione": "altitudine"
+   },
+   "percorso": [
+    {
+     "nome": "Leggi di Keplero",
+     "relazione": null
+    },
+    {
+     "nome": "Giovanni Keplero",
+     "relazione": "autore"
+    },
+    {
+     "nome": "Weil der Stadt",
+     "relazione": "luogo di nascita"
+    }
+   ],
+   "fonte_risposta": "it.wiki ed en.wiki, riquadro di Weil der Stadt: 406 m",
+   "stato_riferimento": "ok"
+  },
+  {
+   "tema": "scienze",
+   "seme": "Guglielmo Marconi",
+   "domanda": "Qual è l'altitudine sul livello del mare della città italiana in cui è nato il fisico premio Nobel nel 1909 per lo sviluppo della telegrafia senza fili?",
+   "risposta": "54 m",
+   "attributo": {
+    "relazione": "altitudine"
+   },
+   "percorso": [
+    {
+     "nome": "Telegrafia senza fili",
+     "relazione": null
+    },
+    {
+     "nome": "Guglielmo Marconi",
+     "relazione": "inventore"
+    },
+    {
+     "nome": "Bologna",
+     "relazione": "luogo di nascita"
+    }
+   ],
+   "fonte_risposta": "it.wiki ed en.wiki, riquadro di Bologna: 54 m",
+   "stato_riferimento": "ok"
+  },
+  {
+   "tema": "storia",
+   "seme": "Battaglia di Austerlitz",
+   "domanda": "Qual è la data di morte (giorno, mese e anno) del generale francese che fu il primo marito della prima moglie dell'imperatore vincitore della battaglia di Austerlitz del 1805?",
+   "risposta": "23 luglio 1794",
+   "attributo": {
+    "relazione": "data di morte"
+   },
+   "percorso": [
+    {
+     "nome": "Battaglia di Austerlitz",
+     "relazione": null
+    },
+    {
+     "nome": "Napoleone Bonaparte",
+     "relazione": "vincitore"
+    },
+    {
+     "nome": "Giuseppina di Beauharnais",
+     "relazione": "prima moglie"
+    },
+    {
+     "nome": "Alessandro di Beauharnais",
+     "relazione": "primo marito"
+    }
+   ],
+   "fonte_risposta": "it.wiki ed en.wiki, voce Alessandro di Beauharnais: 23 luglio 1794",
+   "stato_riferimento": "ok"
+  },
+  {
+   "tema": "storia",
+   "seme": "Rivoluzione d'ottobre",
+   "domanda": "Qual è la data di morte (giorno, mese e anno) della rivoluzionaria e pedagogista russa moglie del capo bolscevico che guidò la Rivoluzione d'ottobre del 1917?",
+   "risposta": "27 febbraio 1939",
+   "attributo": {
+    "relazione": "data di morte"
+   },
+   "percorso": [
+    {
+     "nome": "Rivoluzione d'ottobre",
+     "relazione": null
+    },
+    {
+     "nome": "Lenin",
+     "relazione": "capo"
+    },
+    {
+     "nome": "Nadežda Krupskaja",
+     "relazione": "moglie"
+    }
+   ],
+   "fonte_risposta": "it.wiki ed en.wiki, voce Nadežda Krupskaja: 27 febbraio 1939",
+   "stato_riferimento": "ok"
+  },
+  {
+   "tema": "storia",
+   "seme": "Guerra e pace",
+   "domanda": "Qual è la data di morte (giorno, mese e anno) della contessa russa moglie dello scrittore autore del romanzo «Guerra e pace»?",
+   "risposta": "4 novembre 1919",
+   "attributo": {
+    "relazione": "data di morte"
+   },
+   "percorso": [
+    {
+     "nome": "Guerra e pace",
+     "relazione": null
+    },
+    {
+     "nome": "Lev Tolstoj",
+     "relazione": "autore"
+    },
+    {
+     "nome": "Sof'ja Tolstaja",
+     "relazione": "moglie"
+    }
+   ],
+   "fonte_risposta": "it.wiki ed en.wiki, voce Sof'ja Tolstaja: 4 novembre 1919",
+   "stato_riferimento": "ok"
+  },
+  {
+   "tema": "geografia_cultura",
+   "seme": "Notte stellata",
+   "domanda": "Qual è la data di morte (giorno, mese e anno) del mercante d'arte olandese fratello minore del pittore che nel 1889 dipinse la «Notte stellata»?",
+   "risposta": "25 gennaio 1891",
+   "attributo": {
+    "relazione": "data di morte"
+   },
+   "percorso": [
+    {
+     "nome": "Notte stellata",
+     "relazione": null
+    },
+    {
+     "nome": "Vincent van Gogh",
+     "relazione": "autore"
+    },
+    {
+     "nome": "Theo van Gogh",
+     "relazione": "fratello"
+    }
+   ],
+   "fonte_risposta": "it.wiki ed en.wiki, voce Theo van Gogh: 25 gennaio 1891",
+   "stato_riferimento": "ok"
+  },
+  {
+   "tema": "geografia_cultura",
+   "seme": "Il barbiere di Siviglia",
+   "domanda": "Qual è la data di morte (giorno, mese e anno) della cantante spagnola che fu la prima moglie del compositore dell'opera «Il barbiere di Siviglia» andata in scena a Roma nel 1816?",
+   "risposta": "7 ottobre 1845",
+   "attributo": {
+    "relazione": "data di morte"
+   },
+   "percorso": [
+    {
+     "nome": "Il barbiere di Siviglia",
+     "relazione": null
+    },
+    {
+     "nome": "Gioachino Rossini",
+     "relazione": "compositore"
+    },
+    {
+     "nome": "Isabella Colbran",
+     "relazione": "prima moglie"
+    }
+   ],
+   "fonte_risposta": "it.wiki ed en.wiki, voce Isabella Colbran: 7 ottobre 1845",
+   "stato_riferimento": "ok"
+  },
+  {
+   "tema": "geografia_cultura",
+   "seme": "Cavalleria rusticana",
+   "domanda": "Qual è l'altitudine sul livello del mare della città toscana in cui è nato il compositore dell'opera «Cavalleria rusticana» del 1890?",
+   "risposta": "3 m",
+   "attributo": {
+    "relazione": "altitudine"
+   },
+   "percorso": [
+    {
+     "nome": "Cavalleria rusticana",
+     "relazione": null
+    },
+    {
+     "nome": "Pietro Mascagni",
+     "relazione": "compositore"
+    },
+    {
+     "nome": "Livorno",
+     "relazione": "luogo di nascita"
+    }
+   ],
+   "fonte_risposta": "it.wiki ed en.wiki, riquadro di Livorno: 3 m",
+   "stato_riferimento": "ok"
+  },
+  {
+   "tema": "geografia_cultura",
+   "seme": "Faust",
+   "domanda": "Qual è l'altitudine sul livello del mare della città tedesca in cui è nato lo scrittore autore del poema drammatico «Faust»?",
+   "risposta": "112 m",
+   "attributo": {
+    "relazione": "altitudine"
+   },
+   "percorso": [
+    {
+     "nome": "Faust",
+     "relazione": null
+    },
+    {
+     "nome": "Johann Wolfgang von Goethe",
+     "relazione": "autore"
+    },
+    {
+     "nome": "Francoforte sul Meno",
+     "relazione": "luogo di nascita"
+    }
+   ],
+   "fonte_risposta": "it.wiki ed en.wiki, riquadro di Francoforte: 112 m",
+   "stato_riferimento": "ok"
+  },
+  {
+   "tema": "entita_inventata",
+   "seme": "Trattato di Castelvetro",
+   "domanda": "Qual è la data di nascita (giorno, mese e anno) del diplomatico che firmò per il Ducato di Modena il trattato di Castelvetro del 1687 con la Repubblica di Lucca?",
+   "risposta": "",
+   "senza_risposta": true,
+   "perche": "Nel 1687 non ci fu un trattato di Castelvetro tra Modena e Lucca."
+  },
+  {
+   "tema": "entita_inventata",
+   "seme": "Nordlys OS",
+   "domanda": "In quale città è nato l'informatico norvegese che nel 1994 pubblicò a Tromsø il sistema operativo Nordlys OS?",
+   "risposta": "",
+   "senza_risposta": true,
+   "perche": "Il sistema operativo Nordlys OS non esiste."
+  },
+  {
+   "tema": "entita_inventata",
+   "seme": "Il custode di Valparaíso",
+   "domanda": "Qual è la data di morte (giorno, mese e anno) del traduttore in inglese del romanzo di Italo Calvino «Il custode di Valparaíso», pubblicato nel 1961?",
+   "risposta": "",
+   "senza_risposta": true,
+   "perche": "Calvino non ha scritto un romanzo con questo titolo."
+  },
+  {
+   "tema": "entita_inventata",
+   "seme": "Cometa Halvorsen-Ricci",
+   "domanda": "Qual è l'altitudine sul livello del mare del comune italiano in cui è nato l'astronomo che nel 1978 scoprì, insieme a un collega norvegese, la cometa Halvorsen-Ricci?",
+   "risposta": "",
+   "senza_risposta": true,
+   "perche": "La cometa Halvorsen-Ricci non esiste."
+  },
+  {
+   "tema": "relazione_inesistente",
+   "seme": "Ludwig van Beethoven",
+   "domanda": "In quale giorno, mese e anno si sposò il compositore tedesco Ludwig van Beethoven, autore della Nona sinfonia?",
+   "risposta": "",
+   "senza_risposta": true,
+   "perche": "Beethoven non si è mai sposato."
+  },
+  {
+   "tema": "relazione_inesistente",
+   "seme": "Kurt Gödel",
+   "domanda": "In che anno il logico Kurt Gödel, autore dei teoremi di incompletezza, ha ricevuto la medaglia Fields?",
+   "risposta": "",
+   "senza_risposta": true,
+   "perche": "Gödel non ha mai ricevuto la medaglia Fields."
+  },
+  {
+   "tema": "relazione_inesistente",
+   "seme": "Wolfgang Amadeus Mozart",
+   "domanda": "Qual è il codice postale del comune italiano in cui è nato il compositore Wolfgang Amadeus Mozart, autore del Flauto magico?",
+   "risposta": "",
+   "senza_risposta": true,
+   "perche": "Mozart è nato a Salisburgo, non in Italia."
+  },
+  {
+   "tema": "relazione_inesistente",
+   "seme": "Galileo Galilei senza laurea",
+   "domanda": "Qual è la data di nascita (giorno, mese e anno) del professore che fu relatore della tesi di laurea in medicina discussa da Galileo Galilei all'Università di Pisa?",
+   "risposta": "",
+   "senza_risposta": true,
+   "perche": "Galileo lasciò l'Università di Pisa senza laurearsi."
+  },
+  {
+   "tema": "dato_mai_esistito",
+   "seme": "Euclide",
+   "domanda": "In quale giorno, mese e anno è nato il matematico greco Euclide, autore degli Elementi?",
+   "risposta": "",
+   "senza_risposta": true,
+   "perche": "La data di nascita di Euclide non è nota."
+  },
+  {
+   "tema": "dato_mai_esistito",
+   "seme": "Linee di Nazca",
+   "domanda": "In quale città è nato l'architetto che progettò le linee di Nazca, nel Perù meridionale?",
+   "risposta": "",
+   "senza_risposta": true,
+   "perche": "Le linee di Nazca non hanno un progettista noto."
+  }
+ ]
+}

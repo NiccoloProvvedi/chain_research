@@ -191,3 +191,19 @@ def test_il_nuovo_giudizio_ricalcola_lo_stato_con_la_regola_di_adesso() -> None:
     onesta = {"attesa": "", "senza_risposta": True, "trovata": False, "valore": None, "corretta": True, "deciso_da": "senza risposta"}
     esito = rigiudica.rigiudica({"i": inventata, "o": onesta})
     assert (esito["i"]["corretta"], esito["o"]["corretta"]) == (False, True)
+
+
+def test_l_insieme_di_conferma_e_ben_fatto() -> None:
+    import json
+    from pathlib import Path
+    radice = Path(__file__).resolve().parents[1] / "banco"
+    domande = json.loads((radice / "domande_conferma.json").read_text())["domande"]
+    con, senza = [d for d in domande if not d.get("senza_risposta")], [d for d in domande if d.get("senza_risposta")]
+    assert (len(con), len(senza)) == (13, 10) and len({d["seme"] for d in domande}) == 23
+    assert all(d["risposta"] and d["fonte_risposta"] and d["domanda"].endswith("?") for d in con)
+    assert all(d["risposta"] == "" and d["perche"] for d in senza)
+    # la risposta e l'entità finale non stanno nella domanda; nessun seme già usato negli altri insiemi
+    assert all(d["risposta"] not in d["domanda"] and d["percorso"][-1]["nome"] not in d["domanda"] for d in con)
+    usati = {d["seme"] for f in ("domande.json", "domande_holdout.json", "domande_senza_risposta.json")
+             for d in json.loads((radice / f).read_text())["domande"]}
+    assert not usati & {d["seme"] for d in domande}
