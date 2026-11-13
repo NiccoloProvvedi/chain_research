@@ -174,3 +174,7 @@
 | 2026-11-10 03:03 | 40 domande dopo la revisione, con registrazione (FALSATA: limite di 5 ore non riconosciuto) | a26b341 | 40 domande | 22/40 | 8.1 | 4.378 | 0 |
 | 2026-11-10 14:06 | 40 domande dopo la revisione, con registrazione | 46ae7e2 | 40 domande | 34/40 | 10.1 | 5.559 | 0 |
 | 2026-11-10 18:17 | domande di controllo, corsa 1 | 4f3ba92 | 36 domande | 25/36 | 19.9 | 4.452 | 0 |
+| 2026-11-13 00:01 | domande di controllo con tutti i controlli (3 domande rifatte dopo il limite di sessione) | 513a90e | 36 domande | 25/36 | 8.4 | 5.065 | 0 | 12/13 | 13 |
+| 2026-11-12 23:37 | domande di controllo, la revisione vede le altre voci degli anelli | 05db7f3 | 36 domande | 24/36 | 7.8 | 5.409 | 0 | 9/9 | 15 |
+| 2026-11-13 04:59 | 40 domande con tutti i controlli: taratura dello stato e nuova registrazione | 51d22d6 | 40 domande | 33/40 | 9.8 | 6.605 | 0 | 10/10 | 9 |
+| 2026-11-13 06:17 | 20 domande senza risposta (giusta = «non trovata») | 51d22d6 | 20 domande | 5/20 | 11.1 | 3.082 | 0 | 0/2 | 0 |

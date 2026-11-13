@@ -345,3 +345,58 @@ limite di sessione; due valori uguali segnati «discordi» perché uno aveva una
 
 **Prossimo passo:** restringere `incerta` (anello debole ma revisione «regge: sì» e riscontro concorde) usando solo
 la corsa di taratura sulle 40 domande, poi una corsa di conferma sulle domande di controllo.
+
+### Taratura, regola ristretta e domande senza risposta (13/11/2026)
+
+**Taratura sulle 40 domande regolate** (`taratura-1`, 33/40 giuste, 6,6 $): l'anello debole da solo era un segnale
+povero anche qui (21 giuste, 6 sbagliate). Con la revisione che regge senza obiezioni: 6 giuste e 0 sbagliate.
+Regola nuova, decisa solo su questa corsa: **un anello debole porta a `incerta` solo se la revisione non regge**;
+se regge, la risposta è al massimo `sostenuta`, con il limite scritto.
+
+**La regola nuova sulle corse già fatte** (`rigiudica.py` ricalcola lo stato dagli esiti salvati, senza rifare niente):
+
+| Stato | Domande di controllo, c1 e d1 (risposte attese buone) | Taratura, 40 domande |
+|---|---|---|
+| verificata | 9 giuste, 0 sbagliate | 1, 0 |
+| sostenuta | 23 giuste, 0 sbagliate | 15, 0 |
+| contestata | 3 giuste, 0 sbagliate | 1, 0 |
+| incerta | 10 giuste, 9 sbagliate | 16, 6 |
+
+- Sulle domande di controllo **32 risposte su 32 date come fatto sono giuste** (limite inferiore al 95%: 89%), e
+  `incerta` ora separa davvero: 10 giuste su 19. Tutte le risposte sbagliate stanno in `incerta`.
+- Il criterio «`verificata` ≥ 95% con limite inferiore ≥ 85%» resta non dimostrato per lo stato `verificata` da
+  solo (9 su 9, limite inferiore 70%); per `verificata` e `sostenuta` insieme è raggiunto. Le due corse sono
+  ripetizioni delle stesse domande: la conferma indipendente è il terzo insieme di domande.
+- **Lo stato non è stabile quanto il valore**: ripetendo, stesso valore in 28 domande su 36, stesso stato in 19. Il
+  verdetto della revisione cambia tra «regge» e «non provato» da una corsa all'altra. Cambia tra `sostenuta` e
+  `incerta`, non tra giusto dato per fatto e sbagliato dato per fatto; da migliorare (due revisioni, vale la più severa).
+
+**Venti domande senza risposta** (`senza-risposta-1`, 3,1 $; entità inventate, relazioni che non esistono, dati mai
+esistiti):
+
+| Che cosa ha fatto la catena | Domande |
+|---|---|
+| «Non trovata» (giusto) | 5 |
+| Un valore, segnato `incerta` | 13 |
+| Un valore dato come fatto (`sostenuta`) | 2 |
+
+- **La catena da sola inventa**: in 15 casi su 20 trova una strada «abbastanza simile» e dà un valore (obiettivo: al
+  massimo 2). È il difetto più serio rimasto, e non è dei controlli: è della ricerca, che accetta la premessa della
+  domanda.
+- I controlli ne fermano 13 su 15 (`incerta`, in 10 con un'obiezione della revisione che dice proprio che la premessa
+  è falsa: «Newton non ha una moglie», «non si aggiudicarono mai il premio»). Nel documento finiscono nei «Punti
+  aperti», non nel testo.
+- 2 su 20 passano come fatto: il relatore del «dottorato» di Leonardo da Vinci e il codice postale del villaggio natale
+  di Spartaco. La revisione non ha obiettato.
+- Tutte le entità inventate (8 su 8) hanno avuto un valore: la catena sostituisce l'entità che non esiste con una
+  vicina. Rimedio da provare: un controllo sulla partenza (l'entità nominata dalla domanda esiste, con quel nome e
+  quei tratti?) prima di cercare, e «non trovata» quando la revisione smentisce la premessa.
+
+**Rigioco**: le 40 catene sono state registrate di nuovo con i controlli; 39 si ripetono uguali senza rete né Claude,
+una (finita per budget) non è ripetibile. Le vecchie registrazioni stanno in `risultati/rigioco-vecchio` (70 MB, si
+possono cancellare).
+
+**Spesa delle corse** dall'11/11: circa 20 $ (c1 5,1; d1 5,4; taratura 6,6; senza risposta 3,1).
+
+**B7** («confermato da N strade») resta com'è: cambierebbe il motivo finale scritto in tutte le registrazioni per una
+frase che non entra nello stato.
