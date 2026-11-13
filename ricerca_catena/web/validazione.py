@@ -216,7 +216,13 @@ def stato(c: dict) -> tuple[str, list[str]]:
     esami = c.get("esami") or {}
     lettura, riscontro, revisione = (esami.get(k) or {} for k in ("seconda_lettura", "riscontro", "revisione"))
     incerta, contestata, limiti = [], [], []
-    if c.get("anelli_deboli"):
+    # Un anello debole (controlli non tutti provati) porta a «incerta», a meno che la revisione della catena intera
+    # regga senza obiezioni: allora resta un limite e la risposta è al massimo «sostenuta» (taratura del 13/11 sulle
+    # 40 domande: debole con revisione che regge 6 giuste e 0 sbagliate; debole senza, 16 e 6).
+    regge = revisione.get("esito") == "fatta" and revisione.get("regge") == "sì" and not revisione.get("obiezioni")
+    if c.get("anelli_deboli") and regge:
+        limiti.append(f"{c['anelli_deboli']} anelli con controlli non tutti provati, ma la catena intera regge alla revisione")
+    elif c.get("anelli_deboli"):
         incerta.append(f"{c['anelli_deboli']} anelli della catena non confermati")
     if c.get("fonte_valore") == "C":
         incerta.append("il valore viene dall'estratto di una ricerca, da una pagina non letta")
@@ -233,7 +239,7 @@ def stato(c: dict) -> tuple[str, list[str]]:
     if contestata:
         return "contestata", contestata
     if not esami:
-        return "sostenuta", ["controlli con il modello non fatti"]
+        return "sostenuta", limiti + ["controlli con il modello non fatti"]
     if lettura.get("esito") not in ("concordi", "non serve"):
         limiti.append("la seconda lettura non ha ritrovato il valore")
     if riscontro.get("esito") != "concordi":

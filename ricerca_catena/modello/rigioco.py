@@ -62,6 +62,21 @@ def leggi(chiave: str) -> Any:
     return json.loads(gzip.decompress(file.read_bytes()))["risposta"]
 
 
+def leggi_unica(punto: str) -> Any:
+    """La sola risposta registrata di Claude per questo punto, qualunque fosse la richiesta. Serve alla scrittura della
+    risposta finale: il suo testo d'ingresso riporta lo stato deciso dai controlli, e una regola dello stato cambiata
+    non deve rendere inutile la registrazione di tutta la catena (13/11). Con zero o più di una registrazione: errore."""
+    cartella = _cartella("RICERCA_RIGIOCA")
+    trovate = []
+    for file in sorted(cartella.glob("*.json.gz")) if cartella else []:
+        dati = json.loads(gzip.decompress(file.read_bytes()))
+        if isinstance(dati.get("richiesta"), dict) and dati["richiesta"].get("punto") == punto:
+            trovate.append(dati["risposta"])
+    if len(trovate) != 1:
+        raise RichiestaNonRegistrata(f"{len(trovate)} risposte registrate per «{punto}»: ne serve una sola")
+    return trovate[0]
+
+
 def salva(chiave: str, richiesta: Any, risposta: Any) -> None:
     cartella = _cartella("RICERCA_REGISTRA")
     if cartella is None:

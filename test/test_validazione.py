@@ -245,13 +245,23 @@ _OBIEZIONE = {"esito": "fatta", "regge": "no", "obiezioni": [{"indizio": "fisico
 @pytest.mark.parametrize("cambi,atteso", [
     ({}, "verificata"),
     ({"valore": ""}, "non trovata"),
-    ({"anelli_deboli": 1}, "incerta"),
+    # 13/11, taratura sulle 40 domande: anello debole ma revisione «regge: sì» 6 giuste e 0 sbagliate (sulle domande di
+    # controllo 13 e 0); con «non provato» 11 giuste e 2 sbagliate. L'anello debole porta a «incerta» solo senza una
+    # revisione che regge; con la revisione che regge la risposta è al massimo «sostenuta».
+    ({"anelli_deboli": 1}, "sostenuta"),
+    ({"anelli_deboli": 2, "esami": {**_BUONI, "revisione": {"esito": "fatta", "regge": "non provato", "obiezioni": [], "non_provati": 1}}}, "incerta"),
+    ({"anelli_deboli": 1, "esami": {**_BUONI, "revisione": {"esito": "non fatta"}}}, "incerta"),
+    ({"anelli_deboli": 1, "esami": {**_BUONI, "revisione": _OBIEZIONE}}, "incerta"),
+    ({"anelli_deboli": 1, "esami": None}, "incerta"),
+    ({"anelli_deboli": 1, "esami": {**_BUONI, "riscontro": {"esito": "discordi", "valore": "58 m"}}}, "contestata"),
+    ({"anelli_deboli": 1, "fonte_valore": "C"}, "incerta"),
     ({"fonte_valore": "C"}, "incerta"),
     ({"esami": {**_BUONI, "revisione": _OBIEZIONE}}, "incerta"),
     ({"esami": {**_BUONI, "riscontro": {"esito": "discordi", "valore": "21 giugno 1885"}}}, "contestata"),
     ({"esami": {**_BUONI, "seconda_lettura": {"esito": "discordi", "valore": "58 m"}}}, "contestata"),
     ({"disaccordi": [{"relazione": "nato a", "da": "S", "nome": "Newburyport"}]}, "contestata"),
-    ({"anelli_deboli": 1, "disaccordi": [{"relazione": "nato a", "da": "S", "nome": "N"}]}, "incerta"),
+    ({"anelli_deboli": 1, "disaccordi": [{"relazione": "nato a", "da": "S", "nome": "N"}]}, "contestata"),
+    ({"anelli_deboli": 1, "esami": None, "disaccordi": [{"relazione": "nato a", "da": "S", "nome": "N"}]}, "incerta"),
     ({"esami": {**_BUONI, "riscontro": {"esito": "sola fonte"}}}, "sostenuta"),
     ({"esami": {**_BUONI, "seconda_lettura": {"esito": "non ritrovato"}}}, "sostenuta"),
     ({"esami": {**_BUONI, "seconda_lettura": {"esito": "non serve"}}}, "verificata"),

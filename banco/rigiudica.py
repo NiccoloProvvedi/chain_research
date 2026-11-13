@@ -18,6 +18,8 @@ sys.path.insert(0, str(RADICE / "banco"))
 
 import giudice  # noqa: E402
 
+from ricerca_catena.web import validazione  # noqa: E402
+
 
 def rigiudica(esiti: dict[str, dict], con_giudice: bool = False, stati: dict[str, str] | None = None) -> dict[str, dict]:
     nuovi = {}
@@ -28,6 +30,16 @@ def rigiudica(esiti: dict[str, dict], con_giudice: bool = False, stati: dict[str
             continue
         if stati and chiave in stati:
             voce["stato_riferimento"] = stati[chiave]
+        # Lo stato si ricalcola dagli esiti dei controlli salvati, con la regola di adesso: una regola cambiata si può
+        # provare sulle corse già fatte senza rifarle. Lo stato scritto dalla corsa resta in `stato_della_corsa`.
+        controlli = (voce.get("catena") or {}).get("controlli")
+        if controlli and "esami" in controlli:
+            voce.setdefault("stato_della_corsa", voce.get("stato"))
+            voce["stato"], motivi = validazione.stato(controlli)
+            voce["confermata"] = voce["stato"] in ("verificata", "sostenuta")
+        if voce.get("senza_risposta"):  # giusta solo se la catena non ha dato un valore
+            voce["corretta"], voce["deciso_da"] = not voce.get("trovata"), "senza risposta"
+            continue
         valore = " ".join(str(voce.get("valore") or "").split())
         if not valore:  # nessun valore dal programma: vale il vecchio giudizio sulla risposta scritta
             continue

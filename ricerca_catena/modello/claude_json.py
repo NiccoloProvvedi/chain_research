@@ -179,7 +179,12 @@ def chiedi(istruzioni: str, testo: str, schema: dict | None, punto: str, modello
     consumo = Consumo(punto=punto, modello=modello)
     try:
         if rigioco.in_rigioco():
-            stdout = rigioco.leggi(chiave)
+            try:
+                stdout = rigioco.leggi(chiave)
+            except rigioco.RichiestaNonRegistrata:
+                if punto != "scrittura":
+                    raise
+                stdout = rigioco.leggi_unica(punto)
         else:
             stdout = _esegui(righe, testo, attesa or cfg.pensatore.attesa_s)
             while os.environ.get("RICERCA_ATTENDI_LIMITE") and (pausa := secondi_al_rinnovo(stdout)) is not None:

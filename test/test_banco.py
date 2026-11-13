@@ -176,3 +176,18 @@ def test_riscontro_delle_risposte_attese() -> None:
 def test_il_tempo_di_una_domanda_copre_l_attesa_del_limite() -> None:
     import banco
     assert banco.ATTESA_MASSIMA_S >= 2 * 6 * 3600   # due rinnovi del limite di sessione (6 ore al massimo ciascuno)
+
+
+def test_il_nuovo_giudizio_ricalcola_lo_stato_con_la_regola_di_adesso() -> None:
+    import rigiudica
+    buoni = {"seconda_lettura": {"esito": "concordi"}, "riscontro": {"esito": "concordi"},
+             "revisione": {"esito": "fatta", "regge": "sì", "obiezioni": []}}
+    voce = {"attesa": "56 m", "valore": "56 m", "finale": "56 m", "corretta": True, "deciso_da": "confronto", "stato": "incerta",
+            "catena": {"controlli": {"valore": "56 m", "anelli_deboli": 1, "fonte_valore": "A", "disaccordi": [], "esami": buoni}}}
+    nuova = rigiudica.rigiudica({"a": voce, "b": {"attesa": "x", "valore": "x", "stato": "v", "catena": {}}})
+    assert (nuova["a"]["stato"], nuova["a"]["stato_della_corsa"], nuova["a"]["confermata"]) == ("sostenuta", "incerta", True)
+    assert nuova["b"]["stato"] == "v" and voce["stato"] == "incerta"   # corse di prima: niente da ricalcolare
+    inventata = {"attesa": "", "senza_risposta": True, "trovata": True, "valore": "1850", "corretta": False, "deciso_da": "senza risposta"}
+    onesta = {"attesa": "", "senza_risposta": True, "trovata": False, "valore": None, "corretta": True, "deciso_da": "senza risposta"}
+    esito = rigiudica.rigiudica({"i": inventata, "o": onesta})
+    assert (esito["i"]["corretta"], esito["o"]["corretta"]) == (False, True)

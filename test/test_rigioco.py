@@ -5,6 +5,7 @@ registrazioni questi test si saltano. Un prompt cambiato cambia le richieste: al
 """
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -42,7 +43,11 @@ def test_catena_ripercorsa_uguale(file: Path | None, tmp_path: Path) -> None:
     assert esito is not None, [m for m in messaggi if "errore" in m] or uscita.stderr[-800:]
     assert (esito["valore"], esito["trovata"], esito["motivo_fine"]) == (atteso["valore"], atteso["trovata"],
                                                                         atteso["motivo_fine"])
-    assert esito["catena"]["azioni"] == atteso["azioni"] and esito["risposta"] == atteso["risposta"]
+    # La riga «Fiducia» la scrive il programma dallo stato dei controlli: una regola dello stato cambiata la cambia,
+    # e ha i suoi test (test_validazione.py). Qui conta che la catena e il testo scritto restino uguali.
+    senza_fiducia = lambda testo: re.sub(r"\*\*Fiducia:?\*\*:?[^\n]*", "", testo or "")  # noqa: E731
+    assert esito["catena"]["azioni"] == atteso["azioni"]
+    assert senza_fiducia(esito["risposta"]) == senza_fiducia(atteso["risposta"])
 
 
 def test_registra_e_rigioca(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -86,3 +91,28 @@ def test_blocchi_salvati_in_ordine_di_lettura(tmp_path: Path, monkeypatch: pytes
     r._valuta_completati(attendi=True)
     numeri = [x[0] for x in r.concetti.grafo.db.execute("SELECT numero FROM segmento ORDER BY id")]
     assert numeri == sorted(numeri) and len(numeri) >= 2
+
+
+def test_la_scrittura_si_rigioca_anche_con_un_ingresso_cambiato(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from ricerca_catena.modello import claude_json
+    riga = json.dumps({"type": "result", "subtype": "success", "is_error": False, "total_cost_usd": 0.01, "result": "TESTO"})
+    monkeypatch.setenv("RICERCA_REGISTRA", str(tmp_path))
+    monkeypatch.setattr(claude_json, "_esegui", lambda *_a: riga)
+    assert claude_json.chiedi("regole", "ingresso di allora", None, "scrittura", modello="haiku")[0] == "TESTO"
+    assert claude_json.chiedi("regole", "una lettura", None, "lettura", modello="haiku")[0] == "TESTO"
+    monkeypatch.delenv("RICERCA_REGISTRA")
+    monkeypatch.setenv("RICERCA_RIGIOCA", str(tmp_path))
+    monkeypatch.setattr(rigioco, "_letture", type(rigioco._letture)())
+    monkeypatch.setattr(claude_json, "_esegui", lambda *_a: pytest.fail("nel rigioco non si esce"))
+    assert claude_json.chiedi("regole", "ingresso con lo stato di adesso", None, "scrittura", modello="haiku")[0] == "TESTO"
+    with pytest.raises(rigioco.RichiestaNonRegistrata):          # solo la scrittura: una lettura cambiata resta un errore
+        claude_json.chiedi("regole", "un'altra lettura", None, "lettura", modello="haiku")
+    assert claude_json.chiedi("regole", "ingresso di allora", None, "scrittura", modello="haiku")[0] == "TESTO"
+    monkeypatch.setenv("RICERCA_REGISTRA", str(tmp_path))        # due scritture registrate: non si sa quale, errore
+    monkeypatch.delenv("RICERCA_RIGIOCA")
+    monkeypatch.setattr(claude_json, "_esegui", lambda *_a: riga)
+    claude_json.chiedi("regole", "seconda scrittura", None, "scrittura", modello="haiku")
+    monkeypatch.delenv("RICERCA_REGISTRA")
+    monkeypatch.setenv("RICERCA_RIGIOCA", str(tmp_path))
+    with pytest.raises(rigioco.RichiestaNonRegistrata, match="2 risposte"):
+        claude_json.chiedi("regole", "terzo ingresso", None, "scrittura", modello="haiku")
