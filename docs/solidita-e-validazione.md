@@ -400,3 +400,33 @@ possono cancellare).
 
 **B7** («confermato da N strade») resta com'è: cambierebbe il motivo finale scritto in tutte le registrazioni per una
 frase che non entra nello stato.
+
+### Risposte inventate: premessa smentita e catena respinta (13/11/2026)
+
+Due regole nuove in `Catena.revisione_finale`, tutte e due con le parole di una riga controllate dal programma:
+- **premessa smentita**: la revisione dice che cosa la domanda dà per vero e, se una riga lo nega (o mostra che la
+  strada è partita da un'altra cosa), la risposta è «non trovata» con il motivo; il valore resta in `valore_scartato`;
+- **catena respinta**: obiezione con riga, premessa non provata e anello debole insieme.
+
+Prima della corsa vera, `banco/prova_revisione.py` (rifà solo la revisione sulle corse salvate, circa 1,5 $): sulle 40
+domande di taratura nessuna risposta giusta persa su 33.
+
+| | Prima (`senza-risposta-1`) | Dopo (`senza-risposta-2`) |
+|---|---|---|
+| «Non trovata» (giusto) | 5 su 20 | **14 su 20** |
+| Valore dato come fatto | 2 | **0** |
+| Valore segnato `incerta` o `contestata` | 13 | 6 |
+
+Sulle domande di controllo (`controllo-f1`, risposte attese buone): 25 giuste su 27 = 93% (95%: 77–98%), contro 24 su
+27 di prima dei controlli (McNemar p = 0,69: nessuna differenza dimostrata, e nessun calo); **20 risposte su 20 date
+come fatto sono giuste**; una sola risposta rifiutata, ed era sbagliata. Nessuna risposta giusta persa.
+
+Restano 6 domande senza risposta su 20 con un valore, tutte segnate: due entità inventate (la catena prende un'entità
+vicina e la revisione non ha una riga per dirlo) e quattro in cui la strada trovata «somiglia». L'obiettivo del 10% non
+è raggiunto (30%); nessuna però arriva nel documento come fatto. Il passo che manca è nella ricerca, non nei
+controlli: controllare che l'entità nominata dalla domanda esista con quel nome prima di cercare (cambia le istruzioni
+del piano della catena: vuole una nuova registrazione).
+
+**Insieme di conferma** (`banco/domande_conferma.json`, scritto a mano il 13/11): 13 domande con la risposta
+controllata sulle voci italiane e inglesi (tenute solo quelle in cui le due lingue coincidono; 10 scartate per
+altitudini diverse) e 10 domande senza risposta nuove. Si usa una volta sola, sul codice finale.

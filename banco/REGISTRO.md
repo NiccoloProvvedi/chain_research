@@ -178,3 +178,5 @@
 | 2026-11-12 23:37 | domande di controllo, la revisione vede le altre voci degli anelli | 05db7f3 | 36 domande | 24/36 | 7.8 | 5.409 | 0 | 9/9 | 15 |
 | 2026-11-13 04:59 | 40 domande con tutti i controlli: taratura dello stato e nuova registrazione | 51d22d6 | 40 domande | 33/40 | 9.8 | 6.605 | 0 | 10/10 | 9 |
 | 2026-11-13 06:17 | 20 domande senza risposta (giusta = «non trovata») | 51d22d6 | 20 domande | 5/20 | 11.1 | 3.082 | 0 | 0/2 | 0 |
+| 2026-11-13 17:10 | 20 domande senza risposta, premessa smentita e catena respinta (b1f5366) | b1f5366 | 20 domande | 14/20 | 12.1 | 3.397 | 0 | 0/0 | 0 |
+| 2026-11-13 22:06 | domande di controllo, premessa smentita e catena respinta (b1f5366) | b1f5366 | 36 domande | 25/27 | 7.1 | 3.432 | 0 | 20/20 | 4 |
