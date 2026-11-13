@@ -180,3 +180,4 @@
 | 2026-11-13 06:17 | 20 domande senza risposta (giusta = «non trovata») | 51d22d6 | 20 domande | 5/20 | 11.1 | 3.082 | 0 | 0/2 | 0 |
 | 2026-11-13 17:10 | 20 domande senza risposta, premessa smentita e catena respinta (b1f5366) | b1f5366 | 20 domande | 14/20 | 12.1 | 3.397 | 0 | 0/0 | 0 |
 | 2026-11-13 22:06 | domande di controllo, premessa smentita e catena respinta (b1f5366) | b1f5366 | 36 domande | 25/27 | 7.1 | 3.432 | 0 | 20/20 | 4 |
+| 2026-11-13 22:51 | insieme di conferma, una volta sola (b1f5366) | b1f5366 | 23 domande | 18/23 | 5.0 | 1.878 | 0 | 12/12 | 3 |

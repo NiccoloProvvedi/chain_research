@@ -430,3 +430,17 @@ del piano della catena: vuole una nuova registrazione).
 **Insieme di conferma** (`banco/domande_conferma.json`, scritto a mano il 13/11): 13 domande con la risposta
 controllata sulle voci italiane e inglesi (tenute solo quelle in cui le due lingue coincidono; 10 scartate per
 altitudini diverse) e 10 domande senza risposta nuove. Si usa una volta sola, sul codice finale.
+
+### Conferma su domande mai viste (13/11/2026, `conferma-1`, una volta sola, 1,9 $)
+
+| | Risultato |
+|---|---|
+| Domande con risposta (13) | 12 giuste = 92% (95%: 67–99%) |
+| Risposte date come fatto (`verificata` 8, `sostenuta` 4) | **12 giuste su 12** |
+| La risposta sbagliata | `incerta`: la revisione ha obiettato citando la riga con il nome giusto («ebbe Oswald Veblen come relatore») |
+| Domande senza risposta (10) | 6 «non trovata»; 4 con un valore, tutte `incerta`; **nessuna data come fatto** |
+
+È il numero indipendente: queste domande non hanno mai deciso niente. Sono poche e, quelle con risposta, più facili
+delle domande di controllo (2 o 3 passi, partenze molto note): conferma la direzione, non stringe gli intervalli.
+Insieme alle domande di controllo sul codice finale (`controllo-f1`): 32 risposte su 32 date come fatto sono giuste
+(limite inferiore al 95%: 89%); le domande senza risposta danno un valore in 10 casi su 30, mai come fatto.
