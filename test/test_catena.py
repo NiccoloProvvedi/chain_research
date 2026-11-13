@@ -1200,3 +1200,31 @@ def test_riscontro_in_un_altra_voce(catena, monkeypatch: pytest.MonkeyPatch, rig
     assert riscontro["esito"] == esito and catena.controlli()["stato"] == stato
     if esito == "discordi":
         assert riscontro["valore"] == "16 dicembre 1586" and "altro valore: 16 dicembre 1586" in catena.materiale()
+
+
+@pytest.mark.parametrize("citazione,smentita", [("rettore del Collegio Romano", True), ("parole inventate", False)])
+def test_premessa_smentita_niente_valore(catena, monkeypatch: pytest.MonkeyPatch, citazione: str, smentita: bool) -> None:
+    """13/11: se la revisione mostra, con le parole di una riga, che la domanda dà per vero qualcosa che le fonti negano,
+    la catena non dà il valore: «non trovata», con il motivo. Senza la riga la premessa resta in piedi."""
+    def modello(punto: str, dati: dict, predefinito, **_altri):
+        if punto == "revisione":
+            return {"regge": "no", "motivo": "m", "indizi": [], "premessa": {
+                "esito": "falsa", "cosa": "Zucchi era un laico", "citazione": citazione,
+                "riga": _riga(dati["righe"], "Collegio Romano")}}, "claude"
+        return _decidi(punto, dati, predefinito)
+
+    monkeypatch.setattr(catena.r.pensatore, "decidi", modello)
+    catena.r.pensatore.bilancio.budget_usd = 1.0
+    catena.percorri()
+    _strada_forte(catena)
+    catena.revisione_finale()
+    esito = catena.controlli()
+    if not smentita:
+        assert catena.valore["valore"] == "6 dicembre 1586" and esito["stato"] == "sostenuta" and catena.scartato is None
+        return
+    assert catena.valore is None and esito["stato"] == "non trovata" and not esito["confermata"]
+    assert catena.scartato["valore"] == "6 dicembre 1586" and "premessa smentita" in catena.motivo
+    assert "Zucchi era un laico" in catena.motivo and "rettore del Collegio Romano" in catena.motivo
+    assert esito["premessa"]["url"].endswith("Zucchi") and catena.riepilogo()["valore"] is None
+    assert catena.riepilogo()["valore_scartato"] == "6 dicembre 1586"
+    assert catena.r.scrivi().startswith("**Risposta:** Non trovata: premessa smentita")

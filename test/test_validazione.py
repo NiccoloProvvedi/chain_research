@@ -274,3 +274,23 @@ def test_stato_della_risposta(cambi: dict, atteso: str) -> None:
     stato, motivi = v.stato({**base, **cambi})
     assert stato == atteso and stato in v.STATI
     assert bool(motivi) == (stato not in ("verificata", "non trovata"))
+
+
+# --- 13/11: la premessa della domanda (domande senza risposta: 15 valori inventati su 20) ---------------------------
+
+def _premessa(esito: str, riga: int, citazione: str) -> dict:
+    return {"regge": "no", "motivo": "", "indizi": [],
+            "premessa": {"esito": esito, "cosa": "Newton aveva una moglie", "riga": riga, "citazione": citazione}}
+
+
+def test_la_premessa_falsa_vale_solo_con_la_riga() -> None:
+    righe = [Prova("Newton never married and had no children", "u1"), Prova("His mother remarried in 1646", "u2")]
+    falsa = v.esamina_revisione(_premessa("falsa", 1, "never married"), righe)["premessa"]
+    assert falsa == {"esito": "falsa", "cosa": "Newton aveva una moglie", "citazione": "never married", "url": "u1"}
+    assert v.esamina_revisione(_premessa("falsa", 2, "never married"), righe)["premessa"]["esito"] == "non provata"
+    assert v.esamina_revisione(_premessa("falsa", 0, ""), righe)["premessa"]["esito"] == "non provata"
+    assert v.esamina_revisione(_premessa("regge", 1, "never married"), righe)["premessa"]["esito"] == "regge"
+    assert v.esamina_revisione({"regge": "sì", "indizi": []}, righe)["premessa"]["esito"] == "non provata"  # risposte di prima
+    assert v.premessa_smentita({"revisione": v.esamina_revisione(_premessa("falsa", 1, "never married"), righe)})
+    assert not v.premessa_smentita({"revisione": v.esamina_revisione(_premessa("falsa", 2, "never married"), righe)})
+    assert not v.premessa_smentita({}) and not v.premessa_smentita(None)

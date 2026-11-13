@@ -205,6 +205,7 @@ class Catena:
         self._estratti: list[Prova] = []  # estratti dei risultati dell'ultima ricerca (pagine non lette)
         self.conflitti: list[dict] = []  # candidati scartati che avevano una fonte forte (validazione.disaccordi)
         self.esami: dict | None = None  # controlli con il modello sulla soluzione (revisione_finale)
+        self.scartato: dict | None = None  # il valore trovato e non dato: la revisione ha smentito la premessa
         self._pagine_aggiunte = 0  # pagine concesse oltre il tetto per cercare il valore
 
     # --- chiamate al modello ------------------------------------------------------------------------------------
@@ -819,8 +820,10 @@ class Catena:
         pagina letta, nessuna fonte che indichi un'altra strada o un altro valore, nessuna obiezione della revisione."""
         esami = getattr(self, "esami", None)
         if not self.valore:
-            return {"confermata": False, "stato": "non trovata", "motivi": [], "anelli_deboli": 0, "fonte_valore": "",
-                    "disaccordi": [], "esami": esami}
+            premessa = validazione.premessa_smentita(esami) if getattr(self, "scartato", None) else None
+            return {"confermata": False, "stato": "non trovata", "anelli_deboli": 0, "fonte_valore": "",
+                    "motivi": [f"premessa smentita: «{premessa['cosa']}» («{premessa['citazione']}»)"] if premessa else [],
+                    "disaccordi": [], "esami": esami, "premessa": premessa}
         esito = {"valore": self.valore["valore"], "anelli_deboli": self._anelli_deboli(),
                  "fonte_valore": validazione.livello(self.valore["prova"]),
                  "disaccordi": validazione.disaccordi_sulla_strada(self.conflitti, self.valore["anello"]), "esami": esami}
@@ -849,6 +852,16 @@ class Catena:
             self.esami["seconda_lettura"] = self._seconda_lettura()
             self.esami["riscontro"] = self._riscontro()
         self.esami["revisione"] = self._revisione_contraria()
+        premessa = validazione.premessa_smentita(self.esami)
+        if premessa:
+            # La domanda dà per vero qualcosa che una riga nega: la strada trovata è «abbastanza simile», non la
+            # risposta. Il valore resta da parte (riepilogo: valore_scartato) e la domanda è «non trovata».
+            self.scartato, self.valore = self.valore, None
+            self.motivo = (f"premessa smentita: la domanda dà per vero «{premessa['cosa']}», le fonti dicono "
+                           f"«{premessa['citazione']}»")
+            self.storia.append({"passo": -3, "relazione": "premessa smentita", "tentativo": 0,
+                                "candidati": [str(self.scartato["valore"])], "tenuti": [],
+                                "scartati": [(str(self.scartato["valore"]), [premessa["cosa"], premessa["citazione"]])]})
 
     def _richiesta_valore(self, a: Anello, prove: list[Prova]) -> dict:
         risposta = self.piano.get("risposta") or {}
@@ -2201,6 +2214,7 @@ class Catena:
                            "url": self.valore["prova"].url,
                            "riga": " ".join(str(self.valore["prova"].testo).split())[:600]} if self.valore else None,
                 "motivo": self.motivo, "azioni": self.azioni, "controlli": self.controlli(),
+                "valore_scartato": self.scartato["valore"] if self.scartato else None,
                 # le righe della soluzione con la loro pagina: per ricontrollare il documento sulle fonti (fedelta.py)
                 "prove": [{"url": p.url, "riga": " ".join(p.testo.split())[:500]}
                           for p in {(p.url, p.testo): p for p in self._righe_della_strada()}.values()],

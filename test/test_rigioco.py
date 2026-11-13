@@ -105,7 +105,7 @@ def test_la_scrittura_si_rigioca_anche_con_un_ingresso_cambiato(tmp_path: Path, 
     monkeypatch.setattr(rigioco, "_letture", type(rigioco._letture)())
     monkeypatch.setattr(claude_json, "_esegui", lambda *_a: pytest.fail("nel rigioco non si esce"))
     assert claude_json.chiedi("regole", "ingresso con lo stato di adesso", None, "scrittura", modello="haiku")[0] == "TESTO"
-    with pytest.raises(rigioco.RichiestaNonRegistrata):          # solo la scrittura: una lettura cambiata resta un errore
+    with pytest.raises(rigioco.RichiestaNonRegistrata):          # solo scrittura e revisione: una lettura cambiata resta un errore
         claude_json.chiedi("regole", "un'altra lettura", None, "lettura", modello="haiku")
     assert claude_json.chiedi("regole", "ingresso di allora", None, "scrittura", modello="haiku")[0] == "TESTO"
     monkeypatch.setenv("RICERCA_REGISTRA", str(tmp_path))        # due scritture registrate: non si sa quale, errore

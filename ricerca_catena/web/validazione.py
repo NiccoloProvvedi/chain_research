@@ -201,8 +201,27 @@ def esamina_revisione(risposta: dict, righe: list) -> dict:
             provati += 1
         else:
             non_provati += 1
+    # La premessa della domanda: «falsa» solo con le parole di una riga data, come gli indizi.
+    detta = risposta.get("premessa") or {}
+    numero = detta.get("riga")
+    riga = righe[numero - 1] if isinstance(numero, int) and 1 <= numero <= len(righe) else None
+    premessa = {"esito": detta.get("esito") if detta.get("esito") in ("regge", "falsa") else "non provata"}
+    if premessa["esito"] == "falsa":
+        if riga is not None and citazione_presente(str(detta.get("citazione") or ""), riga.testo):
+            premessa.update(cosa=str(detta.get("cosa", ""))[:200], citazione=str(detta.get("citazione", ""))[:200],
+                            url=riga.url)
+        else:
+            premessa["esito"] = "non provata"
     return {"esito": "fatta", "regge": risposta.get("regge", "non provato"), "obiezioni": obiezioni,
-            "provati": provati, "non_provati": non_provati, "motivo": str(risposta.get("motivo", ""))[:300]}
+            "provati": provati, "non_provati": non_provati, "premessa": premessa,
+            "motivo": str(risposta.get("motivo", ""))[:300]}
+
+
+def premessa_smentita(esami: dict | None) -> dict | None:
+    """La premessa della domanda smentita dalla revisione con una riga (13/11, domande senza risposta: la catena dava
+    un valore in 15 casi su 20, seguendo una strada «abbastanza simile»): allora il valore non si dà."""
+    premessa = ((esami or {}).get("revisione") or {}).get("premessa") or {}
+    return premessa if premessa.get("esito") == "falsa" else None
 
 
 STATI = ("verificata", "sostenuta", "contestata", "incerta", "non trovata")

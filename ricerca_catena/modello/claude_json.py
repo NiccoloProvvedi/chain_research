@@ -182,7 +182,9 @@ def chiedi(istruzioni: str, testo: str, schema: dict | None, punto: str, modello
             try:
                 stdout = rigioco.leggi(chiave)
             except rigioco.RichiestaNonRegistrata:
-                if punto != "scrittura":
+                # Scrittura e revisione vengono dopo la catena, una volta sola, e le loro istruzioni cambiano con i
+                # controlli: la risposta registrata vale anche se la richiesta è cambiata (rigioco.leggi_unica).
+                if punto not in ("scrittura", "revisione"):
                     raise
                 stdout = rigioco.leggi_unica(punto)
         else:

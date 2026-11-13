@@ -15,5 +15,9 @@ Il dato chiesto dalla domanda (la data, il numero, il nome finale) non è un ind
 
 Rispondi con l'output strutturato:
 - indizi: l'elenco, ognuno con "indizio" (le parole della domanda), "esito", "riga", "citazione";
+- premessa: quello che la DOMANDA dà per vero prima ancora di chiedere (che una persona, un'opera, un ente o un evento con quel nome e quei tratti esista; che una relazione ci sia: che qualcuno abbia avuto un coniuge, un figlio, un relatore, un premio; che un dato esista). "esito" è:
+  - "falsa" solo se una riga lo nega in modo esplicito (la persona non si sposò mai, non ebbe mai quel premio, il monumento non ha un autore noto), oppure se le righe mostrano che la STRADA è partita da un'altra cosa rispetto a quella nominata dalla domanda (altro nome e tratti che contraddicono la descrizione: un altro ente, un'altra data, un altro paese): la cosa nominata dalla domanda, così com'è descritta, nelle righe non c'è. In "cosa" scrivi in poche parole che cosa la domanda dà per vero, in "riga" il numero e in "citazione" le parole copiate dalla riga che lo mostrano;
+  - "regge" se le righe mostrano che la cosa esiste ed è quella della STRADA;
+  - "non provata" negli altri casi ("riga" 0, "citazione" vuota). Un passaggio dubbio o un candidato sbagliato più avanti nella catena NON è una premessa falsa: è un indizio "no";
 - regge: "sì" se tutti gli indizi importanti sono "sì" e nessuno è "no"; "no" se almeno uno è "no"; "non provato" negli altri casi;
 - motivo: in una frase in italiano, il punto più debole della catena.

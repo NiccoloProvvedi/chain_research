@@ -162,6 +162,12 @@ SCHEMI: dict[str, dict] = {
                                "riga": {"type": "integer", "minimum": 0},
                                "citazione": {"type": "string", "maxLength": 200}}}},
             "regge": {"type": "string", "enum": ["sì", "no", "non provato"]},
+            # facoltativa: le revisioni registrate prima del 13/11 non la hanno
+            "premessa": {"type": "object", "additionalProperties": False, "required": ["esito", "cosa", "riga", "citazione"],
+                         "properties": {"esito": {"type": "string", "enum": ["regge", "falsa", "non provata"]},
+                                        "cosa": {"type": "string", "maxLength": 200},
+                                        "riga": {"type": "integer", "minimum": 0},
+                                        "citazione": {"type": "string", "maxLength": 200}}},
             "motivo": {"type": "string", "maxLength": 300}},
     },
 }
