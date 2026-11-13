@@ -205,7 +205,8 @@ def esamina_revisione(risposta: dict, righe: list) -> dict:
     detta = risposta.get("premessa") or {}
     numero = detta.get("riga")
     riga = righe[numero - 1] if isinstance(numero, int) and 1 <= numero <= len(righe) else None
-    premessa = {"esito": detta.get("esito") if detta.get("esito") in ("regge", "falsa") else "non provata"}
+    # «assente»: la revisione non ha parlato della premessa (revisioni registrate prima del 13/11): non si sa.
+    premessa = {"esito": detta.get("esito") if detta.get("esito") in ("regge", "falsa", "non provata") else "assente"}
     if premessa["esito"] == "falsa":
         if riga is not None and citazione_presente(str(detta.get("citazione") or ""), riga.testo):
             premessa.update(cosa=str(detta.get("cosa", ""))[:200], citazione=str(detta.get("citazione", ""))[:200],
@@ -268,3 +269,14 @@ def stato(c: dict) -> tuple[str, list[str]]:
     elif revisione.get("regge") != "sì":
         limiti.append(f"la revisione non trova provati {revisione.get('non_provati', 0)} indizi della domanda")
     return ("sostenuta", limiti) if limiti else ("verificata", [])
+
+
+def strada_respinta(esami: dict | None, anelli_deboli: int) -> dict | None:
+    """Tre cose che non tornano insieme: la revisione ha un'obiezione con riga, non trova provata la premessa della
+    domanda, e la strada ha un anello non confermato. Allora il valore non si dà (restituisce l'obiezione). Con la
+    premessa che regge la domanda ha senso e la risposta resta «incerta» (taratura del 13/11: 0 giuste perse)."""
+    revisione = (esami or {}).get("revisione") or {}
+    obiezioni = revisione.get("obiezioni") or []
+    if not anelli_deboli or not obiezioni or (revisione.get("premessa") or {}).get("esito") != "non provata":
+        return None
+    return obiezioni[0]

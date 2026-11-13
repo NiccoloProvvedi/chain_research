@@ -820,9 +820,11 @@ class Catena:
         pagina letta, nessuna fonte che indichi un'altra strada o un altro valore, nessuna obiezione della revisione."""
         esami = getattr(self, "esami", None)
         if not self.valore:
-            premessa = validazione.premessa_smentita(esami) if getattr(self, "scartato", None) else None
+            scartato = getattr(self, "scartato", None)
+            premessa = validazione.premessa_smentita(esami) if scartato else None
             return {"confermata": False, "stato": "non trovata", "anelli_deboli": 0, "fonte_valore": "",
-                    "motivi": [f"premessa smentita: «{premessa['cosa']}» («{premessa['citazione']}»)"] if premessa else [],
+                    "motivi": [f"premessa smentita: «{premessa['cosa']}» («{premessa['citazione']}»)"] if premessa
+                    else [self.motivo] if scartato else [],
                     "disaccordi": [], "esami": esami, "premessa": premessa}
         esito = {"valore": self.valore["valore"], "anelli_deboli": self._anelli_deboli(),
                  "fonte_valore": validazione.livello(self.valore["prova"]),
@@ -862,6 +864,17 @@ class Catena:
             self.storia.append({"passo": -3, "relazione": "premessa smentita", "tentativo": 0,
                                 "candidati": [str(self.scartato["valore"])], "tenuti": [],
                                 "scartati": [(str(self.scartato["valore"]), [premessa["cosa"], premessa["citazione"]])]})
+            return
+        obiezione = validazione.strada_respinta(self.esami, self._anelli_deboli())
+        if obiezione:
+            deboli = self._anelli_deboli()
+            self.scartato, self.valore = self.valore, None
+            self.motivo = (f"catena respinta dalla revisione: non torna «{obiezione['indizio']}» (le fonti dicono "
+                           f"«{obiezione['citazione']}»), la premessa della domanda non è provata e {deboli} anelli "
+                           "non sono confermati")
+            self.storia.append({"passo": -3, "relazione": "catena respinta", "tentativo": 0,
+                                "candidati": [str(self.scartato["valore"])], "tenuti": [],
+                                "scartati": [(str(self.scartato["valore"]), [obiezione["indizio"], obiezione["citazione"]])]})
 
     def _richiesta_valore(self, a: Anello, prove: list[Prova]) -> dict:
         risposta = self.piano.get("risposta") or {}

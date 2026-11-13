@@ -1228,3 +1228,28 @@ def test_premessa_smentita_niente_valore(catena, monkeypatch: pytest.MonkeyPatch
     assert esito["premessa"]["url"].endswith("Zucchi") and catena.riepilogo()["valore"] is None
     assert catena.riepilogo()["valore_scartato"] == "6 dicembre 1586"
     assert catena.r.scrivi().startswith("**Risposta:** Non trovata: premessa smentita")
+
+
+@pytest.mark.parametrize("premessa,deboli,dato", [("non provata", True, False), ("regge", True, True), ("non provata", False, True)])
+def test_strada_respinta_niente_valore(catena, monkeypatch: pytest.MonkeyPatch, premessa: str, deboli: bool, dato: bool) -> None:
+    def modello(punto: str, dati: dict, predefinito, **_altri):
+        if punto == "revisione":
+            return {"regge": "no", "motivo": "m", "premessa": {"esito": premessa, "cosa": "", "riga": 0, "citazione": ""},
+                    "indizi": [{"indizio": "laico", "esito": "no", "citazione": "rettore del Collegio Romano",
+                                "riga": _riga(dati["righe"], "Collegio Romano")}]}, "claude"
+        return _decidi(punto, dati, predefinito)
+
+    monkeypatch.setattr(catena.r.pensatore, "decidi", modello)
+    catena.r.pensatore.bilancio.budget_usd = 1.0
+    catena.percorri()
+    if deboli:
+        assert catena._anelli_deboli() >= 1   # nella catena finta di Galileo un anello resta debole
+    else:
+        _strada_forte(catena)
+    catena.revisione_finale()
+    if dato:
+        assert catena.valore is not None and catena.controlli()["stato"] == "incerta" and catena.scartato is None
+    else:
+        assert catena.valore is None and catena.controlli()["stato"] == "non trovata"
+        assert catena.scartato["valore"] == "6 dicembre 1586" and catena.motivo.startswith("catena respinta dalla revisione")
+        assert "laico" in catena.motivo and "laico" in catena.controlli()["motivi"][0]

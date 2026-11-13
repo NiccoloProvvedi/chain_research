@@ -290,7 +290,28 @@ def test_la_premessa_falsa_vale_solo_con_la_riga() -> None:
     assert v.esamina_revisione(_premessa("falsa", 2, "never married"), righe)["premessa"]["esito"] == "non provata"
     assert v.esamina_revisione(_premessa("falsa", 0, ""), righe)["premessa"]["esito"] == "non provata"
     assert v.esamina_revisione(_premessa("regge", 1, "never married"), righe)["premessa"]["esito"] == "regge"
-    assert v.esamina_revisione({"regge": "sì", "indizi": []}, righe)["premessa"]["esito"] == "non provata"  # risposte di prima
+    assert v.esamina_revisione({"regge": "sì", "indizi": []}, righe)["premessa"]["esito"] == "assente"  # risposte di prima
     assert v.premessa_smentita({"revisione": v.esamina_revisione(_premessa("falsa", 1, "never married"), righe)})
     assert not v.premessa_smentita({"revisione": v.esamina_revisione(_premessa("falsa", 2, "never married"), righe)})
     assert not v.premessa_smentita({}) and not v.premessa_smentita(None)
+
+
+_OB = [{"indizio": "fisico britannico", "citazione": "computer scientist", "url": "u"}]
+
+
+@pytest.mark.parametrize("revisione,deboli,respinta", [
+    ({"esito": "fatta", "obiezioni": _OB, "premessa": {"esito": "non provata"}}, 1, True),
+    ({"esito": "fatta", "obiezioni": _OB}, 2, False),                                          # revisioni di prima: non si sa
+    ({"esito": "fatta", "obiezioni": _OB, "premessa": {"esito": "assente"}}, 2, False),
+    ({"esito": "fatta", "obiezioni": _OB, "premessa": {"esito": "regge"}}, 1, False),          # la domanda ha senso: resta incerta
+    ({"esito": "fatta", "obiezioni": _OB, "premessa": {"esito": "non provata"}}, 0, False),    # strada tutta confermata
+    ({"esito": "fatta", "obiezioni": [], "regge": "no", "premessa": {"esito": "non provata"}}, 1, False),  # «no» senza riga
+    ({"esito": "non fatta"}, 3, False),
+])
+def test_strada_respinta(revisione: dict, deboli: int, respinta: bool) -> None:
+    """13/11, taratura (prova_revisione.py): premessa non provata, obiezione con riga e anello debole insieme: 0 risposte
+    giuste e 2 sbagliate sulle 40 domande; sulle domande senza risposta 3 valori inventati. Tre cose che non tornano:
+    il valore non si dà."""
+    esito = v.strada_respinta({"revisione": revisione}, deboli)
+    assert (esito == _OB[0]) if respinta else esito is None
+    assert v.strada_respinta(None, 2) is None
