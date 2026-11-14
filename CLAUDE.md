@@ -13,6 +13,10 @@ venv/bin/python banco/rigiudica.py <corsa>                  # nuovo giudizio di 
 ```
 
 Il banco (`banco/banco.py`) e ogni corsa con il Claude vero consumano l'abbonamento: chiedi prima di lanciarli.
+Le corse lunghe partono con `banco/corsa.sh` da una copia ferma del codice (`git worktree add --detach`, con `venv`,
+`browser`, `python`, `risultati`, `log`, `indagini` collegati): staccate dal terminale, riprendono da dove erano.
+Le domande di controllo, di conferma e senza risposta non si usano mai per regolare la catena: le regole dello stato
+si tarano sulle 40 di `domande.json` e si provano sulle corse salvate con `banco/rigiudica.py` e `banco/rapporto.py`.
 
 ## Regole
 

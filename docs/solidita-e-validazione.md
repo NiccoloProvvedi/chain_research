@@ -444,3 +444,54 @@ altitudini diverse) e 10 domande senza risposta nuove. Si usa una volta sola, su
 delle domande di controllo (2 o 3 passi, partenze molto note): conferma la direzione, non stringe gli intervalli.
 Insieme alle domande di controllo sul codice finale (`controllo-f1`): 32 risposte su 32 date come fatto sono giuste
 (limite inferiore al 95%: 89%); le domande senza risposta danno un valore in 10 casi su 30, mai come fatto.
+
+### Tre indagini complete sul codice finale (13–14/11/2026)
+
+| Indagine | Domande | verificata | sostenuta | contestata | incerta | Costo |
+|---|---|---|---|---|---|---|
+| Canale di Suez | 28 | 8 | 16 | 0 | 4 | 3,0 $ |
+| Olivetti | 40 | 5 | 24 | 4 | 7 | 3,7 $ |
+| Telescopio James Webb | 36 (30 con risposta) | 2 | 16 | 4 | 8 | 3,7 $ |
+
+- **La regola del documento tiene dal vivo**: 19 risposte incerte nei tre documenti, tutte nei riquadri «Punti
+  aperti»; nessuna entra nel testo da sola (8 valori ci sono anche nel testo perché un'altra risposta, non incerta,
+  porta lo stesso valore con la sua fonte).
+- L'indagine Olivetti si è fermata con la regola nuova («la copertura non cresce più: molti fatti chiave sono incerti
+  o contestati»): la regia reagisce allo stato.
+- Nota sulla prova, non sul prodotto: le indagini sono partite con l'attesa del limite di sessione accesa; il tempo
+  dell'indagine e quello della domanda contano anche quell'attesa (Suez ferma a 2 giri, 5 domande del James Webb
+  scadute). Nell'applicazione il limite ferma l'indagine, che si riprende.
+
+**Fedeltà delle frasi** (`banco/fedelta.py`, 40 frasi citate a caso per documento, giudice Sonnet):
+
+| Indagine | Contro le risposte: sostenute / in parte / no | Contro le righe delle fonti: sostenute / in parte / no |
+|---|---|---|
+| Canale di Suez | 38 / 2 / 0 | 28 / 7 / 5 |
+| Olivetti | 31 / 9 / 0 | 27 / 8 / 5 |
+| Telescopio James Webb | 36 / 3 / 1 | 23 / 10 / 7 |
+
+- Contro le risposte: 105 frasi su 120 sostenute (88%), 1 non sostenuta. **L'obiettivo del 95% è raggiunto in un
+  documento su tre.** Le «in parte» sono frasi che aggiungono o cambiano un dettaglio rispetto alla risposta.
+- Contro le righe delle fonti il numero è più basso (65%) ma misura meno di quel che sembra: si salvano solo le righe
+  della strada della catena, non tutto quello che chi ha scritto la risposta aveva davanti; e molte frasi «non
+  sostenute» parlano delle fonti stesse («viene da una sola fonte», «la data non è indicata»), non di fatti.
+- Tra le non sostenute c'è almeno un fatto che sembra inventato da chi scrive la sezione («fino al 1964 la presidenza
+  fu di Elio Schiavo»): l'obiettivo «nessun fatto chiave inventato» non è dimostrato.
+- **Lo strato più debole adesso è la scrittura delle sezioni**: i controlli proteggono le risposte, non le frasi che
+  Claude scrive a partire da esse. Passo successivo: controllare ogni frase della sezione contro la risposta che cita
+  mentre il documento si scrive (stessa logica della revisione: una frase senza appoggio si toglie o si riscrive), e
+  salvare tutte le righe viste da chi scrive, non solo quelle della strada.
+
+### Bilancio (14/11/2026)
+
+| Obiettivo fissato all'inizio | Risultato |
+|---|---|
+| Risposte giuste su domande nuove, limite inferiore ≥ 70% | 25/27 = 93% (limite inferiore 77%) sulle domande di controllo; 12/13 sull'insieme di conferma: **raggiunto** |
+| Risposte date come fatto giuste ≥ 95%, limite inferiore ≥ 85% | 32 su 32 (limite inferiore 89%) tra controllo e conferma: **raggiunto** per `verificata` e `sostenuta` insieme; non dimostrabile per `verificata` da sola con questi numeri |
+| Stesso valore ripetendo ≥ 85% | 28 su 36 = 78%: **non raggiunto**; le domande instabili sono quasi tutte `incerta` |
+| Stesso stato ripetendo ≥ 85% | 19 su 36: **non raggiunto** (il verdetto della revisione oscilla tra «regge» e «non provato») |
+| Risposte inventate ≤ 10% | valore dato in 10 casi su 30 domande senza risposta: **non raggiunto**; dato come fatto: 0 su 30 |
+| Frasi del documento sostenute ≥ 95% | 88% contro le risposte: **non raggiunto** |
+| Limiti di budget e di tempo rispettati | sì nelle tre indagini |
+
+Spesa totale delle corse dall'11 al 14/11: circa 47 $ di abbonamento.
