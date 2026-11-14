@@ -60,7 +60,10 @@ def valore_nella_riga(valore: str, riga: str) -> bool:
         suoi = _numeri(riga)
         for pezzo in pezzi:  # intero («1234» per «1 234») oppure gruppo per gruppo («21», «1886» per «21, 1886»)
             intero = re.sub(r"\D", "", pezzo).lstrip("0") or "0"
-            if intero not in suoi and not all((g.lstrip("0") or "0") in suoi for g in re.findall(r"\d+", pezzo)):
+            # a gruppi solo se nel valore sono staccati da uno spazio («21, 1886», «1 234»): «9,7» non è «9 … 7»
+            a_gruppi = bool(re.search(r"\s", pezzo)) and all(
+                (g.lstrip("0") or "0") in suoi for g in re.findall(r"\d+", pezzo))
+            if intero not in suoi and not a_gruppi:
                 return False
         # Il mese: lo stesso se la riga ne nomina uno; una riga senza mesi riconosciuti («1943-10-11», o una lingua
         # che qui non c'è: «26 Ιουλίου 1985») non si può smentire, bastano giorno e anno.

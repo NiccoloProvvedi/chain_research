@@ -20,7 +20,7 @@ SABOTAGGI = [
      "if prova is not None and not validazione.valore_nella_riga(esito.get(\"valore\", \"\"), prova.testo):",
      "if False:"),
     ("G1 i numeri non contano", "ricerca_catena/web/validazione.py",
-     "            if intero not in suoi and not all(", "            if False and not all("),
+     "            if intero not in suoi and not a_gruppi:", "            if False:"),
     ("G1 il mese non conta", "ricerca_catena/web/validazione.py",
      "return not mesi or not della_riga or bool(mesi & della_riga)", "return True"),
     ("G3 un antenato può tornare", "ricerca_catena/web/validazione.py",

@@ -33,6 +33,9 @@ def test_valore_scritto_nella_riga(valore: str, riga: str) -> None:
     ("21 luglio 1886", "Morta il 21 giugno 1886; ebbe 7 figli"),
     ("56 m s.l.m.", "Altitudine: 58 m s.l.m."),
     ("5 m", "Altitudine: 56 m, superficie 15 km²"),
+    # 14/11: un numero con la virgola non si ritrova a pezzi («9,7» non è «9 … 7»)
+    ("9,7 miliardi di dollari", "Nel 1997 il costo previsto era di 9 miliardi per 7 strumenti"),
+    ("20,65 km²", "Superficie: 20 km² (65 abitanti)"),
     ("13 dicembre 2004", "David Wheeler was a computer scientist at Cambridge"),
     ("Capri Leone", "Il simulacro si trova a Novara di Sicilia"),
     ("", "qualunque riga"),
