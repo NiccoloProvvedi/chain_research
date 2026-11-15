@@ -22,7 +22,8 @@ from urllib.parse import urlsplit, urlunsplit
 from markdown_it import MarkdownIt
 
 from . import configurazione
-from .modello import pulizia
+from .modello import claude_json, pulizia
+from .web.fonti.wikipedia_grafo import dividi_frasi
 
 if TYPE_CHECKING:
     from .indagine import Indagine
@@ -33,6 +34,12 @@ SCHEMA_CORNICE = {"type": "object", "additionalProperties": False,
                                  "punti_chiave": {"type": "array", "minItems": 1, "maxItems": 12,
                                                   "items": {"type": "string"}},
                                  "conclusioni": {"type": "string"}, "limiti": {"type": "string"}}}
+SCHEMA_CONTROLLO = {"type": "object", "additionalProperties": False, "required": ["frasi"], "properties": {
+    "frasi": {"type": "array", "maxItems": 60, "items": {
+        "type": "object", "additionalProperties": False, "required": ["numero", "esito", "motivo"],
+        "properties": {"numero": {"type": "integer", "minimum": 1},
+                       "esito": {"type": "string", "enum": ["in parte", "non sostenuta"]},
+                       "motivo": {"type": "string", "maxLength": 300}}}}}}
 CITAZIONE = re.compile(r"\[(\s*\d+\s*(?:[,;]\s*\d+\s*)*)\]")
 ESITI = {"risposta": "trovata", "non_trovata": "non trovata", "errore": "errore", "in_attesa": "non fatta",
          "in_corso": "interrotta"}
@@ -100,6 +107,93 @@ def _risposta_pulita(d: dict, mappa: dict[int, int]) -> str:
     return pulizia.testo(rinumera(d.get("risposta") or "", mappa), origine="risposta")
 
 
+def frasi_del_markdown(testo: str) -> list[str]:
+    """Le frasi di una sezione, come stanno scritte (per ritrovarle e toglierle): niente titoli né righe di tabella."""
+    frasi: list[str] = []
+    for riga in (testo or "").splitlines():
+        riga = riga.strip()
+        if not riga or riga.startswith(("#", "|")):
+            continue
+        frasi += dividi_frasi(re.sub(r"^(?:[-*+]|\d+[.)])\s+", "", riga))
+    return [f for f in frasi if len(f) >= 8]
+
+
+def togli_frasi(testo: str, frasi: list[str]) -> str:
+    """Il testo senza quelle frasi; le voci d'elenco e i paragrafi rimasti vuoti spariscono."""
+    for frase in frasi:
+        testo = testo.replace(frase, "")
+    righe = []
+    for riga in testo.splitlines():
+        pulita = re.sub(r"[ \t]{2,}", " ", riga).rstrip()
+        if riga.strip() and re.fullmatch(r"\s*(?:[-*+]|\d+[.)])?\s*", pulita):
+            continue  # una voce d'elenco o un paragrafo che conteneva solo la frase tolta
+        righe.append(pulita)
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(righe)).strip()
+
+
+_NUMERO_NEL_TESTO = re.compile(r"(?<![\w\[])\d[\d.,\u202f\u00a0 ]*\d")
+
+
+def numeri_senza_appoggio(frase: str, appoggio: str) -> list[str]:
+    """I numeri di una frase (date, quantità: almeno due cifre; non le citazioni [n]) che non stanno nei testi da cui la
+    sezione è stata scritta. Un numero che le risposte non danno, chi scrive lo ha aggiunto (14/11: «fino al 1964»)."""
+    from .web.validazione import _numeri
+    senza_citazioni = CITAZIONE.sub(" ", frase)
+    noti = _numeri(CITAZIONE.sub(" ", appoggio))
+    mancanti = []
+    for pezzo in _NUMERO_NEL_TESTO.findall(senza_citazioni):
+        intero = re.sub(r"\D", "", pezzo).lstrip("0") or "0"
+        gruppi = [g.lstrip("0") or "0" for g in re.findall(r"\d+", pezzo)]
+        if intero not in noti and not all(g in noti or len(g) == 1 for g in gruppi):
+            mancanti.append(pezzo.strip(" .,"))
+    return mancanti
+
+
+def controlla_sezione(indagine: "Indagine", s: dict, ingresso: dict, testo: str) -> str:
+    """Il testo della sezione, frase per frase, contro le risposte da cui è stato scritto. Due controlli: il programma
+    (ogni numero della frase sta nelle risposte) e una rilettura della regia (frasi che aggiungono o cambiano un fatto).
+    Le frasi segnalate tornano una volta a chi scrive; quelle ancora senza appoggio le toglie il programma («in parte»
+    resta: il fatto principale c'è). Meglio una frase in meno che un fatto in più."""
+    appoggio = json.dumps(ingresso, ensure_ascii=False)
+
+    def segnala(corrente: str) -> tuple[list[str], dict[str, tuple[str, str]]]:
+        frasi = frasi_del_markdown(corrente)
+        trovate: dict[str, tuple[str, str]] = {}
+        try:
+            esito = indagine.regia.chiedi("documento_controllo", {
+                "risposte": ingresso["risposte"], "fatti_brevi_altre_sezioni": ingresso["fatti_brevi_altre_sezioni"],
+                "frasi": [{"numero": i, "frase": f} for i, f in enumerate(frasi, start=1)]}, SCHEMA_CONTROLLO)
+        except (claude_json.LimiteSessione, claude_json.Interrotta):
+            raise
+        except claude_json.ErroreClaude:
+            esito = {}  # senza la rilettura resta il controllo del programma: la sezione già pagata non si perde
+        for voce in (esito.get("frasi") if isinstance(esito, dict) else None) or []:
+            numero = voce.get("numero") if isinstance(voce, dict) else None
+            if isinstance(numero, int) and 1 <= numero <= len(frasi):
+                trovate[frasi[numero - 1]] = (str(voce.get("esito")), str(voce.get("motivo", ""))[:300])
+        for frase in frasi:
+            mancanti = numeri_senza_appoggio(frase, appoggio)
+            if mancanti:
+                trovate[frase] = ("non sostenuta", "numeri che le risposte non danno: " + ", ".join(mancanti))
+        return frasi, {f: trovate[f] for f in frasi if f in trovate}
+
+    frasi, segnalate = segnala(testo)
+    esito = {"frasi": len(frasi), "segnalate": len(segnalate), "riscritta": False, "tolte": 0}
+    if segnalate:
+        indagine.evento({"tipo": "documento", "testo": f"Sezione «{s['titolo']}»: {len(segnalate)} frasi senza appoggio "
+                                                       "nelle risposte, la riscrivo…"})
+        nuovo = str(indagine.regia.chiedi("documento_sezione", {
+            **ingresso, "testo_precedente": testo,
+            "frasi_da_correggere": [{"frase": f, "motivo": motivo} for f, (_e, motivo) in segnalate.items()]}, None))
+        testo, esito["riscritta"] = _togli_titolo(nuovo, s["titolo"]), True
+        _, ancora = segnala(testo)
+        da_togliere = [f for f, (grado, _m) in ancora.items() if grado == "non sostenuta"]
+        testo, esito["tolte"] = togli_frasi(testo, da_togliere), len(da_togliere)
+    with indagine._serratura:
+        indagine.stato.setdefault("controllo_sezioni", {})[s["id"]] = esito
+    return testo
+
+
 def _con_bozza(indagine: "Indagine", chiave: str, ingresso: Any, produci: Any) -> Any:
     """Il risultato già scritto per questi stessi dati, oppure lo si scrive e si salva: se una sezione o il PDF falliscono,
     alla prossima prova quelle già pagate non si rifanno."""
@@ -139,11 +233,13 @@ def scrivi(indagine: "Indagine") -> dict:
             return {**s, "testo": "*Nessuna risposta confermata per questa sezione: vedi i punti aperti.*" if s["aperti"]
                     else "*Nessuna domanda di questa sezione ha trovato una risposta.*"}
         ingresso = {"titolo": piano["titolo"], "obiettivo": piano["obiettivo"], "sezione": s, "risposte": proprie,
-                    "fatti_brevi_altre_sezioni": [b for b in brevi if b["sezione"] != s["id"]]}
+                    "fatti_brevi_altre_sezioni": [b for b in brevi if b["sezione"] != s["id"]],
+                    "controllo_frasi": 1}  # versione del controllo: cambiarla fa riscrivere le sezioni già fatte
 
         def produci() -> str:
             indagine.evento({"tipo": "documento", "testo": f"Scrivo la sezione «{s['titolo']}»…"})
-            return str(indagine.regia.chiedi("documento_sezione", ingresso, None))
+            scritta = _togli_titolo(str(indagine.regia.chiedi("documento_sezione", ingresso, None)), s["titolo"])
+            return controlla_sezione(indagine, s, ingresso, scritta)
         return {**s, "testo": _togli_titolo(_con_bozza(indagine, f"sezione:{s['id']}", ingresso, produci), s["titolo"])}
 
     with ThreadPoolExecutor(max_workers=3) as esecutore:
@@ -240,6 +336,10 @@ def componi(stato: dict, sezioni: list[dict], cornice: dict, fonti: list[dict], 
     citate = {int(n) for n in re.findall(r'href="#fonte-(\d+)"',
                                          corpo_sezioni + punti + sintesi + conclusioni + limiti + righe_domande)}
     stati = conta_stati(domande)
+    controlli = list((stato.get("controllo_sezioni") or {}).values())
+    controllo_frasi = (f"{sum(c['frasi'] for c in controlli)} frasi, {sum(c['segnalate'] for c in controlli)} segnalate "
+                       f"e fatte riscrivere, {sum(c['tolte'] for c in controlli)} tolte dal programma perché ancora "
+                       "senza appoggio") if controlli else "controllo non fatto"
     con_risposta = f"{trovate} con risposta" + (f" ({stati})" if stati else "")
 
     def voci_fonti(scelte: list[dict]) -> str:
@@ -260,8 +360,8 @@ def componi(stato: dict, sezioni: list[dict], cornice: dict, fonti: list[dict], 
         f"viene; alla fine il valore è riletto, cercato in un'altra fonte e la catena è rivista da un secondo modello: da "
         f"questi controlli viene lo stato di ogni risposta (verificata, sostenuta, contestata, incerta). Dopo ogni giro Claude ha valutato quanto ogni sezione fosse coperta e ha aggiunto domande sui buchi "
         f"e sui nomi emersi. Il testo delle sezioni è scritto da Claude a partire dalle risposte: le sue citazioni non "
-        f"sono ricontrollate dal programma; le risposte incerte non entrano nel testo, stanno nei riquadri «Punti "
-        f"aperti».</p><p>Giri di domande: {stato['giro']} · domande: {len(domande)}, {con_risposta} · fonti citate: {len(citate)}, consultate: {len(fonti)} · durata: {_durata(stato.get('secondi', 0))} · costo di Claude: "
+        f"sono ricontrollate dal programma sulle pagine; ogni frase delle sezioni è però riletta contro le risposte "
+        f"({controllo_frasi}); le risposte incerte non entrano nel testo, stanno nei riquadri «Punti aperti».</p><p>Giri di domande: {stato['giro']} · domande: {len(domande)}, {con_risposta} · fonti citate: {len(citate)}, consultate: {len(fonti)} · durata: {_durata(stato.get('secondi', 0))} · costo di Claude: "
         f"{sum(d.get('costo_usd') or 0 for d in domande) + stato.get('speso_regia_usd', 0):.2f} $ · conclusione "
         f"dell'indagine: {e(stato.get('motivo_fine') or '')}.</p>"
         + (f"<p>Ultima valutazione di Claude: {e(ultima['motivo'])}</p>" if ultima else ""))

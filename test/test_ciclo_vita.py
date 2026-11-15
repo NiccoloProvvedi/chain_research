@@ -201,17 +201,19 @@ def test_documento_non_rifa_le_sezioni_gia_pagate(ind: Indagine, monkeypatch: py
             if oggetto["sezione"]["id"] == "s2" and guasto["attivo"]:
                 raise modulo.claude_json.ErroreClaude("guasto")
             return "Testo della sezione [1]."
+        if punto == "documento_controllo":
+            return {"frasi": []}
         return {"sintesi": "Sintesi abbastanza lunga da passare il controllo dei cinquanta caratteri [1].",
                 "punti_chiave": ["Punto [1]."], "conclusioni": "Fine [1].", "limiti": "Nessuno."}
     monkeypatch.setattr(modulo.Regia, "chiedi", chiedi)
     monkeypatch.setattr(documento, "stampa_pdf", lambda _h, pdf: pdf.write_bytes(b"%PDF-"))
     with pytest.raises(modulo.claude_json.ErroreClaude):
         documento.scrivi(ind)
-    assert sorted(chiamate) == ["s1", "s2"]
+    assert sorted(chiamate) == ["documento_controllo", "s1", "s2"]   # s1 scritta e riletta, s2 fallita
     chiamate.clear()
     guasto["attivo"] = False
     esito = documento.scrivi(ind)
-    assert chiamate == ["s2", "documento_cornice"] and esito["sezioni"] == 2
+    assert chiamate == ["s2", "documento_controllo", "documento_cornice"] and esito["sezioni"] == 2
     chiamate.clear()
     documento.scrivi(ind)
     assert chiamate == []  # niente è cambiato, niente si riscrive
@@ -250,6 +252,8 @@ def test_il_documento_segue_lo_stato_delle_risposte(ind: Indagine, monkeypatch: 
         ricevuti.append((punto, oggetto))
         if punto == "documento_sezione":
             return "Sezione: " + " | ".join(r["risposta"].splitlines()[0] for r in oggetto["risposte"])
+        if punto == "documento_controllo":
+            return {"frasi": []}
         return {"sintesi": "Sintesi dalle sezioni: " + " ".join(x["testo"] for x in oggetto["sezioni"]),
                 "punti_chiave": ["Punto [1]."], "conclusioni": "Fine.", "limiti": "Nessuno."}
     monkeypatch.setattr(modulo.Regia, "chiedi", chiedi)
@@ -290,6 +294,8 @@ def test_sezione_con_sole_risposte_incerte(ind: Indagine, monkeypatch: pytest.Mo
         if punto == "documento_sezione":
             sezioni_scritte.append(oggetto["sezione"]["id"])
             return "Testo."
+        if punto == "documento_controllo":
+            return {"frasi": []}
         return {"sintesi": "Sintesi abbastanza lunga da passare il controllo dei cinquanta caratteri.",
                 "punti_chiave": ["Punto."], "conclusioni": "Fine.", "limiti": "Nessuno."}
     monkeypatch.setattr(modulo.Regia, "chiedi", chiedi)
@@ -305,6 +311,106 @@ def test_la_regia_riceve_lo_stato(ind: Indagine) -> None:
     vecchia = Indagine.in_breve(_risposta(2, "s1", "X", confermata=False))
     assert vecchia["stato"] == "incerta"
     assert Indagine.in_breve({"id": "d3", "sezione": "s1", "domanda": "D", "stato": "non_trovata", "risposta": ""})["stato"] == "non trovata"
+
+
+# --- controllo delle frasi delle sezioni (14/11: 15 frasi su 120 con un dettaglio aggiunto o cambiato) ------------
+
+def test_numeri_senza_appoggio() -> None:
+    appoggio = "**Risposta:** 2005 [1]. Venduti 1 234 pezzi; prezzo 20,65 euro; nato il 24 luglio 1973."
+    assert documento.numeri_senza_appoggio("Fino al 1964 la presidenza fu di Schiavo [3].", appoggio) == ["1964"]
+    assert documento.numeri_senza_appoggio("Nato nel 2005 [1, 12], vendette 1234 pezzi a 20.65 euro [33].", appoggio) == []
+    assert documento.numeri_senza_appoggio("Le 3 sedi e i 7 soci [45].", appoggio) == []          # cifre singole: non si contano
+    assert documento.numeri_senza_appoggio("Nato il 24 luglio 1973 e morto nel 2011 [2].", appoggio) == ["2011"]
+
+
+def test_frasi_del_markdown() -> None:
+    testo = "### Titolo\n\nPrima frase [1]. Seconda frase del 1999 [2].\n\n- voce uno [3];\n- voce due.\n\n| a | b |\n|---|---|\n| 1 | 2 |"
+    assert documento.frasi_del_markdown(testo) == ["Prima frase [1].", "Seconda frase del 1999 [2].", "voce uno [3];", "voce due."]
+    assert documento.togli_frasi(testo, ["Seconda frase del 1999 [2].", "voce uno [3];"]) == (
+        "### Titolo\n\nPrima frase [1].\n\n- voce due.\n\n| a | b |\n|---|---|\n| 1 | 2 |")
+
+
+def _indagine_per_il_controllo(ind: Indagine) -> None:
+    _per_documento(ind)
+    ind.stato["piano"]["sezioni"] = [{"id": "s1", "titolo": "Uno", "scopo": "x"}]
+    ind.stato["domande"] = [_risposta(1, "s1", "nato nel 2005", stato_risposta="verificata", motivi_stato=[])]
+
+
+def test_sezione_controllata_frase_per_frase(ind: Indagine, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Una frase con un numero che nelle risposte non c'è e una segnalata da chi rilegge: si chiede una volta di
+    riscrivere; quello che resta senza appoggio lo toglie il programma."""
+    monkeypatch.undo()
+    monkeypatch.setenv("RICERCA_LOG", str(tmp_path / "log"))
+    _indagine_per_il_controllo(ind)
+    prima = "Il progetto è nato nel 2005 [1]. Nel 1999 vendette 3000 pezzi [1]. Fu amato da tutti [1]."
+    dopo = "Il progetto è nato nel 2005 [1]. Nel 1999 vendette 3000 pezzi [1]. Ebbe successo [1]."
+    chiamate: list[tuple[str, dict]] = []
+
+    def chiedi(self, punto, oggetto, schema, **_k):
+        chiamate.append((punto, oggetto))
+        if punto == "documento_sezione":
+            return dopo if "frasi_da_correggere" in oggetto else prima
+        if punto == "documento_controllo":
+            numero = next((f["numero"] for f in oggetto["frasi"] if "amato da tutti" in f["frase"]), None)
+            return {"frasi": [{"numero": numero, "esito": "non sostenuta", "motivo": "un giudizio che le risposte non danno"}]
+                    if numero else [{"numero": 99, "esito": "non sostenuta", "motivo": "numero che non esiste"}]}
+        return {"sintesi": "Sintesi: " + " ".join(x["testo"] for x in oggetto["sezioni"]) + " " * 50,
+                "punti_chiave": ["Punto [1]."], "conclusioni": "Fine.", "limiti": "Nessuno."}
+    monkeypatch.setattr(modulo.Regia, "chiedi", chiedi)
+    monkeypatch.setattr(documento, "stampa_pdf", lambda _h, pdf: pdf.write_bytes(b"%PDF-"))
+    pagina = Path(documento.scrivi(ind)["html"]).read_text()
+    assert [p for p, _ in chiamate] == ["documento_sezione", "documento_controllo", "documento_sezione",
+                                        "documento_controllo", "documento_cornice"]
+    da_correggere = chiamate[2][1]["frasi_da_correggere"]
+    assert [x["frase"] for x in da_correggere] == ["Nel 1999 vendette 3000 pezzi [1].", "Fu amato da tutti [1]."]
+    assert "1999" in da_correggere[0]["motivo"] and chiamate[2][1]["testo_precedente"] == prima
+    assert "nato nel 2005" in pagina and "Ebbe successo" in pagina
+    assert "vendette 3000 pezzi" not in pagina and "amato da tutti" not in pagina     # nemmeno nella sintesi
+    assert ind.stato["controllo_sezioni"]["s1"] == {"frasi": 3, "segnalate": 2, "riscritta": True, "tolte": 1}
+    assert "1 tolte dal programma" in pagina
+    chiamate.clear()
+    documento.scrivi(ind)
+    assert chiamate == []        # sezione controllata e già pagata: non si rifà
+
+
+def test_sezione_senza_segnalazioni_non_si_riscrive(ind: Indagine, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.undo()
+    monkeypatch.setenv("RICERCA_LOG", str(tmp_path / "log"))
+    _indagine_per_il_controllo(ind)
+    punti: list[str] = []
+
+    def chiedi(self, punto, oggetto, schema, **_k):
+        punti.append(punto)
+        if punto == "documento_sezione":
+            return "Il progetto è nato nel 2005 [1]."
+        if punto == "documento_controllo":
+            return {"frasi": []}
+        return {"sintesi": "Sintesi abbastanza lunga da passare il controllo dei cinquanta caratteri [1].",
+                "punti_chiave": ["Punto [1]."], "conclusioni": "Fine.", "limiti": "Nessuno."}
+    monkeypatch.setattr(modulo.Regia, "chiedi", chiedi)
+    monkeypatch.setattr(documento, "stampa_pdf", lambda _h, pdf: pdf.write_bytes(b"%PDF-"))
+    documento.scrivi(ind)
+    assert punti == ["documento_sezione", "documento_controllo", "documento_cornice"]
+    assert ind.stato["controllo_sezioni"]["s1"] == {"frasi": 1, "segnalate": 0, "riscritta": False, "tolte": 0}
+
+
+def test_se_chi_rilegge_non_risponde_resta_il_controllo_del_programma(ind: Indagine, monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.undo()
+    monkeypatch.setenv("RICERCA_LOG", str(tmp_path / "log"))
+    _indagine_per_il_controllo(ind)
+
+    def chiedi(self, punto, oggetto, schema, **_k):
+        if punto == "documento_sezione":
+            return "Il progetto è nato nel 2005 [1]. Nel 1999 vendette 3000 pezzi [1]."
+        if punto == "documento_controllo":
+            raise modulo.claude_json.ErroreClaude("guasto")
+        return {"sintesi": "Sintesi: " + " ".join(x["testo"] for x in oggetto["sezioni"]) + " " * 50,
+                "punti_chiave": ["Punto [1]."], "conclusioni": "Fine.", "limiti": "Nessuno."}
+    monkeypatch.setattr(modulo.Regia, "chiedi", chiedi)
+    monkeypatch.setattr(documento, "stampa_pdf", lambda _h, pdf: pdf.write_bytes(b"%PDF-"))
+    pagina = Path(documento.scrivi(ind)["html"]).read_text()
+    assert "nato nel 2005" in pagina and "vendette 3000 pezzi" not in pagina
+    assert ind.stato["controllo_sezioni"]["s1"]["tolte"] == 1
 
 
 # --- processi e server ------------------------------------------------------------------------------------------

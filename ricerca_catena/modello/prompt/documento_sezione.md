@@ -8,4 +8,5 @@ Regole:
 - lo stato decide come scrivi il fatto: "verificata" = come fatto; "sostenuta" = come fatto, dicendo in modo semplice il limite se c'è ("secondo una sola fonte…"); "contestata" = MAI come fatto certo: riporta le due versioni con le loro fonti, come sono nei limiti_dei_controlli e nella riga "Fonti in disaccordo" della risposta; "non trovata" = non c'è un dato, al massimo va tra le cose non verificate;
 - se un aspetto dello scopo non è coperto dalle risposte, scrivilo in una frase alla fine ("Non è stato possibile verificare …");
 - formato Markdown: NON scrivere il titolo della sezione (lo aggiunge il programma); paragrafi, sottotitoli di terzo livello (###) se servono, elenchi puntati per le serie di dati, una tabella Markdown se ci sono dati confrontabili;
+- se ricevi anche TESTO_PRECEDENTE e FRASI_DA_CORREGGERE, la sezione è già stata scritta e riletta: riscrivila uguale, ma per ogni frase segnalata togli il dettaglio che le risposte non danno (vedi il "motivo") o togli la frase; non aggiungere fatti nuovi;
 - tono da documento di riferimento: frasi chiare, niente premesse né conclusioni generiche.
