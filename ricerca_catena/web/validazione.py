@@ -218,6 +218,7 @@ def esamina_revisione(risposta: dict, righe: list) -> dict:
             premessa["esito"] = "non provata"
     return {"esito": "fatta", "regge": risposta.get("regge", "non provato"), "obiezioni": obiezioni,
             "provati": provati, "non_provati": non_provati, "premessa": premessa,
+            "nome_di_partenza": " ".join(str(risposta.get("nome_di_partenza") or "").split())[:120],
             "motivo": str(risposta.get("motivo", ""))[:300]}
 
 
@@ -283,3 +284,41 @@ def strada_respinta(esami: dict | None, anelli_deboli: int) -> dict | None:
     if not anelli_deboli or not obiezioni or (revisione.get("premessa") or {}).get("esito") != "non provata":
         return None
     return obiezioni[0]
+
+
+_SEVERITA = {"sì": 0, "non provato": 1, "no": 2}
+
+
+def unisci_revisioni(revisioni: list[dict]) -> dict:
+    """Di più revisioni della stessa catena vale la più severa (15/11: ripetendo le domande lo stato cambiava in 17
+    casi su 36, perché una revisione sola oscilla tra «regge» e «non provato»): il giudizio peggiore, tutte le
+    obiezioni con riga, la premessa «regge» solo se regge per tutte."""
+    fatte = [r for r in revisioni if r.get("esito") == "fatta"]
+    if not fatte:
+        return {"esito": "non fatta"}
+    peggiore = max(fatte, key=lambda r: _SEVERITA.get(r.get("regge"), 1))
+    obiezioni: list[dict] = []
+    for r in fatte:
+        obiezioni += [o for o in r.get("obiezioni") or [] if o not in obiezioni]
+    premesse = [r.get("premessa") or {"esito": "assente"} for r in fatte]
+    premessa = next((p for p in premesse if p.get("esito") == "falsa"), None) \
+        or next((p for p in premesse if p.get("esito") == "assente"), None) \
+        or ({"esito": "regge"} if all(p.get("esito") == "regge" for p in premesse) else {"esito": "non provata"})
+    return {**peggiore, "obiezioni": obiezioni, "premessa": premessa, "letture": len(fatte),
+            "provati": min(r.get("provati", 0) for r in fatte), "non_provati": max(r.get("non_provati", 0) for r in fatte),
+            "nome_di_partenza": next((r["nome_di_partenza"] for r in fatte if r.get("nome_di_partenza")), "")}
+
+
+def nome_assente(nome: str, domanda: str, testi: list[str]) -> list[str]:
+    """Le parole con la maiuscola del nome con cui la domanda chiama la sua partenza che non stanno in nessuna pagina
+    letta. Solo se il nome è copiato dalla domanda. Con più parole la prima non conta («Battaglia di Hastings» letta
+    in inglese: «Battle of Hastings»). 13/11, domande senza risposta: per 8 entità inventate su 8 la catena aveva dato
+    un valore, partendo da un'entità vicina; «Zorvex» o «Aurelia» non stanno in nessuna pagina."""
+    nome = " ".join(str(nome or "").split())
+    if not nome or nome not in " ".join(str(domanda or "").split()):
+        return []
+    proprie = [p for p in re.findall(r"[^\W\d_]{4,}", nome) if p[0].isupper()]
+    if len(proprie) > 1:
+        proprie = proprie[1:] if nome.startswith(proprie[0]) else proprie
+    letto = set(re.findall(r"\w+", _piatto(" ".join(testi))))
+    return [p for p in proprie if _piatto(p) not in letto]

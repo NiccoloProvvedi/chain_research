@@ -318,3 +318,45 @@ def test_strada_respinta(revisione: dict, deboli: int, respinta: bool) -> None:
     esito = v.strada_respinta({"revisione": revisione}, deboli)
     assert (esito == _OB[0]) if respinta else esito is None
     assert v.strada_respinta(None, 2) is None
+
+
+# --- 15/11: due revisioni (vale la più severa) e il nome con cui la domanda chiama la partenza ----------------------
+
+def _rev(regge: str, obiezioni=(), premessa="regge", nome="", provati=3, non_provati=0) -> dict:
+    return {"esito": "fatta", "regge": regge, "obiezioni": list(obiezioni), "provati": provati, "non_provati": non_provati,
+            "premessa": {"esito": premessa}, "nome_di_partenza": nome, "motivo": regge}
+
+
+def test_di_due_revisioni_vale_la_piu_severa() -> None:
+    a, b = {"indizio": "a", "citazione": "x", "url": "u"}, {"indizio": "b", "citazione": "y", "url": "u"}
+    assert v.unisci_revisioni([_rev("sì"), _rev("sì")])["regge"] == "sì"
+    assert v.unisci_revisioni([_rev("sì"), _rev("non provato", non_provati=2)])["regge"] == "non provato"
+    unita = v.unisci_revisioni([_rev("sì", provati=4), _rev("no", [a], premessa="non provata", provati=2, non_provati=1)])
+    assert (unita["regge"], unita["obiezioni"], unita["provati"], unita["non_provati"]) == ("no", [a], 2, 1)
+    assert unita["premessa"]["esito"] == "non provata" and unita["letture"] == 2
+    assert v.unisci_revisioni([_rev("no", [a]), _rev("no", [a, b])])["obiezioni"] == [a, b]       # senza doppioni
+    falsa = {"esito": "falsa", "cosa": "c", "citazione": "q", "url": "u"}
+    assert v.unisci_revisioni([_rev("sì"), {**_rev("no"), "premessa": falsa}])["premessa"] == falsa
+    assert v.unisci_revisioni([_rev("sì", premessa="assente"), _rev("sì")])["premessa"]["esito"] == "assente"
+    assert v.unisci_revisioni([_rev("sì", nome=""), _rev("sì", nome="Zorvex")])["nome_di_partenza"] == "Zorvex"
+    # una sola revisione riuscita: vale quella; nessuna: non fatta
+    assert v.unisci_revisioni([{"esito": "non fatta"}, _rev("sì")])["regge"] == "sì"
+    assert v.unisci_revisioni([{"esito": "non fatta"}, {"esito": "non fatta"}]) == {"esito": "non fatta"}
+
+
+@pytest.mark.parametrize("nome,domanda,testi,mancanti", [
+    ("Zorvex", "creatore nel 1987 del linguaggio Zorvex?", ["Lua è un linguaggio creato nel 1993"], ["Zorvex"]),
+    ("sonda Aurelia 3", "della sonda Aurelia 3, lanciata dall'ESA?", ["Deep Impact fu una sonda della NASA"], ["Aurelia"]),
+    ("Museo Castrovillari", "fondò a Oslo il Museo Castrovillari di arte etrusca?", ["Museo di Oslo", "arte etrusca"], ["Castrovillari"]),
+    ("Battaglia di Hastings", "nella Battaglia di Hastings del 1066?", ["The Battle of Hastings was fought on 14 October 1066"], []),
+    ("linguaggio Python", "il linguaggio Python?", ["[Python (it)] Python è un linguaggio"], []),
+    ("Ducato di Valsenia", "capitale del Ducato di Valsenia?", ["Casola Valsenio è un comune", "Il ducato di Urbino"], ["Valsenia"]),
+    ("Alan Turing", "il matematico alan turing?", ["nessuna riga utile"], []),          # non è scritto così nella domanda
+    ("", "domanda senza nome?", ["x"], []),
+    ("il celebre linguaggio dal nome di un serpente", "il celebre linguaggio dal nome di un serpente?", ["Python"], []),
+])
+def test_nome_di_partenza_assente_dalle_pagine(nome: str, domanda: str, testi: list[str], mancanti: list[str]) -> None:
+    """Le parole con la maiuscola del nome con cui la domanda chiama la partenza devono stare in almeno una pagina
+    letta: «Zorvex», «Aurelia», «Castrovillari» non ci sono, perché la cosa non esiste. Vale solo per un nome copiato
+    dalla domanda; una descrizione senza nomi propri non si può controllare così."""
+    assert v.nome_assente(nome, domanda, testi) == mancanti

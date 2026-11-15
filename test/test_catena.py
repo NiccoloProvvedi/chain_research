@@ -995,7 +995,7 @@ def test_esami_senza_obiezioni_una_sola_fonte(catena, monkeypatch: pytest.Monkey
     assert "**Fiducia:** media — risposta sostenuta: " in testo and "tutto torna" not in testo
     assert "CONTROLLI DEL PROGRAMMA SULLA RISPOSTA" in catena.materiale()
     catena.revisione_finale()
-    assert len(chiamate["revisione"]) == 1  # una volta sola
+    assert len(chiamate["revisione"]) == 2  # due revisioni, una volta sola
 
 
 def test_seconda_lettura_diversa_risposta_contestata(catena, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1039,7 +1039,7 @@ def test_obiezione_della_revisione(catena, monkeypatch: pytest.MonkeyPatch, cita
     _strada_forte(catena)
     catena.revisione_finale()
     esito = catena.controlli()
-    assert chiamate["n"] == 1 and esito["stato"] == stato and esito["confermata"] is (stato == "sostenuta")
+    assert chiamate["n"] == 2 and esito["stato"] == stato and esito["confermata"] is (stato == "sostenuta")
     assert len(esito["esami"]["revisione"]["obiezioni"]) == (1 if stato == "incerta" else 0)
 
 
@@ -1253,3 +1253,46 @@ def test_strada_respinta_niente_valore(catena, monkeypatch: pytest.MonkeyPatch, 
         assert catena.valore is None and catena.controlli()["stato"] == "non trovata"
         assert catena.scartato["valore"] == "6 dicembre 1586" and catena.motivo.startswith("catena respinta dalla revisione")
         assert "laico" in catena.motivo and "laico" in catena.controlli()["motivi"][0]
+
+
+# --- 15/11: due revisioni, vale la più severa; il nome con cui la domanda chiama la partenza ---------------------
+
+def test_di_due_revisioni_discordi_vale_la_piu_severa(catena, monkeypatch: pytest.MonkeyPatch) -> None:
+    risposte = iter([{"regge": "sì", "motivo": "", "indizi": []}, {"regge": "non provato", "motivo": "dubbio", "indizi": []}])
+    serratura = __import__("threading").Lock()
+
+    def modello(punto: str, dati: dict, predefinito, **_altri):
+        if punto == "revisione":
+            with serratura:
+                return next(risposte), "claude"
+        return _decidi(punto, dati, predefinito)
+
+    monkeypatch.setattr(catena.r.pensatore, "decidi", modello)
+    catena.r.pensatore.bilancio.budget_usd = 1.0
+    catena.percorri()
+    assert catena._anelli_deboli() >= 1
+    catena.revisione_finale()
+    revisione = catena.esami["revisione"]
+    assert (revisione["regge"], revisione["letture"]) == ("non provato", 2)
+    assert catena.controlli()["stato"] == "incerta"       # anello debole: serve che reggano tutte e due
+
+
+@pytest.mark.parametrize("nome,trovata", [("Zorvex", False), ("Galileo", True), ("", True), ("Zucchi", True)])
+def test_la_partenza_nominata_dalla_domanda_deve_stare_nelle_pagine(catena, monkeypatch, nome: str, trovata: bool) -> None:
+    def modello(punto: str, dati: dict, predefinito, **_altri):
+        if punto == "revisione":
+            return {"regge": "sì", "motivo": "", "indizi": [], "nome_di_partenza": nome}, "claude"
+        return _decidi(punto, dati, predefinito)
+
+    monkeypatch.setattr(catena.r.pensatore, "decidi", modello)
+    catena.r.pensatore.bilancio.budget_usd = 1.0
+    catena.r.argomento = "Chi fu allievo dell'allievo di Galileo secondo il trattato Zorvex?"   # «Zucchi» non è nella domanda
+    catena.percorri()
+    _strada_forte(catena)
+    catena.revisione_finale()
+    if trovata:
+        assert catena.valore is not None and catena.scartato is None
+    else:
+        assert catena.valore is None and catena.scartato["valore"] == "6 dicembre 1586"
+        assert "«Zorvex», nominato dalla domanda, non compare" in catena.motivo
+        assert catena.controlli()["stato"] == "non trovata" and "Zorvex" in catena.controlli()["motivi"][0]

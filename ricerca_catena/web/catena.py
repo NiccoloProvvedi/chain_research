@@ -865,6 +865,18 @@ class Catena:
                                 "candidati": [str(self.scartato["valore"])], "tenuti": [],
                                 "scartati": [(str(self.scartato["valore"]), [premessa["cosa"], premessa["citazione"]])]})
             return
+        nome = (self.esami["revisione"] or {}).get("nome_di_partenza", "")
+        mancanti = validazione.nome_assente(nome, self.r.argomento, self._testi_letti())
+        if mancanti:
+            # La domanda chiama per nome la sua partenza e quel nome non sta in nessuna pagina letta: la strada è
+            # partita da un'altra cosa (15/11: entità inventate, la catena ne prendeva una vicina).
+            self.scartato, self.valore = self.valore, None
+            self.motivo = (f"premessa smentita: «{nome}», nominato dalla domanda, non compare in nessuna delle pagine "
+                           f"lette (mancano: {', '.join(mancanti)})")
+            self.storia.append({"passo": -3, "relazione": "nome della partenza assente", "tentativo": 0,
+                                "candidati": [str(self.scartato["valore"])], "tenuti": [],
+                                "scartati": [(str(self.scartato["valore"]), [nome] + mancanti)]})
+            return
         obiezione = validazione.strada_respinta(self.esami, self._anelli_deboli())
         if obiezione:
             deboli = self._anelli_deboli()
@@ -968,11 +980,31 @@ class Catena:
                             f"{self.valore['anello'].nome})",
                 "righe": "\n".join(f"[{i}] {p.testo[:700]}" for i, p in enumerate(righe, start=1))}
         modello = str(self.o.get("modello_revisione") or configurazione.carica()["modello_revisione"])
-        esito, da = self.r.pensatore.decidi("revisione", dati, lambda: {}, modello=modello)
+
+        def una(_n: int) -> dict:
+            esito, da = self.r.pensatore.decidi("revisione", dati, lambda: {}, modello=modello)
+            return validazione.esamina_revisione(esito, righe) if da == "claude" else {"esito": "non fatta"}
+        # Due revisioni indipendenti, vale la più severa: una sola oscilla tra «regge» e «non provato».
+        letture = max(1, int(self.o.get("letture_revisione", 2)))
+        with ThreadPoolExecutor(max_workers=letture) as pool:
+            unita = validazione.unisci_revisioni(list(pool.map(una, range(letture))))
         self.r.costo = max(self.r.costo, self.r.pensatore.bilancio.speso)
-        if da != "claude":
-            return {"esito": "non fatta"}
-        return {**validazione.esamina_revisione(esito, righe), "modello": modello}
+        return {**unita, "modello": modello} if unita.get("esito") == "fatta" else unita
+
+    def _testi_letti(self) -> list[str]:
+        """Tutto quello che la catena ha letto per questa domanda: pezzi di pagina salvati, voci di Wikipedia degli
+        anelli (titolo e righe), estratti dei risultati delle ricerche."""
+        testi = [str(s.get("testo", "")) for s in self._segmenti_dopo(0)] + [p.testo for p in self._estratti]
+        anelli = {id(a): a for fascio in self.anelli for a in fascio}
+        a = (self.valore or self.scartato or {}).get("anello")
+        while a is not None:
+            anelli[id(a)] = a
+            a = a.da
+        for a in anelli.values():
+            testi += [x.testo for x in (a.prova_legame, a.inizio) if x is not None]
+            for voce in a.voci.values():
+                testi += [voce.titolo] + [r.testo for r in voce.righe]
+        return testi
 
     def _anelli_deboli(self) -> int:
         a, deboli = (self.valore or {}).get("anello"), 0
