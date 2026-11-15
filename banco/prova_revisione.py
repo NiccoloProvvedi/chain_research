@@ -36,16 +36,23 @@ def richiesta(voce: dict) -> tuple[dict, list]:
             "risposta": str(valore), "righe": "\n".join(f"[{i}] {r.testo[:700]}" for i, r in enumerate(righe, start=1))}, righe
 
 
-def rivedi(voce: dict) -> dict | None:
-    dati, righe = richiesta(voce)
+def _una(dati: dict, righe: list) -> dict:
     try:
         esito, _ = claude_json.chiedi(istruzioni("revisione"), pulizia.dati(dati), SCHEMI["revisione"], "revisione",
                                       modello=configurazione.carica()["modello_revisione"], max_budget_usd=0.2)
     except claude_json.LimiteSessione:
         raise
     except claude_json.ErroreClaude:
-        return None
-    return None if errori_schema(esito, SCHEMI["revisione"]) else validazione.esamina_revisione(esito, righe)
+        return {"esito": "non fatta"}
+    return {"esito": "non fatta"} if errori_schema(esito, SCHEMI["revisione"]) else validazione.esamina_revisione(esito, righe)
+
+
+def rivedi(voce: dict) -> dict | None:
+    """Due revisioni, come nella catena: quella unita (la più severa) e, in `singole`, il giudizio di ognuna."""
+    dati, righe = richiesta(voce)
+    singole = [_una(dati, righe) for _ in range(2)]
+    unita = validazione.unisci_revisioni(singole)
+    return {**unita, "singole": [r.get("regge") for r in singole]} if unita.get("esito") == "fatta" else None
 
 
 def main() -> None:

@@ -7,6 +7,7 @@
 # l'attesa del limite di sessione. Registro: risultati/banco/<nome>/corsa.log; processo: risultati/banco/corse.pid.
 # Una corsa interrotta riparte da dove era arrivata: basta rilanciare lo stesso comando. Per fermare:
 #   kill -- -$(cat risultati/banco/corse.pid)
+# Con BASSA_PRIORITA=1 davanti al comando le corse non disturbano chi usa il computer.
 # Consuma l'abbonamento di Claude.
 set -euo pipefail
 codice=$(cd "$1" && pwd); nomi=$2; shift 2
@@ -16,10 +17,13 @@ if [ -f "$pid" ] && kill -0 "$(cat "$pid")" 2>/dev/null; then
   echo "c'è già una corsa in esecuzione (processo $(cat "$pid"))" >&2; exit 1
 fi
 mkdir -p "$radice/risultati/banco"
+# BASSA_PRIORITA=1: il computer serve ad altro (CPU e disco alla priorità più bassa); di solito con --parallelo 1.
+prefisso=""
+[ -n "${BASSA_PRIORITA:-}" ] && prefisso="nice -n 19 ionice -c 3 "
 comando=""
 for nome in ${nomi//,/ }; do
   mkdir -p "$radice/risultati/banco/$nome"
-  comando+="venv/bin/python banco/banco.py --nome $(printf %q "$nome") $(printf '%q ' "$@") >> $(printf %q "$radice/risultati/banco/$nome/corsa.log") 2>&1; "
+  comando+="${prefisso}venv/bin/python banco/banco.py --nome $(printf %q "$nome") $(printf '%q ' "$@") >> $(printf %q "$radice/risultati/banco/$nome/corsa.log") 2>&1; "
 done
 cd "$codice"
 RICERCA_ATTENDI_LIMITE=1 setsid nohup bash -c "$comando" > /dev/null 2>&1 < /dev/null &
