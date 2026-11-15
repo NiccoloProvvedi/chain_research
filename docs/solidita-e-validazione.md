@@ -495,3 +495,27 @@ Insieme alle domande di controllo sul codice finale (`controllo-f1`): 32 rispost
 | Limiti di budget e di tempo rispettati | sì nelle tre indagini |
 
 Spesa totale delle corse dall'11 al 14/11: circa 47 $ di abbonamento.
+
+### Controllo delle frasi delle sezioni (15/11/2026)
+
+`documento.controlla_sezione`: il programma segnala le frasi con un numero che le risposte non danno, la regia rilegge
+le frasi contro le risposte, le frasi segnalate tornano una volta a chi scrive, quelle ancora senza appoggio le toglie
+il programma. I tre documenti sono stati riscritti (i vecchi restano accanto come `documento_prima_del_controllo.*`):
+
+| Indagine | Frasi segnalate e fatte riscrivere | Tolte dal programma | Sostenute prima | Sostenute dopo | Regia, prima e dopo |
+|---|---|---|---|---|---|
+| Canale di Suez | 3 | 0 | 38 / 40 | 39 / 40 | 0,42 → 1,18 $ |
+| Olivetti | 8 | 0 | 31 / 40 | 35 / 40 | 0,61 → 1,75 $ |
+| Telescopio James Webb | 3 | 0 | 36 / 40 | 33 / 40 | 0,59 → 1,33 $ |
+
+- Frasi «non sostenute» nel campione: da 1 a **0**. La frase inventata sulla presidenza Olivetti «fino al 1964» non
+  c'è più (ora dice quello che le fonti dicono, senza la data).
+- Frasi del tutto sostenute: 105 su 120 prima, 107 su 120 dopo (88% e 89%): **nessun miglioramento misurabile**, e
+  l'obiettivo del 95% resta non raggiunto. Le «in parte» rimaste sono quasi tutte sfumature («una seconda fonte»,
+  «nel mondo», «massima») o frasi che parlano delle fonti; il giudice e chi rilegge sono lo stesso modello e non
+  concordano frase per frase.
+- Il costo della regia cresce di circa 0,75 $ a documento (la riscrittura delle sezioni è compresa in questa cifra;
+  la sola rilettura costa meno).
+- Che cosa dà di sicuro: nessun numero o data nel testo che non stia nelle risposte (controllo del programma, senza
+  costo) e nessuna frase che chi rilegge giudica senza appoggio. Che cosa non dà: frasi senza sfumature aggiunte.
+  Per quello servirebbe scrivere le sezioni per composizione di frasi già controllate, non per riscrittura libera.
