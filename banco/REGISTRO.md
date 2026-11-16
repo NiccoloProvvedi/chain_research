@@ -181,3 +181,6 @@
 | 2026-11-13 17:10 | 20 domande senza risposta, premessa smentita e catena respinta (b1f5366) | b1f5366 | 20 domande | 14/20 | 12.1 | 3.397 | 0 | 0/0 | 0 |
 | 2026-11-13 22:06 | domande di controllo, premessa smentita e catena respinta (b1f5366) | b1f5366 | 36 domande | 25/27 | 7.1 | 3.432 | 0 | 20/20 | 4 |
 | 2026-11-13 22:51 | insieme di conferma, una volta sola (b1f5366) | b1f5366 | 23 domande | 18/23 | 5.0 | 1.878 | 0 | 12/12 | 3 |
+| 2026-11-16 04:12 | 20 domande senza risposta: due revisioni e nome della partenza (6b25bdb) | 6b25bdb | 20 domande | 17/20 | 9.4 | 3.216 | 0 | 0/0 | 0 |
+| 2026-11-16 09:35 | domande di controllo: due revisioni e nome della partenza (6b25bdb) | 6b25bdb | 36 domande | 19/27 | 8.9 | 4.602 | 0 | 17/18 | 9 |
+| 2026-11-16 11:31 | insieme di conferma rifatto (non più indipendente) (6b25bdb) | 6b25bdb | 23 domande | 19/23 | 5.0 | 2.458 | 0 | 10/10 | 3 |

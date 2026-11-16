@@ -519,3 +519,41 @@ il programma. I tre documenti sono stati riscritti (i vecchi restano accanto com
 - Che cosa dà di sicuro: nessun numero o data nel testo che non stia nelle risposte (controllo del programma, senza
   costo) e nessuna frase che chi rilegge giudica senza appoggio. Che cosa non dà: frasi senza sfumature aggiunte.
   Per quello servirebbe scrivere le sezioni per composizione di frasi già controllate, non per riscrittura libera.
+
+### Due revisioni e nome della partenza (15–16/11/2026)
+
+Due modifiche, tutte e due dopo la catena (non cambiano la ricerca):
+- **due revisioni indipendenti, vale la più severa** (`validazione.unisci_revisioni`);
+- **il nome con cui la domanda chiama la sua partenza** (la revisione lo copia dalla domanda, il programma controlla
+  che sia davvero nella domanda) **deve stare in almeno una pagina letta** (`validazione.nome_assente`): altrimenti
+  «non trovata».
+
+Corse a bassa priorità, una domanda alla volta (`BASSA_PRIORITA=1 banco/corsa.sh … --parallelo 1`):
+
+| | Prima (codice del 13/11) | Dopo (codice del 15/11) |
+|---|---|---|
+| 20 domande senza risposta: «non trovata» | 14 | **17** (3 con un valore, tutte `incerta`) |
+| 10 domande senza risposta dell'insieme di conferma | 6 | **8** |
+| Valori inventati dati come fatto | 0 | 0 |
+| Domande di controllo, risposte attese buone | 25 su 27 | **19 su 27** |
+| Insieme di conferma, 13 domande con risposta | 12 giuste | 11 giuste |
+
+- Sulle domande senza risposta il valore inventato resta in 5 casi su 30 (17%; l'obiettivo era 10%), mai come fatto.
+- **Il calo sulle domande di controllo non viene dai controlli ma dalla catena, che cambia da una corsa all'altra**: in
+  5 delle 8 risposte sbagliate la ricerca ha trovato un altro valore prima di ogni revisione (C++, ENIAC, Museo del
+  Louvre, Madama Butterfly, Isaac Newton: le stesse domande instabili delle altre corse). Nelle quattro corse fatte
+  con i controlli le giuste sono state 23, 22, 25 e 19 su 27: in media l'82%, con tre domande in più o in meno da
+  una corsa all'altra. Il 93% del 13/11 era una corsa fortunata; il numero onesto è «tra il 70 e il 93%, in media
+  82%».
+- I rifiuti sulle domande di controllo sono stati 2: uno di una risposta sbagliata, **uno di una risposta giusta**
+  (Decameron: 50 m, catena respinta). È il prezzo misurato delle regole che fermano le risposte inventate.
+- Risposte date come fatto, corse del 13/11 e del 15/11 insieme: `verificata` 15 giuste su 15, `sostenuta` 22 su 23.
+  L'unica sbagliata è un passaggio su cui le fonti non concordano (dove morì la madre di Newton: Stamford per
+  Wikidata, Colsterworth per la pagina letta), che la revisione non ha visto.
+- La stabilità dello stato non è migliorata in modo misurabile: tra le due corse stesso valore in 26 domande su 36,
+  stesso stato in 21 (prima 28 e 19). Con una catena che cambia valore una volta su quattro, lo stato non può essere
+  più stabile del valore.
+
+**Che cosa resta, in ordine:** la catena non è ripetibile sulle domande difficili (stessa domanda, altra strada e
+altro valore): è il limite più grande rimasto, e sta nella ricerca, non nella validazione. Poi: i passaggi su cui le
+fonti non concordano e che la revisione non vede; le frasi delle sezioni con sfumature aggiunte.
