@@ -2228,11 +2228,7 @@ class Catena:
         if not self.valore or not self.esami:
             return testo
         esito = self.controlli()
-        riga = (f"**Fiducia:** {validazione.FIDUCIA[esito['stato']]} — risposta {esito['stato']}"
-                + (": " + "; ".join(esito["motivi"][:4]) if esito["motivi"] else
-                   ": valore letto due volte, ritrovato in un'altra fonte, catena riletta senza obiezioni") + ".")
-        trovata = re.search(r"\*\*Fiducia:?\*\*:?[^\n]*", testo)
-        return testo[:trovata.start()] + riga + testo[trovata.end():] if trovata else f"{testo}\n\n{riga}"
+        return validazione.con_fiducia(testo, esito["stato"], esito["motivi"])
 
     def _valore_in_testa(self, testo: str) -> str:
         """La riga **Risposta:** la scrive il programma con il valore trovato e la sua fonte; quello che Haiku aveva

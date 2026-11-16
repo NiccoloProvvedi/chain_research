@@ -32,6 +32,7 @@ def test_catena_ripercorsa_uguale(file: Path | None, tmp_path: Path) -> None:
     atteso = json.loads(file.read_text(encoding="utf-8"))
     # Le catene registrate prima dei controlli con il modello (11/11) non ne hanno le richieste.
     atteso["opzioni"].setdefault("controlli_modello", False)
+    atteso["opzioni"]["seconda_ricerca"] = False   # le registrazioni sono di una ricerca sola
     richiesta = {"domanda": atteso["domanda"], "opzioni": atteso["opzioni"], "cartella_pezzi": str(tmp_path / "pezzi"),
                  "profilo": str(tmp_path / "profilo")}
     uscita = subprocess.run([sys.executable, "-m", "ricerca_catena.domanda"], cwd=RADICE, capture_output=True, text=True,

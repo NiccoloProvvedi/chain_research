@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from .modello import claude_json
+from .web import riprova
 from .web.raccolta import Raccolta
 
 _scrittura = threading.Lock()
@@ -37,14 +38,21 @@ def main() -> int:
     signal.signal(signal.SIGTERM, _termina)
     richiesta = json.loads(sys.stdin.readline())
     raccolta = None
-    costo = lambda: round(raccolta.pensatore.bilancio.speso, 4) if raccolta is not None else 0.0  # noqa: E731
+    speso = {"prima": 0.0}
+    costo = lambda: round(speso["prima"] + (raccolta.pensatore.bilancio.speso if raccolta is not None else 0.0), 4)  # noqa: E731
     try:
-        raccolta = Raccolta(richiesta["domanda"], opzioni=richiesta.get("opzioni") or {},
-                            pubblica=lambda e: _scrivi({"evento": e}),
-                            profilo=Path(richiesta["profilo"]) if richiesta.get("profilo") else None,
-                            cartella_pezzi=Path(richiesta["cartella_pezzi"]) if richiesta.get("cartella_pezzi")
-                            else None)
-        _scrivi({"esito": raccolta.esegui()})
+        pubblica = lambda e: _scrivi({"evento": e})  # noqa: E731
+
+        def crea(opzioni: dict) -> Raccolta:
+            # Una ricerca da capo: un'altra raccolta, con il suo budget; il costo della domanda è la somma.
+            nonlocal raccolta
+            speso["prima"] += raccolta.pensatore.bilancio.speso if raccolta is not None else 0.0
+            raccolta = Raccolta(richiesta["domanda"], opzioni=opzioni, pubblica=pubblica,
+                                profilo=Path(richiesta["profilo"]) if richiesta.get("profilo") else None,
+                                cartella_pezzi=Path(richiesta["cartella_pezzi"]) if richiesta.get("cartella_pezzi")
+                                else None)
+            return raccolta
+        _scrivi({"esito": riprova.con_riprova(crea, richiesta.get("opzioni") or {}, pubblica)})
     except claude_json.LimiteSessione as errore:
         _scrivi({"errore": str(errore)[:500], "limite_sessione": errore.secondi, "costo_usd": costo()})
         return 3

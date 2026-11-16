@@ -322,3 +322,14 @@ def nome_assente(nome: str, domanda: str, testi: list[str]) -> list[str]:
         proprie = proprie[1:] if nome.startswith(proprie[0]) else proprie
     letto = set(re.findall(r"\w+", _piatto(" ".join(testi))))
     return [p for p in proprie if _piatto(p) not in letto]
+
+
+def con_fiducia(testo: str, stato: str, motivi: list[str]) -> str:
+    """Il testo della risposta con la riga **Fiducia:** scritta dal programma dallo stato dei controlli."""
+    if stato not in FIDUCIA:
+        return testo
+    riga = (f"**Fiducia:** {FIDUCIA[stato]} — risposta {stato}"
+            + (": " + "; ".join(motivi[:4]) if motivi else
+               ": valore letto due volte, ritrovato in un'altra fonte, catena riletta senza obiezioni") + ".")
+    trovata = re.search(r"\*\*Fiducia:?\*\*:?[^\n]*", testo)
+    return testo[:trovata.start()] + riga + testo[trovata.end():] if trovata else f"{testo}\n\n{riga}"

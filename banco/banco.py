@@ -32,7 +32,9 @@ ATTESA_MASSIMA_S = 14 * 3600
 
 
 def una_domanda(d: dict, profilo: str, parallelo: int, registra: Path | None = None) -> dict:
-    opzioni = {"senza_wikidata": True, "wikipedia_intervallo": intervallo_per(parallelo), "controlli_modello": True}
+    # Una registrazione per il rigioco è di una ricerca sola: la seconda ricerca delle risposte incerte resta spenta.
+    opzioni = {"senza_wikidata": True, "wikipedia_intervallo": intervallo_per(parallelo), "controlli_modello": True,
+               "seconda_ricerca": registra is None}
     richiesta = {"domanda": d["domanda"], "profilo": str(configurazione.cartella("cartella_profili") / profilo),
                  "cartella_pezzi": str(RADICE / "risultati" / "banco" / ".pezzi"), "opzioni": opzioni}
     ambiente = dict(os.environ)

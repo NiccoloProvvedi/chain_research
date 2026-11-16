@@ -13,7 +13,7 @@ from pathlib import Path
 
 RADICE = Path(__file__).resolve().parents[1]
 TEST = ["test/test_validazione.py", "test/test_catena.py", "test/test_banco.py", "test/test_regressioni.py",
-        "test/test_raccolta.py", "test/test_ciclo_vita.py", "test/test_indagine.py"]
+        "test/test_raccolta.py", "test/test_ciclo_vita.py", "test/test_indagine.py", "test/test_riprova.py"]
 # (nome, file, testo da trovare una sola volta, testo che lo sostituisce)
 SABOTAGGI = [
     ("G1 il valore non si confronta più con la riga", "ricerca_catena/web/catena.py",
@@ -111,6 +111,16 @@ SABOTAGGI = [
      "        if mancanti:\n            # La domanda chiama per nome", "        if False:\n            # La domanda chiama per nome"),
     ("il nome della partenza vale anche se non è nella domanda", "ricerca_catena/web/validazione.py",
      "    if not nome or nome not in \" \".join(str(domanda or \"\").split()):", "    if not nome:"),
+    ("la domanda si cerca una volta sola anche se è incerta", "ricerca_catena/domanda.py",
+     "riprova.con_riprova(crea, richiesta.get(\"opzioni\") or {}, pubblica)", "crea(richiesta.get(\"opzioni\") or {}).esegui()"),
+    ("seconda ricerca anche per le risposte non incerte", "ricerca_catena/web/riprova.py",
+     " or esito.get(\"stato\") != \"incerta\" or not esito.get(\"valore\"):", " or not esito.get(\"valore\"):"),
+    ("seconda ricerca con un altro valore: la risposta resta com'era", "ricerca_catena/web/riprova.py",
+     "            unito = _con_stato(principale, \"contestata\", motivi)", "            unito = _con_stato(principale, principale[\"stato\"], motivi)"),
+    ("seconda ricerca senza guardare il budget rimasto", "ricerca_catena/web/riprova.py",
+     "    if budget < BUDGET_MINIMO_USD or minuti < MINUTI_MINIMI:", "    if False:"),
+    ("due ricerche uguali ma la risposta resta incerta", "ricerca_catena/web/riprova.py",
+     "else \"sostenuta\"\n            motivi = [\"due ricerche", "else principale[\"stato\"]\n            motivi = [\"due ricerche"),
     ("giudice: il segno non conta", "banco/giudice.py",
      "    return all((n in _negativi(attesa)) == (n in sotto)", "    return True or all((n in _negativi(attesa)) == (n in sotto)"),
     ("giudice: l'errore vale risposta sbagliata", "banco/giudice.py",
