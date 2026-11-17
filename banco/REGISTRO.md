@@ -184,3 +184,5 @@
 | 2026-11-16 04:12 | 20 domande senza risposta: due revisioni e nome della partenza (6b25bdb) | 6b25bdb | 20 domande | 17/20 | 9.4 | 3.216 | 0 | 0/0 | 0 |
 | 2026-11-16 09:35 | domande di controllo: due revisioni e nome della partenza (6b25bdb) | 6b25bdb | 36 domande | 19/27 | 8.9 | 4.602 | 0 | 17/18 | 9 |
 | 2026-11-16 11:31 | insieme di conferma rifatto (non più indipendente) (6b25bdb) | 6b25bdb | 23 domande | 19/23 | 5.0 | 2.458 | 0 | 10/10 | 3 |
+| 2026-11-16 22:43 | domande di controllo: seconda ricerca per le incerte (47ed0dc) | 47ed0dc | 36 domande | 26/27 | 9.1 | 4.954 | 0 | 17/17 | 0 |
+| 2026-11-17 03:17 | 20 domande senza risposta: seconda ricerca per le incerte (47ed0dc) | 47ed0dc | 20 domande | 19/20 | 13.7 | 4.326 | 0 | 0/0 | 0 |

@@ -33,7 +33,8 @@ def rigiudica(esiti: dict[str, dict], con_giudice: bool = False, stati: dict[str
         # Lo stato si ricalcola dagli esiti dei controlli salvati, con la regola di adesso: una regola cambiata si può
         # provare sulle corse già fatte senza rifarle. Lo stato scritto dalla corsa resta in `stato_della_corsa`.
         controlli = (voce.get("catena") or {}).get("controlli")
-        if controlli and "esami" in controlli:
+        # con una seconda ricerca lo stato viene dal confronto delle due (web/riprova.py): non si ricalcola da una sola
+        if controlli and "esami" in controlli and not voce.get("riprova"):
             voce.setdefault("stato_della_corsa", voce.get("stato"))
             voce["stato"], motivi = validazione.stato(controlli)
             voce["confermata"] = voce["stato"] in ("verificata", "sostenuta")

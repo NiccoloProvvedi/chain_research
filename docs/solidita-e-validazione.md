@@ -557,3 +557,39 @@ Corse a bassa priorità, una domanda alla volta (`BASSA_PRIORITA=1 banco/corsa.s
 **Che cosa resta, in ordine:** la catena non è ripetibile sulle domande difficili (stessa domanda, altra strada e
 altro valore): è il limite più grande rimasto, e sta nella ricerca, non nella validazione. Poi: i passaggi su cui le
 fonti non concordano e che la revisione non vede; le frasi delle sezioni con sfumature aggiunte.
+
+### Seconda ricerca per le risposte incerte (16–17/11/2026)
+
+`web/riprova.py`: una risposta `incerta` si cerca una seconda volta, da capo, con il budget e il tempo rimasti alla
+domanda. Stesso valore: `sostenuta` («due ricerche indipendenti»); altro valore: `contestata`, con tutti e due; nessun
+valore: resta `incerta`. Se la seconda ricerca ha uno stato migliore, la risposta principale è la sua.
+
+Prima di costruirla, sulle corse salvate (coppie di corse delle stesse domande di controllo): una risposta `incerta`
+ritrovata uguale era giusta 28 volte su 30; con un altro valore 14 su 51; sulle domande senza risposta 40 valori
+inventati su 42 non si ripetevano.
+
+Corse a bassa priorità (`controllo-h1`, `senza-risposta-4`):
+
+| | Corsa del 15/11 | Con la seconda ricerca |
+|---|---|---|
+| Domande di controllo, risposte attese buone | 19 su 27 | **26 su 27** (l'altra: «non trovata») |
+| Risposte date come fatto | 17 giuste su 18 | **17 giuste su 17** |
+| `contestata` | 1 | 5, tutte con il valore giusto come principale |
+| `incerta` | 5 (1 giusta) | 4 (tutte giuste) |
+| Domande senza risposta: «non trovata» | 17 su 20 | **19 su 20** (1 valore, `incerta`) |
+| Costo, domande di controllo | 4,6 $ (36 domande) | 7,1 $ |
+
+- Seconde ricerche sulle domande di controllo con risposta attesa buona: 6. Due hanno ridato lo stesso valore (giusto,
+  ora `sostenuta`), due un altro valore (`contestata`), due nessun valore.
+- **Nessuna risposta sbagliata tra le 27**, e nessuna data come fatto a torto; nessun valore inventato dato come fatto.
+- Con prudenza: la catena cambia da una corsa all'altra (23, 22, 25, 19 e ora 26 giuste su 27). Una corsa sola non
+  dimostra che la seconda ricerca alzi le risposte giuste; dimostra che non le abbassa e che lo stato regge. Il costo
+  cresce di circa metà.
+- Sulle domande con la risposta attesa contestata la seconda ricerca ridà lo stesso valore (4 su 5): due ricerche che
+  leggono le stesse pagine concordano anche quando la fonte è in disaccordo con Wikidata. La seconda ricerca misura la
+  ripetibilità della catena, non la verità della fonte.
+
+**Bilancio aggiornato (17/11):** risposte date come fatto giuste nelle ultime tre corse sulle domande di controllo
+54 su 55; valori inventati sulle domande senza risposta 1 su 20, mai come fatto (obiettivo 10%: raggiunto in questa
+corsa); frasi dei documenti sostenute 89% (obiettivo 95%: non raggiunto); stesso stato ripetendo: da misurare di
+nuovo con la seconda ricerca. Spesa totale delle corse: circa 75 $.

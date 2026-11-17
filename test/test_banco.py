@@ -187,6 +187,8 @@ def test_il_nuovo_giudizio_ricalcola_lo_stato_con_la_regola_di_adesso() -> None:
     nuova = rigiudica.rigiudica({"a": voce, "b": {"attesa": "x", "valore": "x", "stato": "v", "catena": {}}})
     assert (nuova["a"]["stato"], nuova["a"]["stato_della_corsa"], nuova["a"]["confermata"]) == ("sostenuta", "incerta", True)
     assert nuova["b"]["stato"] == "v" and voce["stato"] == "incerta"   # corse di prima: niente da ricalcolare
+    due = {**voce, "stato": "contestata", "riprova": {"esito": "altro valore", "valore": "58 m"}}
+    assert rigiudica.rigiudica({"a": due})["a"]["stato"] == "contestata"   # deciso da due ricerche: resta
     inventata = {"attesa": "", "senza_risposta": True, "trovata": True, "valore": "1850", "corretta": False, "deciso_da": "senza risposta"}
     onesta = {"attesa": "", "senza_risposta": True, "trovata": False, "valore": None, "corretta": True, "deciso_da": "senza risposta"}
     esito = rigiudica.rigiudica({"i": inventata, "o": onesta})
