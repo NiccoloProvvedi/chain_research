@@ -17,12 +17,37 @@ chiede ancora, e alla fine ottieni un **documento PDF completo** con tutte le fo
    domande sui buchi, sui nomi emersi e sui fatti da verificare. Il ciclo si ripete finché Claude non ritiene la
    conoscenza solida, oppure finiscono budget o tempo (al massimo 12 giri).
 4. **Documento.** Claude scrive ogni sezione dalle risposte trovate, con le fonti numerate una sola volta per tutto
-   il documento; poi sintesi, punti chiave, conclusioni e limiti. In appendice tutte le domande con la risposta e la
-   fiducia, il metodo e l'elenco delle fonti. Il PDF è stampato dal browser del progetto.
+   il documento; ogni frase è poi riletta contro le risposte e quelle senza appoggio si riscrivono o si tolgono. Poi
+   sintesi, punti chiave, conclusioni e limiti. In appendice tutte le domande con la risposta e il suo stato, il metodo
+   e l'elenco delle fonti. Il PDF è stampato dal browser del progetto.
 
-Sul banco di prova di 40 domande a catena la ricerca a catena con Claude Haiku risponde giusto a 36 su 40 (due corse
-di fila); Claude Opus a memoria, senza ricerca, ne indovina 24. I dettagli sono nel paper:
-[`docs/paper/paper.pdf`](docs/paper/paper.pdf).
+### Quanto ci si può fidare delle risposte
+
+Prima di diventare un fatto del documento ogni risposta passa da controlli del programma e da una revisione fatta da
+un secondo modello (dettagli in [`docs/solidita-e-validazione.md`](docs/solidita-e-validazione.md)): il valore deve
+essere scritto nella riga citata, la catena non deve tornare su sé stessa, un estratto di ricerca non conferma niente,
+il valore si rilegge e si cerca in un'altra fonte, e la revisione cerca l'indizio della domanda che non torna. Da qui
+lo **stato** di ogni risposta:
+
+| Stato | Che cosa vuol dire | Nel documento |
+|---|---|---|
+| verificata | riletta, ritrovata in un'altra fonte, catena rivista senza obiezioni | come fatto |
+| sostenuta | nessuna obiezione, ma una sola fonte o un controllo non fatto | come fatto, con il limite |
+| contestata | le fonti o due ricerche danno valori diversi | con tutte e due le versioni |
+| incerta | un passaggio non confermato o un'obiezione della revisione (cercata due volte) | solo nei riquadri «Punti aperti» |
+| non trovata | nessun valore, oppure la premessa della domanda è falsa | tra i limiti |
+
+Misure (novembre 2026, su domande mai usate per regolare il programma, con risposta controllata su Wikipedia):
+
+- risposte giuste: dal 70% al 96% secondo la corsa (la ricerca non dà sempre lo stesso risultato; in media circa 85%);
+- **risposte date come fatto (verificata o sostenuta): 54 giuste su 55** nelle ultime tre corse;
+- domande che non hanno risposta (persone, opere, relazioni inventate): «non trovata» in 19 casi su 20 nell'ultima
+  corsa; quando un valore c'è, è segnato incerto, mai dato come fatto;
+- frasi del documento sostenute dalle risposte: 89% (il resto aggiunge sfumature).
+
+Le domande delle prove stanno in `banco/`; ogni corsa ha una riga in `banco/REGISTRO.md`. Il paper in
+[`docs/paper/paper.pdf`](docs/paper/paper.pdf) descrive il metodo di ricerca com'era il 1° novembre 2026: i suoi
+numeri sono sulle domande usate per regolarlo, quindi più alti di quelli su domande nuove.
 
 ## Avvio
 
@@ -84,7 +109,9 @@ Dal pulsante «Impostazioni» (salvate in `config/impostazioni.json`, fuori da g
 | `ricerca_catena/web/fonti/wikipedia_grafo.py` | Wikipedia come grafo di righe con i loro collegamenti |
 | `ricerca_catena/modello/` | Chiamate a Claude, budget, pulizia del testo, prompt |
 | `ricerca_catena/server.py`, `app/` | Server locale e finestra Electron |
-| `banco/` | Banco di prova (40 domande), giudice, linea di base a memoria, registro |
+| `ricerca_catena/web/validazione.py`, `web/riprova.py` | I controlli sui risultati e lo stato delle risposte |
+| `banco/` | Banco di prova (domande regolate, di controllo, di conferma, senza risposta), giudice, rapporti, registro |
+| `docs/solidita-e-validazione.md` | Come si controllano i risultati, il piano dei test, tutte le misure |
 | `docs/paper/` | Il paper sul metodo |
 
 Le indagini stanno in `indagini/<data>-<argomento>/`: `stato.json` (tutto lo stato, si riprende da lì),
@@ -95,5 +122,6 @@ Le indagini stanno in `indagini/<data>-<argomento>/`: `stato.json` (tutto lo sta
 ```bash
 VIRTUAL_ENV=venv uv pip install -r requirements-dev.txt     # strumenti di sviluppo, una volta
 venv/bin/python -m pytest -q -m "not rete and not claude"   # senza rete e senza Claude (Chromium locale sì)
+venv/bin/python banco/sabotaggio.py                         # ogni controllo spento deve far fallire un test
 venv/bin/python banco/banco.py --nome prova --semi "informatica/Linux kernel"   # una domanda del banco, dal vivo
 ```
