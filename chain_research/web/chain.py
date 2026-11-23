@@ -495,13 +495,13 @@ class Chain:
         infobox; a long list does not fill by itself the rows given to the model (23 Oct, Debian → Bharat Linux)."""
         output: list[tuple[int, Row]] = []
         for i, r in enumerate(v.rows):
-            if r.kind == "elenco" and output:
+            if r.kind == "list" and output:
                 j, first = output[-1]
-                if first.kind == "elenco" and first.section == r.section \
+                if first.kind == "list" and first.section == r.section \
                         and len(first.text) + len(r.text) + 3 <= chars:
                     output[-1] = (j, Row(f"{first.text} · {r.text}",
                                           first.hyperlinks + [c for c in r.hyperlinks if c not in first.hyperlinks],
-                                          "elenco", r.section))
+                                          "list", r.section))
                     continue
             output.append((i, r))
         return output
@@ -526,7 +526,7 @@ class Chain:
             question = {t for t in question if t.split("_")[0] not in GENERIC_ROOTS}
         rows = [(v, i, r) for v in articles for i, r in self._merged_rows(v)
                  if not (key and key not in _norm(r.text))
-                 and not (r.kind == "riquadro" and USELESS_INFOBOX.match(r.text))]
+                 and not (r.kind == "infobox" and USELESS_INFOBOX.match(r.text))]
         terms = [set(self._terms(r.text)) for _, _, r in rows]
         n = len(rows)
         occurrences: dict[str, int] = {}
@@ -552,7 +552,7 @@ class Chain:
             points += 20 * sum(weight(t) for t in set(self._terms(r.section)) & question)
             if bare:
                 pass
-            elif r.kind == "riquadro":
+            elif r.kind == "infobox":
                 # The infobox is dense with relations, but for the verification it goes first only with the words of
                 # the checks (17 Oct, Duchy of Milan: «Gemellaggi: Linards» was left out behind 25 infobox rows).
                 points = points * 1.5 + ((3 if infobox else 1) if points > 0 else 0)
@@ -574,13 +574,13 @@ class Chain:
         if infobox and not bare:
             scores.sort(key=lambda x: -x[0])
             for k, (points, v, i, r) in enumerate(scores):
-                if r.kind == "riquadro":
+                if r.kind == "infobox":
                     infoboxes[v.title] = infoboxes.get(v.title, 0) + 1
                     if infoboxes[v.title] <= 6:
                         scores[k] = (points + 40, v, i, r)
             for v in articles:
                 for i, r in self._merged_rows(v):
-                    if r.kind == "riquadro" and infoboxes.get(v.title, 0) < 6 and _norm(r.text) not in seen_items \
+                    if r.kind == "infobox" and infoboxes.get(v.title, 0) < 6 and _norm(r.text) not in seen_items \
                             and not USELESS_INFOBOX.match(r.text) and not (key and key not in _norm(r.text)):
                         infoboxes[v.title] = infoboxes.get(v.title, 0) + 1
                         seen_items.add(_norm(r.text))
@@ -590,7 +590,7 @@ class Chain:
         for _, v, i, r in scores:
             text = f"[{v.title} ({v.language}){' § ' + r.section if r.section else ''}] {r.text}"
             if r.hyperlinks:  # the exact titles of the linked articles: the candidate is named like its article
-                text += f" ⟶ articles: {'; '.join(r.hyperlinks[:25 if r.kind == 'elenco' else 10])}"
+                text += f" ⟶ articles: {'; '.join(r.hyperlinks[:25 if r.kind == 'list' else 10])}"
             if len(kept) >= maximum:
                 break
             if total + len(text) > chars:
@@ -1411,7 +1411,7 @@ class Chain:
         if str(step.get("kind") or "").strip():  # the kind is a check (16 Oct: BeBox, a computer, taken for BeOS)
             checks.append({"description": f"is of this kind: {step['kind']}", "weight": 1,
                               "readings": [f"{step['kind']} (also as a broader or narrower category)"]})
-        checks.append({"description": f"is in relation «{step['relation']}» with {' or '.join(a.name for a in beam)}",
+        checks.append({"description": f"is related «{step['relation']}» with {' or '.join(a.name for a in beam)}",
                           "weight": 2, "readings": ["in a broad sense: student, disciple, studied with, collaborator, "
                                                  "work of, part of, as the relation requires"]
                           + [str(c.get("description", "")) for c in repeated]})
@@ -1738,14 +1738,14 @@ class Chain:
         ordered = sorted(alive, key=lambda a: (-a.quality, not self._co_occurs(a), -a.points, a.name))
         # Strong only with the tie proven (16 Oct, Blender: Traun, Wels and Gmunden "strong" because towns of Upper
         # Austria on the Traun, without any row saying the developer was born there).
-        with_tie = any(str(c.get("description", "")).startswith("is in relation «") for c in checks)
+        with_tie = any(str(c.get("description", "")).startswith("is related «") for c in checks)
         linked = lambda a: not with_tie or any(  # noqa: E731
-            e["outcome"] == "yes" and e["proof"] and str(e["check"]).startswith("is in relation") for e in a.outcomes)
+            e["outcome"] == "yes" and e["proof"] and str(e["check"]).startswith("is related") for e in a.outcomes)
         # A tie proven only by a search snippet (page never read) does not make a strong link.
         strong = [a for a in ordered if a.quality > 0.5 and linked(a) and not self._decisive_unknown(a)
                  and self._identified(a) and not validation.tie_only_from_snippets(a)]
         relation = next((str(c.get("description", "")) for c in checks
-                          if str(c.get("description", "")).startswith("is in relation «")), "")
+                          if str(c.get("description", "")).startswith("is related «")), "")
         for article in validation.disagreements([a for a in candidates if a not in alive], relation):
             if article not in self.conflicts:
                 self.conflicts.append(article)
@@ -1775,7 +1775,7 @@ class Chain:
         description, content words), not «biography» (24 Oct, Arduino: «Seeed Studio biografia», «Cytron Technologies
         biografia» for companies that were candidates for «makes programmable keyboards»)."""
         pending = sorted((e for e in a.outcomes if e["outcome"] in ("unknown", "partly")
-                         and not str(e["check"]).startswith(("is in relation", "is of this kind"))),
+                         and not str(e["check"]).startswith(("is related", "is of this kind"))),
                         key=lambda e: -float(e.get("weight") or 1))
         if not pending:
             return f"{a.name} biography"
@@ -1803,7 +1803,7 @@ class Chain:
     def _linked(a: Link) -> bool:
         """The tie with the previous entity has a yes with a proof (16 Oct, Hubble: Ken Mattingly, never on STS-103,
         ahead of Grunsfeld in the reserve because he had more yes on the other checks)."""
-        return any(e["outcome"] == "yes" and e["proof"] and str(e["check"]).startswith("is in relation")
+        return any(e["outcome"] == "yes" and e["proof"] and str(e["check"]).startswith("is related")
                    for e in a.outcomes)
 
     def _co_occurs(self, a: Link) -> bool:
@@ -1837,7 +1837,7 @@ class Chain:
         """At least one identifying trait (not the kind, not the tie, weight ≥ 2) has a yes with a proof, if the plan
         has any (23 Oct, paper §9.1: Guiducci «strong» with only the tie and «Bolognese Jesuit» not proven)."""
         own = [e for e in a.outcomes if _weight(e) >= 2
-                  and not str(e["check"]).startswith(("is of this kind", "is in relation"))]
+                  and not str(e["check"]).startswith(("is of this kind", "is related"))]
         return not own or any(e["outcome"] == "yes" and e["proof"] for e in own)
 
     @staticmethod
@@ -1860,7 +1860,7 @@ class Chain:
         the value sought, not a trait to recognise it). `points` = yes minus no."""
         no = sum(_weight(e) for e in a.outcomes if e["outcome"] == "no" and e["proof"])
         si = sum(_weight(e) * OUTCOME_VALUE[e["outcome"]] for e in a.outcomes if e["outcome"] in ("yes", "partly")
-                 and e["proof"] and not str(e["check"]).startswith(("is of this kind", "is in relation")))
+                 and e["proof"] and not str(e["check"]).startswith(("is of this kind", "is related")))
         # kind and tie do not offset a "no": they say the candidate is of the right sort, not that it is the right one
         return no > 0 and si <= no
 
@@ -1963,17 +1963,18 @@ class Chain:
         precise_years = {}
         for c in checks:
             text = str(c.get("description") or "")
-            if not re.search(r"\b(anni|circa|metà|inizio|fine|primi|ultimi|secolo|tra|decennio)\b", text, re.I):
+            if not re.search(r"\b(anni|circa|metà|inizio|fine|primi|ultimi|secolo|tra|decennio|"
+                             r"years|about|around|mid|early|late|century|between|decade)\b", text, re.I):
                 precise_years[_norm(text)] = set(re.findall(r"\b1[0-9]{3}\b|\b20[0-9]{2}\b", text))
         for a in candidates:
-            # Il modello a volte riscrive il nome: allora vale il cognome, ma solo se in questo gruppo lo porta un solo
-            # candidato e una sola risposta (due «Verdi»: nessun esito, meglio «non so» che l'esito dell'altro).
+            # The model sometimes rewrites the name: then the surname counts, but only if in this group a single
+            # candidate and a single answer carry it (two «Verdi»: no outcome, better "don't know" than the other's).
             surname = _name_key(a.name)
             same = [x for k, x in per_name.items() if surname in k.split()]
             single = len(same) == 1 and sum(_name_key(b.name) == surname for b in candidates) == 1
             answer = per_name.get(_norm(a.name)) or (same[0] if single else {"checks": []})
-            # Controllo del programma: la prova di un "sì" o di un "no" deve stare nel blocco DEL candidato (16/10,
-            # Galileo: Viviani e Guiducci "gesuiti di Bologna" con le righe di altri candidati).
+            # Program check: the proof of a "yes" or a "no" must be in the block OF the candidate (16 Oct, Galileo:
+            # Viviani and Guiducci "Jesuits of Bologna" with the rows of other candidates).
             mine = intervals.get(id(a), range(0))
             owned = {v.url for v in a.articles.values()} | ({a.start.url} if a.start else set())
             key = _name_key(a.name)
@@ -1985,7 +1986,7 @@ class Chain:
                     continue
                 answers.append({**e, "check": c["description"] if c else e.get("check", ""),
                                  "weight": c.get("weight") if c else None})
-            # Ogni controllo ha un esito, anche quelli su cui Haiku tace: "non so" (pesano nel conto della qualità).
+            # Every check has an outcome, even those Haiku is silent on: "don't know" (they weigh in the quality).
             data = {_norm(e["check"]): e for e in answers}
             answers = [data.get(_norm(c["description"])) or {"check": c["description"], "outcome": "unknown",
                                                                       "proof": 0, "weight": c.get("weight")}
@@ -1993,38 +1994,38 @@ class Chain:
             for e in answers:
                 number = e.get("proof")
                 is_valid = isinstance(number, int) and number in mine
-                if is_valid:  # e la riga parla del candidato: sua voce, riga del legame o riga che lo nomina
+                if is_valid:  # and the row is about the candidate: its article, the tie row or a row naming it
                     p = proofs[number - 1]
                     is_valid = p.url in owned or p is a.tie_proof or key in _norm(p.text)
-                    # e le parole citate da Haiku sono davvero nella riga (16/10, Emacs: Daniel Murphy "premiato nel
-                    # 2009" con una riga che non ne parla)
+                    # and the words quoted by Haiku really are in the row (16 Oct, Emacs: Daniel Murphy "awarded in
+                    # 2009" with a row that does not mention it)
                     is_valid = is_valid and present_quote(str(e.get("quote") or ""), p.text)
-                    # un anno preciso nel controllo deve stare nelle parole citate (Bobrow "premiato nel 2009")
+                    # a precise year in the check must be in the quoted words (Bobrow "awarded in 2009")
                     years = precise_years.get(_norm(e.get("check", "")), set())
                     is_valid = is_valid and (not years or any(x in str(e.get("quote") or "") for x in years))
                 a.outcomes.append({"check": e.get("check", ""), "weight": e.get("weight") or 1,
                                 "outcome": e.get("outcome", "unknown") if is_valid or e.get("outcome") == "unknown" else "unknown",
                                 "proof": self._proof(proofs, number) if is_valid else None,
-                                # per capire dopo chi ha deciso: l'esito detto dal modello e la riga che ha citato
+                                # to tell later who decided: the outcome given by the model and the row it cited
                                 "said": e.get("outcome", "unknown"), "cited": self._proof(proofs, number)})
             a.points = sum(1 for e in a.outcomes if e["outcome"] == "yes" and e["proof"]) - self._no(a)
             a.quality = quality(a.outcomes)
 
-    # --- 3. valore ---------------------------------------------------------------------------------------------
+    # --- 3. value ----------------------------------------------------------------------------------------------
 
     def _value(self, beam: list[Link], others: list[Link] | None = None) -> None:
-        """Il valore dalle voci di Wikipedia dell'entità finale (riquadro, inizio, righe con le parole della
-        risposta), poi dalle pagine lette, poi da due pagine nuove."""
+        """The value from the Wikipedia articles of the final entity (infobox, start, rows with the words of the
+        answer), then from the pages read, then from two new pages."""
         for a in beam + (others or []):
             if self._entity_value(a, (1, 2, 3) if a in beam else (1,)):
                 return
-        self.reason = self.reason or "valore richiesto non trovato"
+        self.reason = self.reason or "requested value not found"
 
     def _entity_value(self, a: Link, attempts: tuple[int, ...]) -> bool:
-        """Tentativi per il valore di un'entità: 1 = voci di Wikipedia, 2 = pezzi già letti (poi due pagine nuove),
-        3 = pezzi letti di nuovo. Vero se il valore è stato trovato (in self.valore)."""
+        """Attempts for the value of an entity: 1 = Wikipedia articles, 2 = segments already read (then two new
+        pages), 3 = segments read again. True if the value was found (in self.value)."""
         answer = self.plan.get("answer") or {}
-        if answer.get("is_entity"):  # niente ricerca del «valore» sul web: il valore è l'entità
+        if answer.get("is_entity"):  # no search for the «value» on the web: the value is the entity
             return self._value_is_entity(a) if 1 in attempts else False
         words = list(answer.get("words") or []) + [answer.get("what", "")] + list(answer.get("checks") or [])
         bonus = self._bonus_value(answer)
@@ -2036,9 +2037,9 @@ class Chain:
             else:
                 proofs = self._entity_proofs(a.name, segments=self._segments_on(a.name), maximum=40)
                 if attempt == 3:
-                    # Anche gli estratti dei risultati della ricerca del valore che nominano l'entità (29/10, Congresso
-                    # di Vienna: «Sophie … Stackelberg (фон Мейендорф…) (1806 - 1891)» nell'estratto di Geni, pagina
-                    # mai letta: si leggono solo 2 pagine).
+                    # Also the result snippets of the value search that name the entity (29 Oct, Congress of
+                    # Vienna: «Sophie … Stackelberg (фон Мейендорф…) (1806 - 1891)» in the Geni snippet, a page never
+                    # read: only 2 pages are read).
                     key = _name_key(a.name)
                     proofs += [p for p in self._snippets if key in _norm(p.text)][:8]
             outcome = self._decide("value", {"question": self.r.topic[:1000], "entity": a.name,
@@ -2048,67 +2049,67 @@ class Chain:
                                             "proofs": self._numbered(proofs)}, {"value": "", "proof": 0})
             proof = self._proof(proofs, outcome.get("proof"))
             rejection = allowed_value(outcome.get("value", ""), answer) if outcome.get("value") else ""
-            if rejection:  # il programma, non Haiku, decide se il valore rispetta tipo e intervallo
-                self.history.append({"step": -1, "relation": "valore rifiutato", "attempt": attempt,
+            if rejection:  # the program, not Haiku, decides whether the value respects kind and interval
+                self.history.append({"step": -1, "relation": "value rejected", "attempt": attempt,
                                     "candidates": [a.name], "kept": [],
                                     "discarded": [(f"{outcome.get('value')}", [rejection])]})
                 proof = None
-            # Il valore deve essere scritto nella riga citata: il modello può tradurre una data, non cambiarla.
+            # The value must be written in the cited row: the model may translate a date, not change it.
             if proof is not None and not validation.value_in_row(outcome.get("value", ""), proof.text):
-                self.history.append({"step": -1, "relation": "valore non nella riga", "attempt": attempt,
+                self.history.append({"step": -1, "relation": "value not in the row", "attempt": attempt,
                                     "candidates": [a.name], "kept": [],
                                     "discarded": [(str(outcome.get("value")), [proof.text[:200]])]})
                 proof = None
-            # La riga del valore deve parlare dell'entità: sua voce o suo nome (16/10, Ducato di Milano:
-            # l'altitudine di Bereguardo presa dalla voce di Vigevano).
+            # The value row must be about the entity: its article or its name (16 Oct, Duchy of Milan: the
+            # elevation of Bereguardo taken from the Vigevano article).
             if proof is not None and not (proof.url in {v.url for v in a.articles.values()}
                                           or _name_key(a.name) in _norm(proof.text)):
                 proof = None
             if outcome.get("value") and proof:
                 self.value = {"value": outcome["value"], "proof": proof, "link": a,
                                "reason": outcome.get("reason", ""), "proofs": proofs}
-                self.reason = f"catena completa: {a.name} → {outcome['value']}"
+                self.reason = f"complete chain: {a.name} → {outcome['value']}"
                 return True
-            self.history.append({"step": -1, "relation": "valore non trovato", "attempt": attempt,
+            self.history.append({"step": -1, "relation": "value not found", "attempt": attempt,
                                 "candidates": [a.name], "kept": [],
-                                "discarded": [(str(outcome.get("value") or "(vuoto)"),
-                                              [f"{len(proofs)} righe", "voci: " + ", ".join(
+                                "discarded": [(str(outcome.get("value") or "(empty)"),
+                                              [f"{len(proofs)} rows", "articles: " + ", ".join(
                                                   f"{v.title} ({v.language})" for v in a.articles.values()),
                                                str(outcome.get("reason") or "")[:150]])]})
             if attempt == 2 and not self.r.thinker.exhausted and not self.r._reached_limit():
                 self._add_pages_value()
-                # le parole della risposta, nella lingua della ricerca (le prime del piano), non la frase italiana
+                # the words of the answer, in the research language (the first of the plan), not the Italian phrase
                 key = " ".join(str(x) for x in (answer.get("words") or [])[:2]) or answer.get("what", "")
-                # Mai il nome da solo: con una parola dell'entità di prima si evitano gli omonimi più famosi (25/10,
-                # Wikipedia: «Roland Unger» da solo dava il pittore nato nel 1941, non il presidente di Wikivoyage e.V.).
-                # Anche il nome da solo (pagine di profilo che non nominano il contesto), ma le 2 pagine si scelgono
-                # per lo scopo, con il contesto (25/10, Wikipedia: senza il nome da solo la pagina di Commons di
-                # Roland Unger non arrivava più; con il solo nome e nessuno scopo arrivava il pittore omonimo).
+                # Never the name alone: a word of the previous entity avoids the more famous namesakes (25 Oct,
+                # Wikipedia: «Roland Unger» alone gave the painter born in 1941, not the president of Wikivoyage e.V.).
+                # Also the name alone (profile pages that do not name the context), but the 2 pages are chosen by
+                # the purpose, with the context (25 Oct, Wikipedia: without the name alone Roland Unger's Commons
+                # page no longer came up; with the name alone and no purpose the namesake painter came up).
                 context = self._short_context(a)
                 self._search_and_read(list(dict.fromkeys([f"{a.name} {key}"[:120], f"{a.name} {context}".strip(),
                                                         a.name])), 2,
-                                    purpose=f"{answer.get('what', '')} di {a.name}" + (f" ({a.parent.name})" if a.parent else ""))
+                                    purpose=f"{answer.get('what', '')} of {a.name}" + (f" ({a.parent.name})" if a.parent else ""))
         return False
 
     def _add_pages_value(self, maximum: int = 6) -> None:
-        """Due pagine in più per cercare il valore, senza che il tetto della domanda cresca senza fine."""
+        """Two more pages to look for the value, without the question's cap growing without end."""
         if self._added_pages < maximum:
             self._added_pages += 2
             self.o["max_pages"] = int(self.o["max_pages"]) + 2
 
     def _value_is_entity(self, a: Link) -> bool:
-        """La domanda chiede il nome dell'entità dell'ultimo passo (piano: risposta.e_entita): il valore è lei, con la
-        riga che la lega all'anello di prima o l'inizio della sua voce. (24/10, Cappella Sistina: «in quale comune si
-        trova il simulacro» con ultimo passo «comune in cui si trova»; Haiku cercava nelle righe del comune «il nome
-        del comune del simulacro» e rispondeva vuoto, la catena finiva senza risposta.) Chi è giusto lo decidono i
-        controlli del passo, già fatti. Ma il legame con l'anello di prima deve avere una riga (sì o in parte): un
-        valore cercato fa da filtro, il nome dell'entità no (25/10, Cappella Sistina: Capri Leone, trovato solo per
-        descrizione, legame «non so», qualità 0,4, dato come risposta; giusto il 24/10 Novara di Sicilia, legame «in
-        parte» con la riga sulla statua dell'Assunta)."""
-        if a.quality < 0.5 and a.outcomes:  # più di metà del peso dei controlli (Napoli 0,4; Novara di Sicilia 0,6)
+        """The question asks for the name of the entity of the last step (plan: answer.is_entity): the value is the
+        entity, with the row that ties it to the previous link or the start of its article. (24 Oct, Sistine Chapel:
+        «in which municipality is the effigy» with last step «municipality where it is»; Haiku searched the rows of
+        the municipality for «the name of the municipality of the effigy» and answered empty, the chain ended without
+        an answer.) Who is right is decided by the checks of the step, already done. But the tie with the previous
+        link must have a row (yes or partly): a sought value acts as a filter, the entity's name does not (25 Oct,
+        Sistine Chapel: Capri Leone, found only by description, tie "don't know", quality 0.4, given as the answer;
+        right on 24 Oct Novara di Sicilia, tie "partly" with the row on the statue of the Assunta)."""
+        if a.quality < 0.5 and a.outcomes:  # more than half the weight of the checks (Napoli 0.4; Novara di Sicilia 0.6)
             return False
         if a.parent is not None and not any(e["outcome"] in ("yes", "partly") and e["proof"]
-                                        and str(e["check"]).startswith("is in relation") for e in a.outcomes):
+                                        and str(e["check"]).startswith("is related") for e in a.outcomes):
             return False
         proof = a.tie_proof or a.start
         if proof is None:
@@ -2118,14 +2119,14 @@ class Chain:
                 return False
             proof = Proof(f"[{article.title} ({article.language})] {sentence.text}", article.url, sentence.hyperlinks, article.language)
         self.value = {"value": a.name, "proof": proof, "link": a,
-                       "reason": "la domanda chiede l'entità dell'ultimo passo"}
-        self.reason = f"catena completa: la risposta è l'entità {a.name}"
+                       "reason": "the question asks for the entity of the last step"}
+        self.reason = f"complete chain: the answer is the entity {a.name}"
         return True
 
     @staticmethod
     def _bonus_value(answer: dict):
-        """Righe bersaglio (DS4A): il programma porta avanti le righe che contengono il tipo di dato chiesto, e ancora
-        di più quelle con un valore nell'intervallo, prima che Haiku le veda."""
+        """Target rows (DS4A): the program moves forward the rows that contain the requested data kind, and even more
+        those with a value in the interval, before Haiku sees them."""
         kind = str(answer.get("value_kind") or "")
         forms = {"full date": rf"\b\d{{1,2}}\s+(?:{MONTHS})\s+\d{{4}}\b|\b(?:{MONTHS})\s+\d{{1,2}},?\s+\d{{4}}\b",
                  "day and month": rf"\b\d{{1,2}}\s+(?:{MONTHS})\b|\b(?:{MONTHS})\s+\d{{1,2}}\b",
@@ -2153,10 +2154,10 @@ class Chain:
             constraints["interval"] = f"{answer.get('min', '…')} - {answer.get('max', '…')}"
         return constraints
 
-    # --- 4. scrittura --------------------------------------------------------------------------------------------
+    # --- 4. writing ---------------------------------------------------------------------------------------------
 
     def material(self) -> str:
-        """La catena trovata con le prove, citate con il numero della fonte."""
+        """The chain found with its proofs, cited with the source number."""
         number = lambda url: self.r._source_number(url) if url not in {f["url"] for f in self.r.sources} else \
             next(f["number"] for f in self.r.sources if f["url"] == url)  # noqa: E731
         chain = []
@@ -2165,96 +2166,96 @@ class Chain:
             chain.append(a)
             a = a.parent
         root = chain[-1] if chain else None
-        rows = [f"PARTENZA: {root.name if root else self.plan.get('starting_point', {}).get('entity', '')}"
-                 + (f" (entità nominata dalla domanda, «{root.relation}» porta al passo {root.base_step + 1})"
+        rows = [f"STARTING POINT: {root.name if root else self.plan.get('starting_point', {}).get('entity', '')}"
+                 + (f" (entity named by the question, «{root.relation}» leads to step {root.base_step + 1})"
                     if root is not None and root.base_step else "")]
         steps = self.plan.get("steps", [])
         for i, a in enumerate(reversed(chain[:-1])):
             relation = a.relation or (steps[(root.base_step if root else 0) + i]["relation"]
                                         if (root.base_step if root else 0) + i < len(steps) else "")
-            rows.append(f"\nANELLO «{relation}» {a.parent.name if a.parent else ''} → {a.name}"
-                         + (" (NON CONFERMATO del tutto: i controlli non sono tutti provati, ma nessuna prova lo smentisce)"
+            rows.append(f"\nLINK «{relation}» {a.parent.name if a.parent else ''} → {a.name}"
+                         + (" (NOT FULLY CONFIRMED: not all checks are proven, but no proof refutes it)"
                             if a.weak else ""))
             if a.tie_proof:
                 rows.append(f"- [{number(a.tie_proof.url)}] {a.tie_proof.text[:600]}")
             for e in a.outcomes:
                 if e["proof"]:
-                    rows.append(f"- controllo «{e['check']}»: {e['outcome']} [{number(e['proof'].url)}] "
+                    rows.append(f"- check «{e['check']}»: {e['outcome']} [{number(e['proof'].url)}] "
                                  f"{e['proof'].text[:500]}")
         if self.value:
-            rows.append(f"\nVALORE CERCATO ({self.plan.get('answer', {}).get('what', '')}): "
+            rows.append(f"\nVALUE SOUGHT ({self.plan.get('answer', {}).get('what', '')}): "
                          f"{self.value['value']} [{number(self.value['proof'].url)}] "
                          f"{self.value['proof'].text[:600]}")
         contrary = validation.disagreements_on_route(self.conflicts, self.value["link"]) if self.value else []
         if contrary:
-            rows.append("\nFONTI IN DISACCORDO CON LA CATENA (scrivile nella riga **Fonti in disaccordo** e abbassa la "
-                         "**Fiducia**):")
-            rows += [f"- [{number(x['url'])}] per «{x['relation']}» di {x['parent']} la fonte indica {x['name']}: "
-                      f"{x['row']} — scartato perché non rispetta: {'; '.join(x['against'])}" for x in contrary]
+            rows.append("\nSOURCES DISAGREEING WITH THE CHAIN (write them in the **Conflicting sources:** row and lower "
+                         "the **Confidence:**):")
+            rows += [f"- [{number(x['url'])}] for «{x['relation']}» of {x['parent']} the source gives {x['name']}: "
+                      f"{x['row']} — discarded because it does not respect: {'; '.join(x['against'])}" for x in contrary]
         if self.value and self.exams:
             outcome = self.checks()
             if outcome["reasons"]:
-                rows.append("\nCONTROLLI DEL PROGRAMMA SULLA RISPOSTA (riportali nei **Limiti**; se una fonte dà un altro "
-                             "valore, anche in **Fonti in disaccordo**): " + "; ".join(outcome["reasons"]))
+                rows.append("\nPROGRAM CHECKS ON THE ANSWER (report them in the **Limitations:**; if a source gives "
+                             "another value, also in **Conflicting sources:**): " + "; ".join(outcome["reasons"]))
             for name in ("second_reading", "corroboration"):
                 exam = self.exams.get(name) or {}
                 if exam.get("outcome") == "disagree":
-                    rows.append(f"- [{number(exam['url'])}] altro valore: {exam['value']} — {exam['row']}")
+                    rows.append(f"- [{number(exam['url'])}] other value: {exam['value']} — {exam['row']}")
         others = [x for beam in self.links[-1:] for x in beam if not chain or x is not chain[0]]
         if others:
-            rows.append("\nALTRI CANDIDATI DELL'ULTIMO PASSO: " + "; ".join(f"{x.name} ({x.points} controlli sì)"
+            rows.append("\nOTHER CANDIDATES OF THE LAST STEP: " + "; ".join(f"{x.name} ({x.points} checks yes)"
                                                                             for x in others))
         return "\n".join(rows)
 
     def write(self, task: str) -> str | None:
         if not self.links:
             return None
-        self.r._phase("Claude scrive la risposta dalla catena trovata…")
+        self.r._phase("Claude is writing the answer from the chain found…")
         readings = [f"{i.get('clue')}: {'; '.join(i.get('readings') or [])}"
                    for i in self.interpretation.get("clues", []) if len(i.get("readings") or []) > 1]
         text = self.r.thinker.ask(
             "writing", instructions("writing"),
             f"TOPIC: {self.r.topic}\nTODAY: {self.r.today}\n"
-            + ("INDIZI AMBIGUI (se la risposta dipende da una lettura, dillo): " + " | ".join(readings) + "\n"
+            + ("AMBIGUOUS CLUES (if the answer depends on a reading, say so): " + " | ".join(readings) + "\n"
                if readings else "")
-            + f"NOTES (la catena percorsa, con le prove e la loro fonte [n]):\n<<<DATI\n{self.material()}\nDATI>>>"
-            + (f"\n\nLa catena non è completa: {self.reason}. Nella riga **Risposta:** scrivi «Non trovata» e "
-               "quale anello manca." if not self.value else
-               "\n\nLa catena è completa: nella riga **Risposta:** dai il VALORE CERCATO con la sua fonte. Se un anello "
-               "è segnato NON CONFERMATO, rispondi comunque con il valore, dillo nei **Limiti** e abbassa la "
-               "**Fiducia**: non scrivere «Non trovata».")
-            + f"\n\nCOMPITO:\n{task}")
+            + f"NOTES (the chain walked, with the proofs and their source [n]):\n<<<DATA\n{self.material()}\nDATA>>>"
+            + (f"\n\nThe chain is not complete: {self.reason}. In the **Answer:** row write «Not found» and "
+               "which link is missing." if not self.value else
+               "\n\nThe chain is complete: in the **Answer:** row give the VALUE SOUGHT with its source. If a link "
+               "is marked NOT FULLY CONFIRMED, answer with the value anyway, say so in the **Limitations:** and lower "
+               "the **Confidence:**: do not write «Not found».")
+            + f"\n\nTASK:\n{task}")
         self.r.cost = max(self.r.cost, self.r.thinker.ledger.spent)
         if not isinstance(text, str) or not text.strip():
             return None
         return self._confidence_from_program(self._value_in_head(text.strip()))
 
     def _confidence_from_program(self, text: str) -> str:
-        """La riga **Fiducia:** la scrive il programma dallo stato dei controlli, non il modello che scrive (11/11,
-        domande di controllo: risposte sbagliate con fiducia «alta» e «media»). Solo se i controlli con il modello sono
-        stati fatti: altrimenti resta quella del modello."""
+        """The **Confidence:** row is written by the program from the state of the checks, not by the writing model
+        (11 Nov, control questions: wrong answers with confidence «high» and «medium»). Only if the checks with the
+        model were done: otherwise the model's row stays."""
         if not self.value or not self.exams:
             return text
         outcome = self.checks()
         return validation.with_confidence(text, outcome["status"], outcome["reasons"])
 
     def _value_in_head(self, text: str) -> str:
-        """La riga **Risposta:** la scrive il programma con il valore trovato e la sua fonte; quello che Haiku aveva
-        scritto lì (spiegazione e dubbi) va nella riga **Spiegazione:**. (16/10, Firefox e Raspberry Pi: valore giusto
-        trovato, ma la riga di Haiku era piena di dubbi e non si capiva quale fosse la risposta.)"""
+        """The **Answer:** row is written by the program with the value found and its source; what Haiku had written
+        there (explanation and doubts) goes in the **Explanation:** row. (16 Oct, Firefox and Raspberry Pi: right value
+        found, but Haiku's row was full of doubts and it was unclear which was the answer.)"""
         if not self.value:
             return text
         value = " ".join(str(self.value["value"]).split())
         url = self.value["proof"].url
         number = next((f["number"] for f in self.r.sources if f.get("url") == url), None)
-        row = f"**Risposta:** {value}" + (f" [{number}]" if number else "") + "."
-        found = re.search(r"\*\*Risposta:?\*\*:?[ \t]*([^\n]*)", text)
+        row = f"**Answer:** {value}" + (f" [{number}]" if number else "") + "."
+        found = re.search(r"\*\*Answer:?\*\*:?[ \t]*([^\n]*)", text)
         if found is None:
             return f"{row}\n\n{text}"
         rest = found.group(1).strip()
         if _norm(rest.replace("*", "")).startswith(_norm(value)) and len(rest) <= len(value) + 20:
             return text
-        fresh = row + (f"\n\n**Spiegazione:** {rest}" if rest else "")
+        fresh = row + (f"\n\n**Explanation:** {rest}" if rest else "")
         return text[:found.start()] + fresh + text[found.end():]
 
     def summary(self) -> dict:
@@ -2264,7 +2265,7 @@ class Chain:
                            "row": " ".join(str(self.value["proof"].text).split())[:600]} if self.value else None,
                 "reason": self.reason, "actions": self.actions, "checks": self.checks(),
                 "discarded_value": self.discarded["value"] if self.discarded else None,
-                # le righe della soluzione con la loro pagina: per ricontrollare il documento sulle fonti (fedelta.py)
+                # the solution rows with their page: to recheck the document against the sources (fedelta.py)
                 "proofs": [{"url": p.url, "row": " ".join(p.text.split())[:500]}
                           for p in {(p.url, p.text): p for p in self._route_rows()}.values()],
                 "wikipedia": {"articles": self.wiki.read_count, "requests": self.wiki.requests, "cap": self.wiki.exhausted}

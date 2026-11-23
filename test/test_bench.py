@@ -67,10 +67,10 @@ def test_judge_error_does_not_decide(monkeypatch) -> None:
 def test_rejudge_without_claude() -> None:
     import rejudge
     outcomes = {
-        "a": {"wait": "2 m", "value": "−2 m a.s.l.", "final": "−2 m a.s.l.", "correct": True, "decided_by": "comparison"},
-        "b": {"wait": "00118–00199", "value": "00118–00199", "final": "", "correct": False, "decided_by": "empty"},
-        "c": {"wait": "68 m", "value": "56 m a.s.l.", "final": "56 m a.s.l.", "correct": False, "decided_by": "judge"},
-        "d": {"wait": "27 January 1861", "value": None, "found": False, "final": "", "correct": False, "decided_by": "empty"},
+        "a": {"expected": "2 m", "value": "−2 m a.s.l.", "final": "−2 m a.s.l.", "correct": True, "decided_by": "comparison"},
+        "b": {"expected": "00118–00199", "value": "00118–00199", "final": "", "correct": False, "decided_by": "empty"},
+        "c": {"expected": "68 m", "value": "56 m a.s.l.", "final": "56 m a.s.l.", "correct": False, "decided_by": "judge"},
+        "d": {"expected": "27 January 1861", "value": None, "found": False, "final": "", "correct": False, "decided_by": "empty"},
         "e": {"error": "boh"},
     }
     new_items = rejudge.rejudge(outcomes)
@@ -122,8 +122,8 @@ def test_unanswerable_question_is_right_only_if_not_found(monkeypatch) -> None:
     import bench
     monkeypatch.setattr(judge, "extract", lambda *_to: pytest.fail("no model needed"))
     monkeypatch.setattr(judge, "assess", lambda *_to: pytest.fail("no judge needed"))
-    honest = {"question": "d", "wait": "", "without_answer": True, "found": False, "value": None, "answer": "Not found"}
-    invented = {"question": "d", "wait": "", "without_answer": True, "found": True, "value": "12 March 1850", "answer": "x"}
+    honest = {"question": "d", "expected": "", "without_answer": True, "found": False, "value": None, "answer": "Not found"}
+    invented = {"question": "d", "expected": "", "without_answer": True, "found": True, "value": "12 March 1850", "answer": "x"}
     bench.assess_article(honest)
     bench.assess_article(invented)
     assert (honest["correct"], honest["decided_by"]) == (True, "unanswerable")
@@ -168,8 +168,8 @@ def test_corroboration_of_expected_answers() -> None:
 
         def infobox(self):
             from chain_research.web.sources.wikipedia_graph import Row
-            return [Row("Altitudine: 58 m s.l.m.", [], "riquadro"), Row("Superficie: 230 km²", [], "riquadro"),
-                    Row("Nome abitanti: reggiani (altitudine media)", [], "riquadro")]
+            return [Row("Altitudine: 58 m s.l.m.", [], "infobox"), Row("Superficie: 230 km²", [], "infobox"),
+                    Row("Nome abitanti: reggiani (altitudine media)", [], "infobox")]
     assert vr.datum_rows(V(), "elevation") == ["Altitudine: 58 m s.l.m."]
     assert vr.datum_rows(V(), "founding date") == [V.start]
 
@@ -183,15 +183,15 @@ def test_rejudge_recomputes_status_with_current_rule() -> None:
     import rejudge
     good = {"second_reading": {"outcome": "agree"}, "corroboration": {"outcome": "agree"},
              "review": {"outcome": "done", "holds": "yes", "objections": []}}
-    article = {"wait": "56 m", "value": "56 m", "final": "56 m", "correct": True, "decided_by": "comparison", "status": "uncertain",
+    article = {"expected": "56 m", "value": "56 m", "final": "56 m", "correct": True, "decided_by": "comparison", "status": "uncertain",
             "chain": {"checks": {"value": "56 m", "weak_links": 1, "value_source": "A", "disagreements": [], "exams": good}}}
-    fresh = rejudge.rejudge({"a": article, "b": {"wait": "x", "value": "x", "status": "v", "chain": {}}})
+    fresh = rejudge.rejudge({"a": article, "b": {"expected": "x", "value": "x", "status": "v", "chain": {}}})
     assert (fresh["a"]["status"], fresh["a"]["run_status"], fresh["a"]["confirmed"]) == ("supported", "uncertain", True)
     assert fresh["b"]["status"] == "v" and article["status"] == "uncertain"   # older runs: nothing to recompute
     two = {**article, "status": "contested", "retry": {"outcome": "other value", "value": "58 m"}}
     assert rejudge.rejudge({"a": two})["a"]["status"] == "contested"   # decided by two researches: stays
-    invented = {"wait": "", "without_answer": True, "found": True, "value": "1850", "correct": False, "decided_by": "unanswerable"}
-    honest = {"wait": "", "without_answer": True, "found": False, "value": None, "correct": True, "decided_by": "unanswerable"}
+    invented = {"expected": "", "without_answer": True, "found": True, "value": "1850", "correct": False, "decided_by": "unanswerable"}
+    honest = {"expected": "", "without_answer": True, "found": False, "value": None, "correct": True, "decided_by": "unanswerable"}
     outcome = rejudge.rejudge({"i": invented, "o": honest})
     assert (outcome["i"]["correct"], outcome["o"]["correct"]) == (False, True)
 

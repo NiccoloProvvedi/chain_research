@@ -31,7 +31,7 @@ def same(a: str, b: str) -> bool:
     return normalize(a) == normalize(b) and digits(a) == digits(b)
 
 
-def alias_compatibile(name: str, alias: str) -> bool:
+def compatible_alias(name: str, alias: str) -> bool:
     """An alias joins an entity only if it has the same numbers as the name: "Qwen 3" is not an alias of "Qwen 2.5",
     and "Pace di Vestfalia 1650" is not one of "Pace di Vestfalia" (cautious: better a lost alias than two merged
     entities)."""

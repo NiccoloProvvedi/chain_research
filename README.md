@@ -1,106 +1,109 @@
-# Ricerca a catena
+# Chain Research
 
 [![test](https://github.com/NiccoloProvvedi/chain_research/actions/workflows/test.yml/badge.svg)](https://github.com/NiccoloProvvedi/chain_research/actions/workflows/test.yml)
 
-**Indagini sul web guidate da Claude, con risposte verificate e un documento PDF con tutte le fonti.**
+**Web investigations guided by Claude, with verified answers and a PDF report citing every source.**
 
-Si scrive un argomento. Claude lo divide in sezioni e in domande precise; ogni domanda viene risolta da un programma
-che segue le prove da una pagina all'altra (la *ricerca a catena*) e controlla ogni citazione; ogni risposta riceve uno
-**stato** che dice quanto è affidabile; alla fine si ottiene un documento completo in cui solo le risposte confermate
-compaiono come fatti.
+You type a topic. Claude splits it into sections and precise questions; each question is answered by a program that
+follows the evidence from one page to the next (the *chain search*) and checks every quotation; each answer gets a
+**status** that says how reliable it is; at the end you get a complete document in which only confirmed answers are
+stated as facts.
 
-- **Prove controllate dal programma**: ogni valore deve essere scritto nella riga della pagina che lo cita.
-- **Stato di ogni risposta**: verificata, sostenuta, contestata, incerta o non trovata, deciso dal programma e non
-  dal modello che scrive.
-- **Documento prudente**: le risposte incerte restano fuori dal testo, in riquadri «Punti aperti»; ogni frase delle
-  sezioni è riletta contro le risposte.
-- **Applicazione locale**: finestra desktop, indagini che si fermano e si riprendono, limiti di spesa e di tempo.
+- **Evidence checked by the program**: every value must be written in the row of the page that is cited for it.
+- **A status for every answer**: verified, supported, contested, uncertain or not found, decided by the program, not
+  by the model that writes the text.
+- **A cautious document**: uncertain answers stay out of the main text, in "Open points" boxes; every sentence of the
+  sections is checked again against the answers.
+- **Local application**: desktop window, investigations that can be stopped and resumed, spending and time limits.
 
-## Indice
+## Contents
 
-- [Come funziona](#come-funziona)
-- [Affidabilità delle risposte](#affidabilità-delle-risposte)
-- [Requisiti](#requisiti)
-- [Installazione](#installazione)
-- [Utilizzo](#utilizzo)
-- [Configurazione](#configurazione)
-- [Sicurezza e privacy](#sicurezza-e-privacy)
-- [Struttura del progetto](#struttura-del-progetto)
-- [Sviluppo e test](#sviluppo-e-test)
-- [Limiti noti](#limiti-noti)
-- [Documentazione](#documentazione)
+- [How it works](#how-it-works)
+- [How reliable the answers are](#how-reliable-the-answers-are)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Security and privacy](#security-and-privacy)
+- [Project structure](#project-structure)
+- [Development and tests](#development-and-tests)
+- [Known limitations](#known-limitations)
+- [Documentation](#documentation)
 
-## Come funziona
+## How it works
 
 ```
-argomento ─► piano ─► domande ─► ricerca a catena ─► controlli ─► stato ─┐
-                ▲                                                         │
-                └──────────── valutazione della copertura ◄───────────────┘
-                                         │
-                                         ▼
-                        documento (frasi riverificate) ─► PDF
+topic ─► plan ─► questions ─► chain search ─► checks ─► status ─┐
+           ▲                                                     │
+           └──────────── coverage evaluation ◄───────────────────┘
+                                   │
+                                   ▼
+                  document (sentences re-checked) ─► PDF
 ```
 
-1. **Piano.** Claude (Haiku, Sonnet od Opus, a scelta) prepara titolo, sezioni e prime domande. Ogni domanda chiede un
-   solo dato verificabile: una data, un numero, un nome, un luogo, un evento.
-2. **Ricerca a catena.** Per ogni domanda un programma parte da ciò che è certo, segue i collegamenti tra le voci di
-   Wikipedia e le pagine del web e usa Claude Haiku solo per leggere poche righe numerate alla volta. Le domande vanno
-   in parallelo (tre per impostazione predefinita), ognuna con il proprio browser.
-3. **Controlli e stato.** Il programma verifica la catena trovata e un secondo modello la rilegge cercando l'errore
-   (vedi [Affidabilità delle risposte](#affidabilità-delle-risposte)). Una risposta incerta viene cercata una seconda
-   volta, da capo.
-4. **Valutazione.** Dopo ogni giro Claude valuta la copertura di ogni sezione, tenendo conto dello stato delle
-   risposte, e aggiunge domande sui buchi e sui fatti da confermare. Il ciclo si ferma quando la conoscenza è solida,
-   quando la copertura non cresce più, al termine del budget o del tempo, o dopo 12 giri.
-5. **Documento.** Claude scrive ogni sezione dalle risposte; ogni frase viene riletta contro le risposte e quelle senza
-   appoggio si riscrivono o si tolgono. Seguono sintesi, punti chiave, conclusioni, limiti, l'appendice con tutte le
-   domande e il loro stato, il metodo e l'elenco delle fonti. Il PDF è generato dal browser del progetto.
+1. **Plan.** Claude (Haiku, Sonnet or Opus, your choice) prepares the title, the sections and the first questions.
+   Each question asks for a single verifiable datum: a date, a number, a name, a place, an event.
+2. **Chain search.** For each question a program starts from what is certain, follows the links between Wikipedia
+   articles and web pages, and uses Claude Haiku only to read a few numbered rows at a time. Questions run in
+   parallel (three by default), each with its own browser.
+3. **Checks and status.** The program verifies the chain it found and a second model re-reads it looking for the
+   error (see [How reliable the answers are](#how-reliable-the-answers-are)). An uncertain answer is searched a second
+   time, from scratch.
+4. **Evaluation.** After each round Claude rates the coverage of every section, taking the status of the answers into
+   account, and adds questions on the gaps and on the facts to confirm. The cycle stops when the knowledge is solid,
+   when coverage stops growing, when the budget or the time is used up, or after 12 rounds.
+5. **Document.** Claude writes each section from the answers; every sentence is checked against the answers and the
+   unsupported ones are rewritten or removed. Then come the summary, key points, conclusions, limitations, an appendix
+   with every question and its status, the method and the list of sources. The PDF is printed by the project's
+   browser.
 
-## Affidabilità delle risposte
+The tool always writes in English, whatever language the topic is written in.
 
-Prima di diventare un fatto del documento, ogni risposta passa da controlli del programma e da una revisione
-indipendente:
+## How reliable the answers are
 
-- il valore deve essere scritto nella riga citata, e la riga deve parlare dell'entità giusta;
-- la catena non può tornare su un'entità già attraversata;
-- un estratto dei risultati di ricerca (pagina non letta) non conferma niente;
-- il valore viene riletto e cercato in un'altra fonte;
-- un secondo modello rilegge, due volte, domanda, catena e righe cercando l'indizio che non torna, e controlla la
-  premessa della domanda: se la premessa è falsa (una persona o un'opera che non esiste) la risposta è «non trovata».
+Before an answer becomes a fact in the document, it goes through program checks and an independent review:
 
-| Stato | Significato | Nel documento |
+- the value must be written in the cited row, and the row must be about the right entity;
+- the chain cannot come back to an entity it has already passed through;
+- a search-result snippet (a page that was not read) confirms nothing;
+- the value is read a second time and looked for in another source;
+- a second model reviews, twice, the question, the chain and the rows, looking for the clue that does not fit, and
+  checks the premise of the question: if the premise is false (a person or a work that does not exist) the answer is
+  "not found".
+
+| Status | Meaning | In the document |
 |---|---|---|
-| **verificata** | riletta, ritrovata in un'altra fonte, catena senza obiezioni | come fatto |
-| **sostenuta** | nessuna obiezione, ma una sola fonte o un controllo non eseguito | come fatto, con il limite indicato |
-| **contestata** | le fonti, o due ricerche indipendenti, danno valori diversi | con entrambe le versioni |
-| **incerta** | un passaggio non confermato o un'obiezione della revisione | solo nei riquadri «Punti aperti» |
-| **non trovata** | nessun valore, oppure premessa della domanda falsa | tra i limiti |
+| **verified** | read twice, found again in another source, chain reviewed without objections | as a fact |
+| **supported** | no objection, but a single source or a check not done | as a fact, with the limitation stated |
+| **contested** | the sources, or two independent searches, give different values | with both versions |
+| **uncertain** | an unconfirmed link or an objection from the review | only in the "Open points" boxes |
+| **not found** | no value, or a false premise in the question | among the limitations |
 
-### Misure
+### Measurements
 
-Novembre 2026, su domande mai usate per regolare il programma, con risposta attesa controllata sulle voci di
-Wikipedia:
+The figures below were measured in November 2026 on the **Italian version** of the tool, on questions never used to
+tune it, with expected answers checked against Wikipedia. The English version is being re-measured; this table will be
+updated with its results.
 
-| Misura | Risultato |
+| Measure | Result |
 |---|---|
-| Risposte date come fatto (verificata o sostenuta) che sono giuste | **54 su 55** nelle ultime tre corse |
-| Risposte giuste sul totale | dal 70% al 96% secondo la corsa, in media circa 85% |
-| Domande senza risposta (entità o relazioni inventate) concluse con «non trovata» | 19 su 20 nell'ultima corsa; nessun valore inventato dato come fatto |
-| Frasi del documento interamente sostenute dalle risposte | 89% |
+| Answers stated as fact (verified or supported) that are correct | **54 of 55** over the last three runs |
+| Correct answers overall | 70% to 96% depending on the run, about 85% on average |
+| Unanswerable questions (invented entities or relations) ending in "not found" | 19 of 20 in the last run; no invented value stated as fact |
+| Document sentences fully supported by the answers | 89% |
 
-Metodo, piano dei test e risultati di ogni corsa sono in
-[`docs/validation.md`](docs/validation.md); ogni corsa ha una riga in
-[`bench/LOG.md`](bench/LOG.md).
+Method, test plan and the results of every run are in [`docs/validation.md`](docs/validation.md); each run has a line
+in [`bench/LOG.md`](bench/LOG.md).
 
-## Requisiti
+## Requirements
 
-- Linux (l'unica piattaforma provata);
-- [Claude Code](https://claude.com/claude-code) (`claude`) collegato al proprio account: le chiamate a Claude usano
-  l'abbonamento di quell'account;
-- [uv](https://docs.astral.sh/uv/) e Python 3.12;
-- Node.js 22 o successivo, con npm.
+- Linux (the only platform tested);
+- [Claude Code](https://claude.com/claude-code) (`claude`) logged in to your account: the calls to Claude use that
+  account's subscription;
+- [uv](https://docs.astral.sh/uv/) and Python 3.12;
+- Node.js 22 or later, with npm.
 
-## Installazione
+## Installation
 
 ```bash
 git clone https://github.com/NiccoloProvvedi/chain_research.git
@@ -109,114 +112,113 @@ cd chain_research
 uv python install 3.12
 uv venv venv --python 3.12
 VIRTUAL_ENV=venv uv pip install -r requirements.txt
-PLAYWRIGHT_BROWSERS_PATH=browser/motori venv/bin/playwright install chromium
+PLAYWRIGHT_BROWSERS_PATH=browser/engines venv/bin/playwright install chromium
 
 cd app && npm install
 ```
 
-## Utilizzo
+## Usage
 
 ```bash
 ./start.sh
 ```
 
-1. Nella colonna di sinistra si scrive l'argomento, si sceglie il modello e si fissano budget e tempo (oppure
-   «Nessun limite»), poi **Avvia l'indagine**.
-2. A destra si segue il lavoro in diretta: sezioni con la copertura, domande con risposta e stato, attività.
-3. Al termine, **Apri il PDF**.
+1. In the left column, type the topic, choose the model and set budget and time (or "No spending or time limit"),
+   then **Start the investigation**.
+2. On the right you follow the work live: sections with their coverage, questions with answer and status, activity.
+3. At the end, **Open the PDF**.
 
-Un'indagine fermata o interrotta si riprende con **Riprendi**, anche con limiti nuovi; **Scrivi il documento con
-quello che c'è** produce il PDF prima della fine. Ogni indagine sta in `indagini/<data>-<argomento>/` (`stato.json`,
-`eventi.jsonl`, `documento.html`, `documento.pdf`).
+A stopped or interrupted investigation can be resumed with **Resume**, also with new limits; **Write the document with
+what is there** produces the PDF before the end. Each investigation lives in `investigations/<date>-<topic>/`
+(`status.json`, `events.jsonl`, `document.html`, `document.pdf`).
 
-**Costi e tempi indicativi** (indagini reali, novembre 2026): 0,08–0,20 $ e 6–9 minuti per domanda; un'indagine
-completa di 30–40 domande costa circa 4–5 $ di abbonamento e richiede da una a quattro ore.
+**Indicative costs and times** (real investigations, November 2026): $0.08–0.20 and 6–9 minutes per question; a
+complete investigation of 30–40 questions costs about $4–5 of subscription usage and takes one to four hours.
 
-## Configurazione
+## Configuration
 
-Dal pulsante **Impostazioni** (salvate in `config/impostazioni.json`, escluso da git):
+From the **Settings** button (saved in `config/settings.json`, excluded from git):
 
-| Impostazione | Predefinito | Descrizione |
+| Setting | Default | Description |
 |---|---|---|
-| Modello della regia | Sonnet | piano, valutazione e documento |
-| Budget e tempo | 5 $, 2 ore | limiti predefiniti di un'indagine; in alternativa nessun limite |
-| Domande in parallelo | 3 | da 1 a 4 |
-| Modello della catena | Haiku | lettura delle pagine nella ricerca a catena |
-| Modello della revisione | Sonnet | rilettura della catena alla ricerca di errori |
-| Budget, pagine e minuti per domanda | 0,50 $, 30, 35 | limiti di una singola domanda |
-| Contatto per Wikipedia | email dell'account Claude | vedi [Sicurezza e privacy](#sicurezza-e-privacy) |
+| Director model | Sonnet | plan, evaluation and document |
+| Budget and time | $5, 2 hours | default limits of an investigation; alternatively no limit |
+| Questions in parallel | 3 | from 1 to 4 |
+| Chain model | Haiku | reads the pages in the chain search |
+| Review model | Sonnet | re-reads the chain looking for errors |
+| Budget, pages and minutes per question | $0.50, 30, 35 | limits of a single question |
+| Wikipedia contact | Claude account email | see [Security and privacy](#security-and-privacy) |
 
-## Sicurezza e privacy
+## Security and privacy
 
-- **Claude senza strumenti.** Ogni chiamata usa `claude -p --tools ""`, senza server MCP né memoria: il modello non
-  può navigare, leggere file o eseguire comandi. Riceve testo e risponde in un formato fisso.
-- **Il testo delle pagine è un dato.** Le frasi rivolte a un modello vengono rimosse e il testo viaggia tra
-  delimitatori.
-- **Browser isolato.** Il browser della ricerca non usa i tuoi account, riparte vuoto a ogni domanda e tutto il suo
-  traffico passa da un proxy locale che rifiuta il computer e la rete di casa, anche dopo un redirect o tramite
-  WebSocket.
-- **Server locale.** Il server dell'applicazione ascolta solo su `127.0.0.1`, con una chiave nota solo alla finestra.
-- **Contatto per Wikipedia.** Wikipedia chiede un contatto a chi usa le sue API (con il contatto 200 richieste al
-  minuto, senza 10). Se il campo è vuoto si usa l'email dell'account Claude; nelle impostazioni si può indicare un
-  altro indirizzo o disattivarlo. Il contatto viene inviato solo nelle richieste a `wikipedia.org` ed è salvato in
-  `config/segreti.json` con permessi 600.
+- **Claude without tools.** Every call uses `claude -p --tools ""`, with no MCP servers and no memory: the model
+  cannot browse, read files or run commands. It receives text and answers in a fixed format.
+- **Page text is data.** Sentences addressed to a model are removed and the text travels between delimiters.
+- **Isolated browser.** The research browser does not use your accounts, starts empty for every question, and all
+  its traffic goes through a local proxy that refuses the local computer and the home network, also after a redirect
+  or through a WebSocket.
+- **Local server.** The application server listens only on `127.0.0.1`, with a key known only to the window.
+- **Wikipedia contact.** Wikipedia asks API users for a contact (200 requests per minute with a contact, 10 without).
+  If the field is empty, the email of the Claude account is used; in the settings you can give another address or
+  switch it off. The contact is sent only in requests to `wikipedia.org` and is stored in `config/secrets.json` with
+  permissions 600.
 
-## Struttura del progetto
+## Project structure
 
-| Percorso | Contenuto |
+| Path | Contents |
 |---|---|
-| `chain_research/investigation.py` | ciclo dell'indagine: piano, domande in parallelo, valutazione, limiti |
-| `chain_research/question.py` | una domanda in un processo separato, con la seconda ricerca per le risposte incerte |
-| `chain_research/document.py` | documento: sezioni con controllo delle frasi, cornice, fonti, HTML e PDF |
-| `chain_research/web/chain.py` | ricerca a catena: piano, frontiera, candidati, verifica, valore, revisione |
-| `chain_research/web/validation.py` | controlli sui risultati e stato delle risposte |
-| `chain_research/web/retry.py` | seconda ricerca indipendente per le risposte incerte |
-| `chain_research/web/collector.py` | ricerche sul web, lettura delle pagine, limiti di una domanda |
-| `chain_research/web/fonti/` | Wikipedia come grafo di righe collegate; client HTTP sicuro |
-| `chain_research/web/proxy.py`, `browser.py` | proxy di rete e browser isolato |
-| `chain_research/modello/` | chiamate a Claude, budget, pulizia del testo, prompt, registrazione e rigioco |
-| `chain_research/server.py`, `app/` | server locale e finestra Electron |
-| `bench/` | banco di prova: insiemi di domande, giudice, statistiche, rapporti, registro delle corse |
-| `test/` | test automatici |
-| `docs/` | validazione dei risultati e paper sul metodo |
+| `chain_research/investigation.py` | investigation cycle: plan, parallel questions, evaluation, limits |
+| `chain_research/question.py` | one question in a separate process, with a second search for uncertain answers |
+| `chain_research/document.py` | document: sections with sentence checks, frame, sources, HTML and PDF |
+| `chain_research/web/chain.py` | chain search: plan, frontier, candidates, verification, value, review |
+| `chain_research/web/validation.py` | checks on the results and answer status |
+| `chain_research/web/retry.py` | independent second search for uncertain answers |
+| `chain_research/web/collector.py` | web searches, page reading, limits of a question |
+| `chain_research/web/sources/` | Wikipedia as a graph of linked rows; safe HTTP client |
+| `chain_research/web/proxy.py`, `browser.py` | network proxy and isolated browser |
+| `chain_research/model/` | calls to Claude, budget, text cleaning, prompts, recording and replay |
+| `chain_research/server.py`, `app/` | local server and Electron window |
+| `bench/` | test bench: question sets, judge, statistics, reports, run log |
+| `test/` | automated tests |
+| `docs/` | validation of the results and paper on the method |
 
-## Sviluppo e test
+## Development and tests
 
 ```bash
 VIRTUAL_ENV=venv uv pip install -r requirements-dev.txt
 
-venv/bin/python -m pytest -q -m "not network and not claude"   # suite completa, senza Internet e senza Claude
-venv/bin/python -m pytest -q -m browser                     # solo i test con il browser locale
-venv/bin/ruff check ricerca_catena banco test               # analisi statica
-venv/bin/python bench/sabotage.py                         # ogni controllo disattivato deve far fallire un test
+venv/bin/python -m pytest -q -m "not network and not claude"   # full suite, no Internet and no Claude
+venv/bin/python -m pytest -q -m browser                         # only the tests with the local browser
+venv/bin/ruff check chain_research bench test                   # static analysis
+venv/bin/python bench/sabotage.py                               # every disabled check must make a test fail
 ```
 
-La suite (oltre 500 test) gira a ogni push su GitHub Actions. Le catene registrate in `risultati/rigioco/` si
-ripercorrono senza rete né Claude con `pytest -m replay`.
+The suite (over 500 tests) runs on every push on GitHub Actions. The chains recorded in `results/replay/` are replayed
+without network or Claude with `pytest -m replay`.
 
-**Banco di prova.** Quattro insiemi di domande con ruoli separati: `domande.json` (40, usate per regolare la catena),
-`domande_holdout.json` (36, di controllo), `domande_conferma.json` (23, conferma finale) e
-`domande_senza_risposta.json` (20, domande senza risposta). Le corse usano Claude e consumano l'abbonamento:
+**Test bench.** Four question sets with separate roles: `questions.json` (40, used to tune the chain),
+`questions_holdout.json` (36, control), `questions_confirmation.json` (23, final confirmation) and
+`questions_unanswerable.json` (20, questions with no answer). Runs use Claude and the subscription:
 
 ```bash
-venv/bin/python bench/bench.py --nome prova --domande bench/questions_holdout.json --parallelo 1
-venv/bin/python bench/report.py <corsa di base> prova    # confronto, precisione per stato, regola di decisione
+venv/bin/python bench/bench.py --name trial --questions bench/questions_holdout.json --parallel 1
+venv/bin/python bench/report.py <baseline run> trial   # comparison, precision per status, decision rule
 ```
 
-## Limiti noti
+## Known limitations
 
-- **Variabilità della ricerca.** La stessa domanda può seguire una strada diversa e dare un altro valore da una corsa
-  all'altra; lo stato della risposta ne tiene conto, ma la percentuale di risposte giuste varia tra le corse.
-- **Tipo di domande.** Le misure riguardano catene di fatti (date, luoghi, numeri) ricostruibili soprattutto da
-  Wikipedia, su campioni di qualche decina di domande.
-- **Scrittura del documento.** Circa una frase su dieci aggiunge sfumature che le risposte non contengono.
-- **Dipendenze esterne.** La ricerca sul web legge le pagine dei risultati di DuckDuckGo e Bing, che possono cambiare.
-- **Costo e durata.** Un'indagine completa richiede ore e qualche dollaro di abbonamento.
+- **Search variability.** The same question can follow a different path and give a different value from one run to
+  the next; the answer status takes this into account, but the share of correct answers varies between runs.
+- **Kind of questions.** The measurements concern chains of facts (dates, places, numbers) that can be reconstructed
+  mostly from Wikipedia, on samples of a few dozen questions.
+- **Document writing.** About one sentence in ten adds nuances that the answers do not contain.
+- **External dependencies.** Web search reads the result pages of DuckDuckGo and Bing, which can change.
+- **Cost and duration.** A complete investigation takes hours and a few dollars of subscription usage.
 
-## Documentazione
+## Documentation
 
-- [`docs/validation.md`](docs/validation.md): come si controllano i risultati, piano dei test,
-  risultati di tutte le corse.
-- [`docs/paper/paper.pdf`](docs/paper/paper.pdf): il metodo di ricerca a catena com'era il 1° novembre 2026. I suoi
-  numeri sono misurati sulle domande usate per regolarlo e sono quindi più alti di quelli su domande nuove.
-- [`bench/LOG.md`](bench/LOG.md): registro di tutte le corse del banco di prova.
+- [`docs/validation.md`](docs/validation.md): how the results are checked, test plan, results of every run.
+- [`docs/paper/paper.pdf`](docs/paper/paper.pdf): the chain-search method as it was on 1 November 2026 (Italian
+  version). Its figures are measured on the questions used to tune it and are therefore higher than those on new
+  questions.
+- [`bench/LOG.md`](bench/LOG.md): log of every test bench run.

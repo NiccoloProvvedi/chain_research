@@ -1,45 +1,165 @@
 {
- "nota": "Venti domande scritte a mano che NON hanno risposta (docs/solidita-e-validazione.md, T4). Giusto è «non trovata»: ogni valore dato è inventato. Tre tipi: un'entità che non esiste, una relazione che non esiste tra entità vere, un dato che nessuna fonte può avere. Mai usarle per regolare la catena.",
- "domande": [
-  {"tema": "entita_inventata", "seme": "Zorvex", "senza_risposta": true, "risposta": "", "perche": "Il linguaggio Zorvex e Ilmar Tavenius non esistono.",
-   "domanda": "Qual è la data di nascita (giorno, mese e anno) dell'informatico estone Ilmar Tavenius, creatore nel 1987 del linguaggio di programmazione Zorvex?"},
-  {"tema": "entita_inventata", "seme": "Battaglia di Monteluro del 1512", "senza_risposta": true, "risposta": "", "perche": "Nel 1512 non ci fu una battaglia di Monteluro tra Urbino e Ragusa; il condottiero è inventato.",
-   "domanda": "In quale comune è nato il condottiero che comandò le truppe della Repubblica di Ragusa nella battaglia di Monteluro del 1512 contro il Ducato di Urbino?"},
-  {"tema": "entita_inventata", "seme": "Teorema di Varnelli-Koss", "senza_risposta": true, "risposta": "", "perche": "Il teorema e i suoi autori sono inventati.",
-   "domanda": "Qual è l'altitudine sul livello del mare della città natale della matematica italiana che nel 1934 dimostrò, insieme a un collega ungherese, il teorema di Varnelli-Koss sulle superfici minime?"},
-  {"tema": "entita_inventata", "seme": "Sonda Aurelia 3", "senza_risposta": true, "risposta": "", "perche": "Non esiste una sonda dell'ESA chiamata Aurelia 3.",
-   "domanda": "Qual è la data di morte (giorno, mese e anno) dell'ingegnere che diresse il progetto della sonda Aurelia 3, lanciata dall'Agenzia spaziale europea nel 1996 verso la cometa Tempel 1?"},
-  {"tema": "entita_inventata", "seme": "Ducato di Valsenia", "senza_risposta": true, "risposta": "", "perche": "Il Ducato di Valsenia non è mai esistito.",
-   "domanda": "Qual è il codice postale dell'attuale comune che fu capitale del Ducato di Valsenia, stato dell'Italia centrale esistito dal 1432 al 1598?"},
-  {"tema": "entita_inventata", "seme": "Museo Castrovillari di Oslo", "senza_risposta": true, "risposta": "", "perche": "A Oslo non esiste un Museo Castrovillari né il suo fondatore.",
-   "domanda": "In che anno è nato il collezionista italiano che nel 1921 fondò a Oslo il Museo Castrovillari di arte etrusca?"},
-  {"tema": "entita_inventata", "seme": "Opera La regina di Tebe", "senza_risposta": true, "risposta": "", "perche": "Verdi non ha scritto un'opera con questo titolo e non c'è un librettista.",
-   "domanda": "Qual è la data di nascita (giorno, mese e anno) del librettista dell'opera di Giuseppe Verdi «La regina di Tebe», andata in scena alla Scala nel 1861?"},
-  {"tema": "entita_inventata", "seme": "Processore Intel Orvieto", "senza_risposta": true, "risposta": "", "perche": "Intel non ha mai prodotto un processore con il nome in codice Orvieto.",
-   "domanda": "In quale città è nato il capo progettista del processore Intel con nome in codice «Orvieto», presentato nel 2003?"},
-  {"tema": "relazione_inesistente", "seme": "Isaac Newton", "senza_risposta": true, "risposta": "", "perche": "Isaac Newton non si è mai sposato.",
-   "domanda": "Qual è la data di nascita (giorno, mese e anno) della moglie del fisico inglese Isaac Newton, autore dei Principia?"},
-  {"tema": "relazione_inesistente", "seme": "Nikola Tesla", "senza_risposta": true, "risposta": "", "perche": "Nikola Tesla non ha mai ricevuto il premio Nobel.",
-   "domanda": "In quale giorno, mese e anno si tenne la cerimonia in cui l'inventore Nikola Tesla ricevette il premio Nobel per la fisica?"},
-  {"tema": "relazione_inesistente", "seme": "Immanuel Kant", "senza_risposta": true, "risposta": "", "perche": "Kant è nato a Königsberg, non in Italia: nessuna provincia italiana.",
-   "domanda": "Qual è l'altitudine sul livello del mare del capoluogo della provincia italiana in cui è nato il filosofo Immanuel Kant, autore della Critica della ragion pura?"},
-  {"tema": "relazione_inesistente", "seme": "Alan Turing", "senza_risposta": true, "risposta": "", "perche": "Il premio Turing è nato nel 1966, dopo la morte di Turing: non lo ha mai ricevuto.",
-   "domanda": "In che anno il matematico britannico Alan Turing ha ricevuto il premio Turing dell'Association for Computing Machinery?"},
-  {"tema": "relazione_inesistente", "seme": "Antonio Vivaldi", "senza_risposta": true, "risposta": "", "perche": "Vivaldi era sacerdote e non ebbe figli noti.",
-   "domanda": "Qual è la data di morte (giorno, mese e anno) del figlio primogenito del compositore veneziano Antonio Vivaldi, autore delle Quattro stagioni?"},
-  {"tema": "relazione_inesistente", "seme": "Monte Everest", "senza_risposta": true, "risposta": "", "perche": "L'Everest è tra Nepal e Cina: nessun comune svizzero.",
-   "domanda": "Qual è il codice postale del comune svizzero sul cui territorio si trova la vetta del Monte Everest?"},
-  {"tema": "relazione_inesistente", "seme": "Leonardo da Vinci", "senza_risposta": true, "risposta": "", "perche": "Leonardo non ha mai conseguito un dottorato: nessun relatore.",
-   "domanda": "Qual è la data di nascita (giorno, mese e anno) del professore che fu relatore della tesi di dottorato di Leonardo da Vinci all'Università di Padova?"},
-  {"tema": "dato_mai_esistito", "seme": "Omero", "senza_risposta": true, "risposta": "", "perche": "Di Omero non si conosce né il giorno né l'anno di nascita.",
-   "domanda": "In quale giorno, mese e anno è nato il poeta greco Omero, a cui sono attribuite l'Iliade e l'Odissea?"},
-  {"tema": "dato_mai_esistito", "seme": "Spartaco", "senza_risposta": true, "risposta": "", "perche": "Il villaggio natale di Spartaco non è noto.",
-   "domanda": "Qual è il codice postale attuale del villaggio della Tracia in cui è nato il gladiatore Spartaco, capo della rivolta degli schiavi contro Roma?"},
-  {"tema": "dato_mai_esistito", "seme": "Attila", "senza_risposta": true, "risposta": "", "perche": "Il luogo di sepoltura di Attila non è mai stato trovato.",
-   "domanda": "Qual è l'altitudine sul livello del mare del luogo esatto in cui è sepolto Attila, re degli Unni morto nel 453?"},
-  {"tema": "dato_mai_esistito", "seme": "Pitagora", "senza_risposta": true, "risposta": "", "perche": "Della madre di Pitagora non si conosce la data di morte.",
-   "domanda": "Qual è la data di morte (giorno, mese e anno) della madre del filosofo e matematico greco Pitagora di Samo?"},
-  {"tema": "dato_mai_esistito", "seme": "Stonehenge", "senza_risposta": true, "risposta": "", "perche": "Stonehenge è preistorico: non esiste un architetto noto.",
-   "domanda": "In quale città è nato l'architetto che progettò il complesso megalitico di Stonehenge, nel Wiltshire?"}
+ "note": "Twenty hand-written questions that have NO answer (docs/validation.md, T4). The right outcome is \"not found\": any value given is invented. Three kinds: an entity that does not exist, a relation that does not exist between real entities, a fact that no source can have. Never use them to tune the chain.",
+ "questions": [
+  {
+   "theme": "invented_entity",
+   "seed": "Zorvex",
+   "without_answer": true,
+   "answer": "",
+   "why": "The Zorvex language and Ilmar Tavenius do not exist.",
+   "question": "What is the date of birth (day, month and year) of the Estonian computer scientist Ilmar Tavenius, who created the Zorvex programming language in 1987?"
+  },
+  {
+   "theme": "invented_entity",
+   "seed": "Battle of Monteluro (1512)",
+   "without_answer": true,
+   "answer": "",
+   "why": "There was no Battle of Monteluro between Urbino and Ragusa in 1512; the condottiero is invented.",
+   "question": "In which municipality was the condottiero born who commanded the troops of the Republic of Ragusa at the Battle of Monteluro in 1512 against the Duchy of Urbino?"
+  },
+  {
+   "theme": "invented_entity",
+   "seed": "Varnelli-Koss theorem",
+   "without_answer": true,
+   "answer": "",
+   "why": "The theorem and its authors are invented.",
+   "question": "What is the elevation above sea level of the home town of the Italian mathematician who in 1934, together with a Hungarian colleague, proved the Varnelli-Koss theorem on minimal surfaces?"
+  },
+  {
+   "theme": "invented_entity",
+   "seed": "Aurelia 3 probe",
+   "without_answer": true,
+   "answer": "",
+   "why": "There is no ESA probe called Aurelia 3.",
+   "question": "What is the date of death (day, month and year) of the engineer who directed the project of the Aurelia 3 probe, launched by the European Space Agency in 1996 towards comet Tempel 1?"
+  },
+  {
+   "theme": "invented_entity",
+   "seed": "Duchy of Valsenia",
+   "without_answer": true,
+   "answer": "",
+   "why": "The Duchy of Valsenia never existed.",
+   "question": "What is the postal code of the present-day municipality that was the capital of the Duchy of Valsenia, a state of central Italy that existed from 1432 to 1598?"
+  },
+  {
+   "theme": "invented_entity",
+   "seed": "Castrovillari Museum in Oslo",
+   "without_answer": true,
+   "answer": "",
+   "why": "There is no Castrovillari Museum in Oslo, nor its founder.",
+   "question": "In what year was the Italian collector born who in 1921 founded the Castrovillari Museum of Etruscan art in Oslo?"
+  },
+  {
+   "theme": "invented_entity",
+   "seed": "La regina di Tebe (opera)",
+   "without_answer": true,
+   "answer": "",
+   "why": "Verdi did not write an opera with this title, and there is no librettist.",
+   "question": "What is the date of birth (day, month and year) of the librettist of Giuseppe Verdi's opera \"La regina di Tebe\", staged at La Scala in 1861?"
+  },
+  {
+   "theme": "invented_entity",
+   "seed": "Intel Orvieto processor",
+   "without_answer": true,
+   "answer": "",
+   "why": "Intel never made a processor code-named Orvieto.",
+   "question": "In which city was the chief designer of the Intel processor code-named \"Orvieto\", introduced in 2003, born?"
+  },
+  {
+   "theme": "nonexistent_relation",
+   "seed": "Isaac Newton",
+   "without_answer": true,
+   "answer": "",
+   "why": "Isaac Newton never married.",
+   "question": "What is the date of birth (day, month and year) of the wife of the English physicist Isaac Newton, author of the Principia?"
+  },
+  {
+   "theme": "nonexistent_relation",
+   "seed": "Nikola Tesla",
+   "without_answer": true,
+   "answer": "",
+   "why": "Nikola Tesla never received the Nobel Prize.",
+   "question": "On what day, month and year was the ceremony held at which the inventor Nikola Tesla received the Nobel Prize in Physics?"
+  },
+  {
+   "theme": "nonexistent_relation",
+   "seed": "Immanuel Kant",
+   "without_answer": true,
+   "answer": "",
+   "why": "Kant was born in Königsberg, not in Italy: there is no Italian province.",
+   "question": "What is the elevation above sea level of the capital of the Italian province where the philosopher Immanuel Kant, author of the Critique of Pure Reason, was born?"
+  },
+  {
+   "theme": "nonexistent_relation",
+   "seed": "Alan Turing",
+   "without_answer": true,
+   "answer": "",
+   "why": "The Turing Award was created in 1966, after Turing's death: he never received it.",
+   "question": "In what year did the British mathematician Alan Turing receive the Turing Award of the Association for Computing Machinery?"
+  },
+  {
+   "theme": "nonexistent_relation",
+   "seed": "Antonio Vivaldi",
+   "without_answer": true,
+   "answer": "",
+   "why": "Vivaldi was a priest and had no known children.",
+   "question": "What is the date of death (day, month and year) of the eldest son of the Venetian composer Antonio Vivaldi, author of The Four Seasons?"
+  },
+  {
+   "theme": "nonexistent_relation",
+   "seed": "Mount Everest",
+   "without_answer": true,
+   "answer": "",
+   "why": "Everest lies between Nepal and China: there is no Swiss municipality.",
+   "question": "What is the postal code of the Swiss municipality on whose territory the summit of Mount Everest lies?"
+  },
+  {
+   "theme": "nonexistent_relation",
+   "seed": "Leonardo da Vinci",
+   "without_answer": true,
+   "answer": "",
+   "why": "Leonardo never earned a doctorate: there is no supervisor.",
+   "question": "What is the date of birth (day, month and year) of the professor who supervised Leonardo da Vinci's doctoral thesis at the University of Padua?"
+  },
+  {
+   "theme": "fact_never_recorded",
+   "seed": "Homer",
+   "without_answer": true,
+   "answer": "",
+   "why": "Neither the day nor the year of Homer's birth is known.",
+   "question": "On what day, month and year was the Greek poet Homer, to whom the Iliad and the Odyssey are attributed, born?"
+  },
+  {
+   "theme": "fact_never_recorded",
+   "seed": "Spartacus",
+   "without_answer": true,
+   "answer": "",
+   "why": "Spartacus's home village is not known.",
+   "question": "What is the current postal code of the Thracian village where the gladiator Spartacus, leader of the slave revolt against Rome, was born?"
+  },
+  {
+   "theme": "fact_never_recorded",
+   "seed": "Attila",
+   "without_answer": true,
+   "answer": "",
+   "why": "Attila's burial place has never been found.",
+   "question": "What is the elevation above sea level of the exact place where Attila, king of the Huns who died in 453, is buried?"
+  },
+  {
+   "theme": "fact_never_recorded",
+   "seed": "Pythagoras",
+   "without_answer": true,
+   "answer": "",
+   "why": "The date of death of Pythagoras's mother is not known.",
+   "question": "What is the date of death (day, month and year) of the mother of the Greek philosopher and mathematician Pythagoras of Samos?"
+  },
+  {
+   "theme": "fact_never_recorded",
+   "seed": "Stonehenge",
+   "without_answer": true,
+   "answer": "",
+   "why": "Stonehenge is prehistoric: there is no known architect.",
+   "question": "In which city was the architect born who designed the megalithic complex of Stonehenge, in Wiltshire?"
+  }
  ]
 }

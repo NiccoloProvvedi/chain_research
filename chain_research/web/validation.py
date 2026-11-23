@@ -26,7 +26,7 @@ _MONTHS = [
 MONTH = {name: number for number, names in enumerate(_MONTHS, start=1) for name in names.split()}
 _NUMBER = re.compile(r"\d(?:[\d.,   ]*\d)?")
 _STOP_WORDS = {"the", "del", "della", "dei", "di", "von", "van", "de", "la", "le", "il", "and"}
-SNIPPET = "[risultato di ricerca:"  # how chain.py marks search result snippets (pages not read)
+SNIPPET = "[search result:"  # how chain.py marks search result snippets (pages not read)
 
 
 def _flat(text: str) -> str:
@@ -113,7 +113,7 @@ def repeats_ancestor(a, node) -> bool:
 
 def _ties(a) -> list[dict]:
     return [e for e in a.outcomes if e.get("outcome") == "yes" and e.get("proof") is not None
-            and str(e.get("check", "")).startswith("è in relazione")]
+            and str(e.get("check", "")).startswith("is related")]
 
 
 def tie_only_from_snippets(a) -> bool:

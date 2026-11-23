@@ -47,8 +47,8 @@ def test_value_not_in_row(value: str, row: str) -> None:
 @pytest.mark.parametrize("text,url,expected", [
     ("[Amsterdam (it)] Altitudine: −2 m", "https://it.wikipedia.org/wiki/Amsterdam", "A"),
     ("Michael Stonebraker was born in Milton", "https://example.org/bio", "B"),
-    ("[risultato di ricerca: Michael Stonebraker | Aubrey Research] born in Milton", "https://example.org/bio", "C"),
-    ("[risultato di ricerca: Wikipedia] nato a Milton", "https://en.wikipedia.org/wiki/X", "C"),
+    ("[search result: Michael Stonebraker | Aubrey Research] born in Milton", "https://example.org/bio", "C"),
+    ("[search result: Wikipedia] nato a Milton", "https://en.wikipedia.org/wiki/X", "C"),
 ])
 def test_source_level(text: str, url: str, expected: str) -> None:
     assert v.level(Proof(text, url)) == expected
@@ -73,10 +73,10 @@ def _si(check: str, proof: Proof) -> dict:
 
 
 def test_tie_proven_only_by_snippets() -> None:
-    snippet = Proof("[risultato di ricerca: Aubrey Research] Stonebraker was born in Milton", "https://x.org/a")
+    snippet = Proof("[search result: Aubrey Research] Stonebraker was born in Milton", "https://x.org/a")
     read = Proof("Stonebraker was born in Milton, New Hampshire", "https://x.org/a")
-    assert v.tie_only_from_snippets(Link("Milton", parent=Link("S"), outcomes=[_si("è in relazione «nato a»", snippet)]))
-    assert not v.tie_only_from_snippets(Link("Milton", parent=Link("S"), outcomes=[_si("è in relazione «nato a»", read)]))
+    assert v.tie_only_from_snippets(Link("Milton", parent=Link("S"), outcomes=[_si("is related «nato a»", snippet)]))
+    assert not v.tie_only_from_snippets(Link("Milton", parent=Link("S"), outcomes=[_si("is related «nato a»", read)]))
     assert not v.tie_only_from_snippets(Link("Milton", outcomes=[]))  # starting point: no tie to prove
 
 
@@ -105,8 +105,8 @@ def test_disagreements_log() -> None:
 
 def test_confirmed_requires_all_checks() -> None:
     wiki = Proof("[Dover (en)] Elevation: 36 m", "https://en.wikipedia.org/wiki/Dover")
-    snippet = Proof("[risultato di ricerca: x] Elevation 36 m", "https://x.org")
-    a = Link("Dover", parent=Link("County"), outcomes=[_si("è in relazione «capoluogo»", wiki)])
+    snippet = Proof("[search result: x] Elevation 36 m", "https://x.org")
+    a = Link("Dover", parent=Link("County"), outcomes=[_si("is related «capoluogo»", wiki)])
     c = Chain.__new__(Chain)
     c.conflicts = []
     c.value = {"value": "36 m", "proof": wiki, "link": a}
@@ -117,7 +117,7 @@ def test_confirmed_requires_all_checks() -> None:
     a.weak = True
     assert not c.checks()["confirmed"]
     a.weak = False
-    a.outcomes = [_si("è in relazione «capoluogo»", Proof("Dover is the county seat", "https://x.org/county"))]
+    a.outcomes = [_si("is related «capoluogo»", Proof("Dover is the county seat", "https://x.org/county"))]
     c.conflicts = [{"parent": "County", "name": "Other", "url": "u", "row": "r", "against": ["c"], "relation": "county seat"}]
     assert not c.checks()["confirmed"] and len(c.checks()["disagreements"]) == 1
     c.value = None
@@ -181,16 +181,16 @@ def test_case_postgresql_snippet_against_infobox() -> None:
     stonebraker = Link("Michael Stonebraker")
     infobox = Proof("[Michael Stonebraker (en)] Born: (1943-10-11) October 11, 1943 Newburyport, Massachusetts, U.S.",
                      "https://en.wikipedia.org/wiki/Michael_Stonebraker")
-    snippet = Proof("[risultato di ricerca: Michael Stonebraker | Computer scientist - Aubrey Research] Michael "
+    snippet = Proof("[search result: Michael Stonebraker | Computer scientist - Aubrey Research] Michael "
                      "Stonebraker was born in Milton, New Hampshire in 1943.", "https://aubrey.example/stonebraker")
     newburyport = Link("Newburyport, Massachusetts", parent=stonebraker, tie_proof=infobox, outcomes=[
         {"check": "town in New Hampshire", "outcome": "no", "proof": infobox, "weight": 2}])
     milton = Link("Milton", parent=stonebraker, tie_proof=snippet, quality=0.9,
-                    outcomes=[_si("è in relazione «luogo di nascita di» con Michael Stonebraker", snippet)])
+                    outcomes=[_si("is related «luogo di nascita di» with Michael Stonebraker", snippet)])
     assert v.tie_only_from_snippets(milton)
     dover = Link("Dover, New Hampshire", parent=Link("Strafford County", parent=milton))
     c = Chain.__new__(Chain)
-    c.conflicts = v.disagreements([newburyport], "è in relazione «luogo di nascita di» con Michael Stonebraker")
+    c.conflicts = v.disagreements([newburyport], "is related «luogo di nascita di» with Michael Stonebraker")
     c.value = {"value": "36 metri", "link": dover,
                 "proof": Proof("[Dover, New Hampshire (en)] Elevation: 118 ft (36 m)", "https://en.wikipedia.org/wiki/Dover")}
     outcome = c.checks()

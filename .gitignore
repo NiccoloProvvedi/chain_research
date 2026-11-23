@@ -1,4 +1,4 @@
-# Ambiente e programmi (si ricreano: vedi README)
+# Environment and programs (recreated: see README)
 venv/
 python/
 browser/
@@ -7,10 +7,10 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .coverage
-# Dati dell'utente: indagini, registri, impostazioni e segreti (mai in git)
-indagini/
+# User data: investigations, logs, settings and secrets (never in git)
+investigations/
 log/
-risultati/
-config/impostazioni.json
-config/segreti.json
+results/
+config/settings.json
+config/secrets.json
 *.tmp

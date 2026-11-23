@@ -25,7 +25,7 @@ def one(d: dict, model: str) -> dict:
         text = f"ERROR {error}"
     final = judge.extract(d["question"], judge.short_answer(text))
     correct, _ = judge.assess(d["question"], d["answer"], final)
-    return {"seed": d["seed"], "final": final, "wait": d["answer"], "correct": correct, "text": text[-600:]}
+    return {"seed": d["seed"], "final": final, "expected": d["answer"], "correct": correct, "text": text[-600:]}
 
 
 def main() -> None:
@@ -39,7 +39,7 @@ def main() -> None:
                                                        encoding="utf-8")
     print(model, sum(e["correct"] for e in outcomes), "/", len(outcomes))
     for e in outcomes:
-        print("✓" if e["correct"] else "✗", e["seed"], "|", e["final"][:60], "| expected:", e["wait"])
+        print("✓" if e["correct"] else "✗", e["seed"], "|", e["final"][:60], "| expected:", e["expected"])
 
 
 if __name__ == "__main__":

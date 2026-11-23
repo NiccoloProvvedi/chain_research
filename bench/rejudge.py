@@ -47,13 +47,13 @@ def rejudge(outcomes: dict[str, dict], with_judge: bool = False, statuses: dict[
         final_old = judge.normalize(article.get("final") or "").strip()
         value_n = judge.normalize(value).strip()
         article["final"] = value
-        if judge.normalized_equal(article["wait"], value):
+        if judge.normalized_equal(article["expected"], value):
             article["correct"], article["decided_by"] = True, "comparison"
         elif article.get("decided_by") == "judge" and final_old and (
                 value_n in final_old or final_old in value_n):
             pass  # the judge had already seen this value
         elif with_judge:
-            correct, article["decided_by"] = judge.assess(article.get("question", ""), article["wait"], value)
+            correct, article["decided_by"] = judge.assess(article.get("question", ""), article["expected"], value)
             if correct is None:
                 article.pop("correct", None)
             else:

@@ -10,9 +10,9 @@ def test_entity_normalization_and_numbers_rule() -> None:
     assert ent.normalize("  «Città di Forlì». ") == "citta di forli"
     assert ent.same("Pace di Vestfalia", "pace di vestfalia")
     assert not ent.same("Qwen 2.5", "Qwen 3") and not ent.same("b4000", "b4100")
-    assert ent.alias_compatibile("Qwen 2.5", "Qwen2.5 Instruct") and not ent.alias_compatibile("Qwen 2.5", "Qwen 3")
-    assert not ent.alias_compatibile("Pace di Vestfalia", "Pace di Vestfalia 1650")
-    assert ent.alias_compatibile("Monte Bianco", "Mont Blanc")
+    assert ent.compatible_alias("Qwen 2.5", "Qwen2.5 Instruct") and not ent.compatible_alias("Qwen 2.5", "Qwen 3")
+    assert not ent.compatible_alias("Pace di Vestfalia", "Pace di Vestfalia 1650")
+    assert ent.compatible_alias("Monte Bianco", "Mont Blanc")
 
 
 SEGMENTS = {3: "Since version 1.5, whisper.cpp now supports Vulkan on AMD GPUs — including “RDNA 4” cards.",

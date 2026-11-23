@@ -87,7 +87,8 @@ def main() -> int:
     sentences = cited_sentences((arg.folder / "document.html").read_text(encoding="utf-8"))
     if arg.on == "sources":  # only the sentences whose rows are available (investigations run after 2026-11-12)
         sentences = [(f, numbers) for f, numbers in sentences if any(n in answers for n in numbers)]
-    sample = random.Random("fedelta")  # seed kept: the same sample as before the translation.sample(sentences, min(arg.sentences, len(sentences)))
+    # seed kept in Italian: the same sample as before the translation
+    sample = random.Random("fedelta").sample(sentences, min(arg.sentences, len(sentences)))
     counts = {"supported": 0, "partly": 0, "unsupported": 0}
     for sentence, numbers in sample:
         proofs = list(dict.fromkeys(t for n in numbers for t in answers.get(n, [])))

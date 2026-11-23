@@ -1,595 +1,607 @@
-# Solidità e validazione dei risultati
+# Robustness and validation of the results
 
-Revisione dell'11/11/2026 (ramo `revisione-correzioni-e-test`). La revisione precedente ha sistemato ciclo di vita,
-sicurezza, impostazioni e test. Questo documento riguarda lo strato successivo: che cosa lo strumento *dichiara* e che
-cosa ha davvero *controllato*. Il punto centrale è la **validazione dei risultati**: una volta trovato un dato, essere
-sicuri che sia valido e giusto.
+> All measurements in this document were taken on the Italian version of the tool (before 24 Nov 2026); the English
+> version is being re-measured.
 
-**Prove usate:** il codice (`web/catena.py`, `web/raccolta.py`, `bench/judge.py`, `bench/bench.py`,
-`bench/faithfulness.py`, `prove/triple.py`, le istruzioni in `modello/prompt/`) e i dati delle corse: domande di controllo
-corsa 1 (36 domande, completa) e corsa 2 (14 domande, interrotta; la corsa 3 non è mai partita), le 40 domande
-(`dopo-revisione-2`).
+Review of 11 Nov 2026 (branch `revisione-correzioni-e-test`). The previous review fixed the lifecycle, security,
+settings and tests. This document is about the next layer: what the tool *claims* and what it has actually
+*checked*. The central point is **validation of the results**: once a fact has been found, being sure that it is valid
+and correct.
 
-Sigle: **D** = visto nei dati delle corse, **R** = visto leggendo il codice, **I** = ipotesi da controllare.
+**Evidence used:** the code (`web/chain.py`, `web/collector.py`, `bench/judge.py`, `bench/bench.py`,
+`bench/faithfulness.py`, `proofs/triples.py`, the prompts in `model/prompts/`) and the data of the runs: holdout
+questions run 1 (36 questions, complete) and run 2 (14 questions, interrupted; run 3 never started), the 40 questions
+(`after-review-2`).
+
+Labels: **D** = seen in the run data, **R** = seen by reading the code, **I** = hypothesis to be checked.
 
 ---
 
-## 1. In breve: la validazione è più debole di quanto dicevano i numeri
+## 1. In short: validation is weaker than the numbers suggested
 
-| Misura | 40 domande regolate | Domande di controllo (mai viste) | Obiettivo |
+| Measure | 40 tuned questions | Holdout questions (never seen) | Target |
 |---|---|---|---|
-| Risposte giuste | 34/40 = 85% | 25/36 = 69% (95%: 53–82%) | limite inferiore ≥ 70% |
-| Risposte «confermate» giuste | 13/13 | corsa 1: 10/12 = 83%; corsa 2: 4/7 | ≥ 95% |
-| Stesso valore ripetendo | — | 11/14 = 79% | ≥ 85% |
-| Stesso «confermata» ripetendo | — | **8/14 = 57%** | ≥ 85% |
+| Correct answers | 34/40 = 85% | 25/36 = 69% (95%: 53–82%) | lower bound ≥ 70% |
+| “Confirmed” answers that are correct | 13/13 | run 1: 10/12 = 83%; run 2: 4/7 | ≥ 95% |
+| Same value on repetition | — | 11/14 = 79% | ≥ 85% |
+| Same “confirmed” on repetition | — | **8/14 = 57%** | ≥ 85% |
 
-Con il metro corretto (fase A, fatta): corsa 1 di controllo 25/35 = 71% (95%: 55–84%), una da giudicare; corsa 2
-10/12. Sulle due corse insieme le «confermate» sono giuste 13/17 = 76%, le non confermate 22/30 = 73%: **il sigillo
-oggi non dice niente.**
+With the corrected yardstick (phase A, done): holdout run 1 25/35 = 71% (95%: 55–84%), one still to be judged; run 2
+10/12. Over the two runs together, the “confirmed” answers are correct 13/17 = 76% of the time, the unconfirmed ones
+22/30 = 73%: **today the seal says nothing.**
 
-1. **«Confermata» non è un sigillo affidabile.** Perfetta sulle domande regolate, 83% e 57% su quelle nuove; ripetendo
-   la corsa cambia quasi una volta su due. Oggi vuol dire solo «nessun anello della strada vincente è segnato debole»
-   (`raccolta.py:159`).
-2. **Lo strumento di misura sbaglia in tutte e due le direzioni** (§3). La percentuale vera sulle domande di controllo
-   non si conosce, a meno di circa ±4 domande, finché giudice e risposte attese non sono sistemati.
-3. Quindi due lavori, in quest'ordine: raddrizzare il metro, poi costruire i controlli veri.
+1. **“Confirmed” is not a reliable seal.** Perfect on the tuned questions, 83% and 57% on the new ones; repeating the
+   run, it changes almost one time in two. Today it only means “no link of the winning route is marked weak”
+   (`collector.py`).
+2. **The measuring instrument errs in both directions** (§3). The true percentage on the holdout questions is not
+   known to better than about ±4 questions until the judge and the expected answers are fixed.
+3. Hence two jobs, in this order: straighten the yardstick, then build the real checks.
 
 ---
 
-## 2. Che cosa è controllato oggi e che cosa no
+## 2. What is checked today and what is not
 
-**Controllato dal programma (da tenere):**
-- Controlli di ogni anello: due letture indipendenti, «sì» solo se concordano (`_esiti`, `_unisci_esiti`).
-- Le parole citate stanno davvero nella riga; la riga è del candidato; l'anno preciso del controllo è nella citazione
-  (`_applica_esiti`, `triple.citazione_presente`).
-- Tipo e intervallo del valore (`valore_ammesso`); la riga del valore parla dell'entità finale (`_valore_entita`).
-- Più strade allo stesso valore («confermato da N strade»).
+**Checked by the program (to keep):**
+- Checks on every link: two independent readings, “yes” only if they agree (`_outcomes`, `_merge_outcomes`).
+- The quoted words really are in the row; the row belongs to the candidate; the exact year of the check is in the
+  quote (`_apply_outcomes`, `triples.present_quote`).
+- Type and range of the value (`allowed_value`); the value's row is about the final entity (`_entity_value`).
+- Several routes to the same value (“confirmed by N routes”).
 
-**Non controllato:**
+**Not checked:**
 
-| # | Lacuna | Prova | |
+| # | Gap | Evidence | |
 |---|---|---|---|
-| V1 | **Il valore non è mai confrontato con la sua riga.** Il modello dà valore e numero di riga; il programma controlla che la riga parli dell'entità, non che contenga il valore. | `catena.py`, `_valore_entita` | R |
-| V2 | **Il valore si legge una volta sola.** Gli anelli hanno due letture, il valore finale (la risposta) una. | `_valore_entita` | R |
-| V3 | **Nessun confronto del valore tra fonti.** Basta una riga di una pagina. Aida: en.wiki 21 giugno 1886, attesa 1885. 30 valori su 35 vengono da una sola voce di Wikipedia. | controllo 1 | D |
-| V4 | **Un estratto dei risultati di ricerca vale come prova forte di un anello.** PostgreSQL: il riquadro di Wikipedia («Newburyport, Massachusetts») scartato, l'estratto di una pagina mai letta («born in Milton, New Hampshire») a 0,9 «forte», catena «confermata», risposta sbagliata. Le due corse hanno dato due città sbagliate diverse. | controllo 1 e 2 | D |
-| V5 | **Il disaccordo tra fonti si perde.** Un candidato scartato che aveva una fonte forte non lascia traccia: «Fonti in disaccordo: nessuno». | stesso caso | D |
-| V6 | **Nessun controllo di cicli e di verso sulla strada.** C++ corsa 2: Stroustrup → Wheeler → … → Burrows → **di nuovo Wheeler** (relazione percorsa al contrario: allievo invece di relatore), «forte» 0,88, «confermata», sbagliata. | controllo 2 | D |
-| V7 | **Nessun controllo della risposta contro tutta la domanda.** C++ corsa 1: un passo in meno («fisico britannico» mai controllato sull'entità finale). Ducato di Savoia: strada «Ducato di Savoia → Prima Repubblica francese → Primo Impero → Regno d'Olanda → Roma» detta «catena completa»; valore giusto per caso. | controllo 1 | D |
-| V8 | **Anelli deboli dentro una catena «completa», e chi scrive deve rispondere comunque.** 14 risposte non confermate giuste su 24, 9 sbagliate: una moneta 60/40 mostrata come risposta. | `scrivi`, dati | D |
-| V9 | **La «Fiducia» è testo libero del modello che scrive.** Non dipende dai controlli. Risposte sbagliate con «alta» (Reggio Emilia) e «media» (4). Maiuscole diverse, a volte assente. La regia e le sezioni la usano come una misura. | dati, `indagine.in_breve` | D |
-| V10 | **Segno, unità e significato del valore non normalizzati.** −2 m e 2 m; data di istituzione o di entrata in vigore; calendario giuliano o gregoriano (16 e 27 maggio 1703). | dati | D |
-| V11 | **Documento:** `fedelta.py` confronta la frase con le *risposte*, mai con la *pagina*. Le risposte non confermate entrano nelle sezioni con un solo avviso. Nessun controllo che i fatti della sintesi siano confermati. | `fedelta.py`, `documento_sezione.md` | R |
-| V12 | **Dati vecchi:** il valore non ha data («i passaggi non dicono di quando è») e non si rilegge. | righe «Limiti» | D |
-| V13 | **«Non trovata» non è verificata:** può essere il limite di sessione, una pagina bloccata o una vera assenza; oggi si distingue solo il limite. | `raccolta.py` | R |
+| V1 | **The value is never compared with its row.** The model gives the value and the row number; the program checks that the row is about the entity, not that it contains the value. | `chain.py`, `_entity_value` | R |
+| V2 | **The value is read only once.** Links get two readings, the final value (the answer) gets one. | `_entity_value` | R |
+| V3 | **No comparison of the value across sources.** One row from one page is enough. Aida: en.wiki 21 June 1886, expected 1885. 30 values out of 35 come from a single Wikipedia article. | holdout 1 | D |
+| V4 | **A search-result snippet counts as strong evidence for a link.** PostgreSQL: the Wikipedia infobox (“Newburyport, Massachusetts”) discarded, the snippet of a page never read (“born in Milton, New Hampshire”) at 0.9 “strong”, chain “confirmed”, wrong answer. The two runs gave two different wrong cities. | holdout 1 and 2 | D |
+| V5 | **Disagreement between sources is lost.** A discarded candidate that had a strong source leaves no trace: “Sources in disagreement: none”. | same case | D |
+| V6 | **No check for cycles or direction along the route.** C++ run 2: Stroustrup → Wheeler → … → Burrows → **Wheeler again** (relation walked backwards: student instead of advisor), “strong” 0.88, “confirmed”, wrong. | holdout 2 | D |
+| V7 | **No check of the answer against the whole question.** C++ run 1: one step short (“British physicist” never checked on the final entity). Duchy of Savoy: route “Duchy of Savoy → French First Republic → First Empire → Kingdom of Holland → Rome” called “complete chain”; value correct by chance. | holdout 1 | D |
+| V8 | **Weak links inside a “complete” chain, and the writer has to answer anyway.** 14 unconfirmed answers correct out of 24, 9 wrong: a 60/40 coin shown as an answer. | `write`, data | D |
+| V9 | **“Confidence” is free text from the writing model.** It does not depend on the checks. Wrong answers with “high” (Reggio Emilia) and “medium” (4). Inconsistent capitalisation, sometimes missing. The director and the sections use it as if it were a measurement. | data, `investigation.in_short` | D |
+| V10 | **Sign, unit and meaning of the value are not normalised.** −2 m and 2 m; date of establishment or of entry into force; Julian or Gregorian calendar (16 and 27 May 1703). | data | D |
+| V11 | **Document:** `faithfulness.py` compares the sentence with the *answers*, never with the *page*. Unconfirmed answers enter the sections with just a warning. No check that the facts in the summary are confirmed. | `faithfulness.py`, `document_section.md` | R |
+| V12 | **Stale data:** the value has no date (“the passages do not say when it is from”) and is never re-read. | “Limits” rows | D |
+| V13 | **“Not found” is not verified:** it may be the session limit, a blocked page or a genuine absence; today only the limit is told apart. | `collector.py` | R |
 
 ---
 
-## 3. Il metro è storto (banco e giudice)
+## 3. The yardstick is crooked (bench and judge)
 
-| # | Problema | Prova | |
+| # | Problem | Evidence | |
 |---|---|---|---|
-| M1 | **Il confronto normalizzato ignora il segno.** «2 m» è dentro «−2 m s.l.m.» → contata giusta. | `giudice.uguale_normalizzata`, domanda Python nelle due corse | D |
-| M2 | **Il banco fa estrarre la risposta a un modello invece di usare il valore che il programma ha già.** `esito["valore"]` esiste; `banco.py` chiede a Haiku di ricavarlo dalla riga «Risposta». Estrazione vuota = «vuota» = sbagliata. Due domande con il valore atteso esatto contate sbagliate (Ducato di Savoia corsa 1, Presa di Roma corsa 2). | dati | D |
-| M3 | **Gli errori del giudice spariscono.** `giudice._chiedi` trasforma ogni `ErroreClaude` (anche il limite di sessione) in "", cioè risposta sbagliata. | `giudice.py` | R |
-| M4 | **Le risposte attese di Wikidata non sono la verità.** Almeno 5 su 36 non coincidono con Wikipedia e vanno guardate da una persona: Reggio Emilia 68 e 56 m, Aida 1885 e 1886, Regno Unito 1921 e 1801, Gorizia 2020 e 2019, Amsterdam 2 e −2 m; in più la premessa della domanda PostgreSQL (stato di nascita). | dati | D/I |
-| M5 | **Le durate contano le attese del limite di sessione** (145, 152, 159, 160 minuti): «19,9 minuti medi» è falso. | `raccolta.py`: `secondi` usa l'orologio grezzo | D |
-| M6 | **Il registro non ha colonne di qualità:** niente precisione delle confermate, niente quota decisa dal giudice. | `banco.py` | R |
-| M7 | Domande generate con due letture difendibili («stato insulare… fondazione»); nessun campo le segna. | dati | D |
+| M1 | **The normalised comparison ignores the sign.** “2 m” is contained in “−2 m a.s.l.” → counted correct. | `judge.normalized_equal`, Python question in both runs | D |
+| M2 | **The bench has a model extract the answer instead of using the value the program already has.** `outcome["value"]` exists; `bench.py` asks Haiku to derive it from the “Answer” row. Empty extraction = “empty” = wrong. Two questions with exactly the expected value counted wrong (Duchy of Savoy run 1, Capture of Rome run 2). | data | D |
+| M3 | **Judge errors disappear.** `judge._ask` turns every `ClaudeError` (including the session limit) into "", i.e. a wrong answer. | `judge.py` | R |
+| M4 | **The expected answers from Wikidata are not the truth.** At least 5 out of 36 do not match Wikipedia and need to be looked at by a person: Reggio Emilia 68 and 56 m, Aida 1885 and 1886, United Kingdom 1921 and 1801, Gorizia 2020 and 2019, Amsterdam 2 and −2 m; in addition, the premise of the PostgreSQL question (state of birth). | data | D/I |
+| M5 | **Durations include the waits for the session limit** (145, 152, 159, 160 minutes): “19.9 minutes on average” is false. | `collector.py`: `seconds` uses the raw clock | D |
+| M6 | **The log has no quality columns:** no precision of the confirmed answers, no share decided by the judge. | `bench.py` | R |
+| M7 | Questions generated with two defensible readings (“island state… founding”); no field marks them. | data | D |
 
-Finché M1–M4 non sono corretti, nessuna percentuale va citata.
+Until M1–M4 are fixed, no percentage should be quoted.
 
 ---
 
-## 4. Il disegno: sette controlli tra «trovato» e «mostrato come fatto»
+## 4. The design: seven checks between “found” and “shown as fact”
 
-Principio: **il programma decide, il modello propone.** Ogni controllo è del programma dove si può; dove serve un
-modello, è una seconda chiamata indipendente che prova a smentire, non quella che ha proposto.
+Principle: **the program decides, the model proposes.** Every check belongs to the program wherever possible; where a
+model is needed, it is a second, independent call that tries to refute, not the one that made the proposal.
 
 ```
-valore proposto
-  G1 valore nella riga      numeri, data o nome del valore scritti nella riga citata          (programma)
-  G2 seconda lettura        una seconda chiamata deve dare lo stesso valore normalizzato      (modello ×2)
-  G3 strada integra         nessuna entità due volte, passi = piano, verso della relazione    (programma)
-  G4 qualità della fonte    ogni anello e il valore provati da una pagina letta, livello ≥ B  (programma)
-  G5 riscontro              valore in ≥ 2 fonti indipendenti, o livello A e nessuna contraria (programma + rete)
-  G6 revisione contraria    un altro modello vede domanda, strada e righe: «quale indizio non torna?»
-  G7 registro dei disaccordi ogni smentita da fonte forte registrata e mostrata               (programma)
-→ stato e punteggio calcolati dal programma
+proposed value
+  G1 value in the row        digits, date or name of the value written in the cited row       (program)
+  G2 second reading          a second call must give the same normalised value                (model ×2)
+  G3 sound route             no entity twice, steps = plan, direction of the relation         (program)
+  G4 source quality          every link and the value proven by a page read, level ≥ B        (program)
+  G5 corroboration           value in ≥ 2 independent sources, or level A and none against    (program + network)
+  G6 adversarial review      another model sees question, route and rows: “which clue does not fit?”
+  G7 disagreement register   every refutation from a strong source recorded and shown         (program)
+→ status and score computed by the program
 ```
 
-- **G1 Valore nella riga** (`_valore_entita`). Valore e riga normalizzati (cifre, mesi con `MESI`, segno, virgola
-  decimale). Date: giorno, mese e anno nella riga. Numeri: stesse cifre con il segno. Nomi: `citazione_presente`.
-  Se manca: valore rifiutato, in `storia` «valore non nella riga». Il controllo meno caro e più utile.
-- **G2 Seconda lettura del valore.** Come `_esiti`: due letture, unione in ordine fisso. Se discordano si passa al
-  tentativo successivo; se restano divise, tutte e due nel registro dei disaccordi e stato «contestata».
-- **G3 Strada integra.** In `_percorri_frontiera`: un figlio con la stessa chiave (`_chiave_canonica`,
-  `_chiave_entita`) di un antenato è scartato. Alla soluzione: lunghezza della strada = passi del piano + 1. Il piano
-  dice il `verso` di ogni passo e la riga del legame deve rispettarlo (relatore *di*, non allievo *di*).
-- **G4 Qualità della fonte.** Nuovo modulo `prove/fonte.py`: A = voce o riquadro di Wikipedia, sito ufficiale o
-  istituzionale, sito dell'entità; B = pagina letta di un altro sito; C = estratto dei risultati, pagina non letta,
-  aggregatore. Una prova C può proporre un candidato, non può rendere «forte» un anello né portare un valore.
-- **G5 Riscontro.** Dopo G1–G2 lo stesso dato si cerca (a) nella voce di Wikipedia in un'altra lingua (collegamenti
-  tra lingue, già in `WikipediaGrafo`), (b) nelle pagine già lette, (c) in al massimo 2 pagine nuove. Esito:
-  `concordi`, `sola fonte`, `discordi`. A scelta (impostazione, spenta): l'affermazione di Wikidata sull'entità finale.
-- **G6 Revisione contraria.** Una chiamata con un modello diverso da quello della catena (catena Haiku → revisione
-  Sonnet). Riceve la domanda, la strada con una riga per anello e la riga del valore. Per ogni indizio della domanda:
-  `{indizio, soddisfatto: sì / no / non provato, riga}`. Decide il programma: un «no» con riga e citazione valide →
-  strada «smentita», la catena prova il candidato successivo. Avrebbe fermato C++ (l'entità finale non è un fisico) e
-  Ducato di Savoia.
-- **G7 Registro dei disaccordi.** `Catena.conflitti`: ogni candidato o valore scartato che aveva una prova di livello
-  A o B, con la fonte. La riga «Fonti in disaccordo» la scrive il programma.
+- **G1 Value in the row** (`_entity_value`). Value and row normalised (digits, months via `_MONTHS`, sign, decimal
+  comma). Dates: day, month and year in the row. Numbers: same digits with the sign. Names: `present_quote`.
+  If missing: value rejected, “value not in the row” in `history`. The cheapest and most useful check.
+- **G2 Second reading of the value.** Like `_outcomes`: two readings, merged in a fixed order. If they disagree, move
+  on to the next attempt; if they remain split, both go into the disagreement register and the status is “contested”.
+- **G3 Sound route.** In `_walk_frontier`: a child with the same key (`_canonical_key`, `_entity_key`) as an ancestor
+  is discarded. At the solution: route length = plan steps + 1. The plan states the `direction` of every step and the
+  row of the tie must respect it (advisor *of*, not student *of*).
+- **G4 Source quality.** New module `proofs/source.py`: A = Wikipedia article or infobox, official or institutional
+  site, the entity's own site; B = a page read on another site; C = search-result snippet, page not read, aggregator.
+  A C-level proof can propose a candidate; it cannot make a link “strong” nor carry a value.
+- **G5 Corroboration.** After G1–G2 the same fact is looked for (a) in the Wikipedia article in another language
+  (interlanguage links, already in `WikipediaGraph`), (b) in the pages already read, (c) in at most 2 new pages.
+  Outcome: `agree`, `single source`, `disagree`. Optional (setting, off by default): the Wikidata claim on the final
+  entity.
+- **G6 Adversarial review.** A call with a model different from the chain's (Haiku chain → Sonnet review). It receives
+  the question, the route with one row per link, and the value's row. For every clue in the question:
+  `{clue, satisfied: yes / no / not proven, row}`. The program decides: a “no” with a valid row and quote → route
+  “refuted”, and the chain tries the next candidate. It would have stopped C++ (the final entity is not a physicist)
+  and the Duchy of Savoy.
+- **G7 Disagreement register.** `Chain.conflicts`: every discarded candidate or value that had a level A or B proof,
+  with the source. The “Sources in disagreement” row is written by the program.
 
-### Stato e punteggio
+### Status and score
 
-Al posto di `confermata` (sì/no) e della «Fiducia» libera:
+In place of `confirmed` (yes/no) and the free-text “Confidence”:
 
-| Stato | Regola | Mostrato come |
+| Status | Rule | Shown as |
 |---|---|---|
-| `verificata` | G1–G4 passati, G5 concordi, G6 senza obiezioni, nessun anello debole | fatto |
-| `sostenuta` | G1–G4 passati, G5 sola fonte (livello A), G6 senza obiezioni | fatto, «una sola fonte» |
-| `contestata` | G5 discordi o registro non vuoto | le due versioni |
-| `incerta` | un anello debole, o G6 «non provato» su un indizio | «non confermata», mai nella sintesi |
-| `non trovata` | nessun valore, con la causa: assente, limite, pagina bloccata | lacuna |
+| `verified` | G1–G4 passed, G5 agree, G6 no objections, no weak link | fact |
+| `supported` | G1–G4 passed, G5 single source (level A), G6 no objections | fact, “single source” |
+| `contested` | G5 disagree or register not empty | both versions |
+| `uncertain` | a weak link, or G6 “not proven” on a clue | “not confirmed”, never in the summary |
+| `not found` | no value, with the cause: absent, limit, blocked page | gap |
 
-Il `punteggio` (0–1) viene dagli esiti dei controlli; i pesi si regolano **solo** su un insieme di taratura, mai sulle
-domande di controllo. La riga «Fiducia» la scrive il programma dallo stato. Regia e documento ricevono lo stato.
+The `score` (0–1) comes from the outcomes of the checks; the weights are tuned **only** on a calibration set, never on
+the holdout questions. The “Confidence” row is written by the program from the status. The director and the document
+receive the status.
 
-### Documento
+### Document
 
-- Le sezioni danno come fatto solo le risposte `verificata` e `sostenuta`; `contestata` con le due versioni; `incerta`
-  in un riquadro «punti aperti». Lo impone `documento.py` passando le risposte divise per stato.
-- Copertina: quante risposte per stato.
-- `fedelta.py`, secondo modo: frase → **riga della fonte** (testo della prova salvato), non solo → risposta.
-- Ogni valore porta «letto il <data>» e, se la riga la dà, la data del dato.
+- The sections give as fact only `verified` and `supported` answers; `contested` with both versions; `uncertain` in
+  an “open points” box. This is enforced by `document.py`, which passes the answers split by status.
+- Cover page: how many answers per status.
+- `faithfulness.py`, second mode: sentence → **source row** (text of the saved proof), not only → answer.
+- Every value carries “read on <date>” and, if the row gives it, the date of the fact.
 
 ---
 
-## 5. Altri difetti e miglioramenti
+## 5. Other defects and improvements
 
-| # | Dove | Problema | |
+| # | Where | Problem | |
 |---|---|---|---|
-| B1 | `bench/judge.py` | M1: il segno si perde in `normalizza`. | D |
-| B2 | `bench/bench.py` | M2: usare `esito["valore"]`; l'estrazione solo se manca. | D |
-| B3 | `bench/judge.py` | M3: il limite di sessione si propaga; gli altri errori sono «giudice in errore», fuori dal conto. | R |
-| B4 | `web/raccolta.py` | `secondi` senza le attese del limite (`_trascorsi`). | D |
-| B5 | `catena._applica_esiti` | Il candidato è abbinato alla risposta del modello per chiave del nome contenuta: due candidati con lo stesso cognome possono scambiarsi gli esiti. | R/I |
-| B6 | `catena._unisci_esiti` | Controlli riconosciuti dai primi 50 caratteri: due controlli che cominciano uguale si fondono. | R/I |
-| B7 | `catena._percorri_frontiera` | «Confermato da N strade» conta strade con la stessa entità finale e la stessa pagina. Vanno contate le fonti diverse. | R |
-| B8 | `catena.percorri` | La catena migliore si sceglie per anelli deboli e qualità; il riscontro non conta. | R |
-| B9 | istruzioni di scrittura | «Fiducia» con maiuscole diverse o assente. Sparisce quando la scrive il programma. | D |
-| B10 | banco | La corsa 3 di controllo non è partita: il ciclo è morto con la sessione. | D |
-| O1 | costo e tempo | Domande di controllo con più di 20 pagine lette: 9 su 36, 4 sbagliate. Una ricerca lunga è un segnale: entra nel punteggio. | D |
-| O2 | `catena.py` | 2.015 righe. I controlli vanno in `web/validazione.py`: primo passo della divisione. | R |
-| O3 | rigioco | G2, G5 e G6 aggiungono chiamate: le 39 catene vanno registrate di nuovo una volta (circa 6 $). | R |
+| B1 | `bench/judge.py` | M1: the sign is lost in `normalize`. | D |
+| B2 | `bench/bench.py` | M2: use `outcome["value"]`; extraction only if it is missing. | D |
+| B3 | `bench/judge.py` | M3: the session limit propagates; other errors are “judge in error”, left out of the count. | R |
+| B4 | `web/collector.py` | `seconds` without the waits for the limit (`_elapsed`). | D |
+| B5 | `chain._apply_outcomes` | The candidate is matched to the model's answer by a contained name key: two candidates with the same surname can swap outcomes. | R/I |
+| B6 | `chain._merge_outcomes` | Checks are recognised by their first 50 characters: two checks that start the same way are merged. | R/I |
+| B7 | `chain._walk_frontier` | “Confirmed by N routes” counts routes with the same final entity and the same page. Distinct sources should be counted. | R |
+| B8 | `chain.walk` | The best chain is chosen by weak links and quality; corroboration does not count. | R |
+| B9 | writing prompts | “Confidence” with inconsistent capitalisation or missing. Disappears once the program writes it. | D |
+| B10 | bench | Holdout run 3 did not start: the loop died with the session. | D |
+| O1 | cost and time | Holdout questions with more than 20 pages read: 9 out of 36, 4 wrong. A long search is a signal: it goes into the score. | D |
+| O2 | `chain.py` | 2,015 lines. The checks go into `web/validation.py`: first step of the split. | R |
+| O3 | replay | G2, G5 and G6 add calls: the 39 chains have to be recorded again once (about $6). | R |
 
-Ancora aperti da prima: la causa del rigioco di Blender; `test_contratti.py` e la CI mai eseguiti; codice morto (`Bm25`,
-`_percorri_piano`, metodi di `Concetti`); l'e-mail dell'account Claude a Wikipedia attiva in partenza.
-
----
-
-## 6. Ordine dei lavori
-
-**Fase A — raddrizzare il metro (senza spesa):** B1–B4 e M6 con i test prima; nuovo giudizio delle corse salvate
-(`bench/rejudge.py`); scheda delle risposte attese (`bench/check_references.py`) con il campo
-`stato_riferimento` nelle domande di controllo (`ok`, `contestata`, `sbagliata`, `ambigua`): si conta solo su `ok`.
-
-**Fase B — controlli del programma (gratis, protetti dal rigioco):** G1, G3, G4, G7, poi B5–B7. Ogni controllo ha il
-suo test, scritto prima, costruito sui casi veri delle domande di controllo.
-
-**Fase C — controlli con il modello (il costo sale, misurato):** G2, G5, G6; stato e punteggio al posto di
-`confermata` e «Fiducia» in `raccolta.py`, `indagine.py`, `documento.py` e nell'interfaccia.
-
-**Fase D — documento e misura:** regole del documento per stato, `fedelta.py` sulla riga della fonte, nuova
-registrazione del rigioco, campagna di prova (§7).
-
-Regola: un controllo resta solo se sulle domande di controllo la precisione delle `verificata` sale e le risposte
-giuste non scendono oltre il rumore (McNemar, `bench/stats.py`).
+Still open from before: the cause of the Blender replay failure; `test_contracts.py` and the CI never run; dead code
+(`Bm25`, `_walk_plan`, methods of `Concepts`); the Claude account e-mail sent to Wikipedia enabled by default.
 
 ---
 
-## 7. Campagna di prova
+## 6. Order of work
 
-| Giro | Che cosa | Criterio | Costo |
+**Phase A — straighten the yardstick (no cost):** B1–B4 and M6 with tests first; re-judging of the saved runs
+(`bench/rejudge.py`); review sheet of the expected answers (`bench/check_references.py`) with the field
+`reference_status` in the holdout questions (`ok`, `contested`, `wrong`, `ambiguous`): only `ok` counts.
+
+**Phase B — program checks (free, protected by the replay):** G1, G3, G4, G7, then B5–B7. Every check has its own
+test, written first, built on the real cases from the holdout questions.
+
+**Phase C — model checks (cost goes up, measured):** G2, G5, G6; status and score in place of `confirmed` and
+“Confidence” in `collector.py`, `investigation.py`, `document.py` and in the interface.
+
+**Phase D — document and measurement:** document rules by status, `faithfulness.py` on the source row, new replay
+recording, test campaign (§7).
+
+Rule: a check stays only if, on the holdout questions, the precision of `verified` goes up and the correct answers do
+not drop beyond the noise (McNemar, `bench/stats.py`).
+
+---
+
+## 7. Test campaign
+
+| Round | What | Criterion | Cost |
 |---|---|---|---|
-| 0 Fermo immagine | commit, modelli esatti, impostazioni di ogni corsa | — | 0 |
-| 1 Integrità | test senza rete, rigioco, ruff, copertura ≥ 80% | tutto verde | 0 |
-| 2 Metro | test del giudice; nuovo giudizio delle corse; scheda delle risposte attese; 50 verdetti del giudice riletti a mano | errori del giudice ≤ 2%; ogni risposta attesa `ok` o esclusa | centesimi e tempo di una persona |
-| 3 Base | domande di controllo ×3 con il metro corretto; risposte a memoria (haiku, sonnet, opus) | solo numeri | circa 14 $ |
-| 4 Taratura | insieme B (36 domande, altri semi) per i pesi del punteggio; 20 domande senza risposta | risposte inventate ≤ 10% | circa 5 $ |
-| 5 Controlli A/B | ogni controllo acceso e spento sulle domande di controllo, a coppie | `verificata` giuste ≥ 95% (limite inferiore ≥ 85%); giuste non in calo | circa 5 $ a controllo |
-| 6 Stabilità | stessa domanda ×3 | stesso valore ≥ 85%; stesso stato ≥ 85% | nei dati dei giri 3 e 5 |
-| 7 Fonti | 150 prove di anelli e valori rilette dal vivo | ≥ 90% sostenute | centesimi |
-| 8 Documenti | 6 indagini complete; `fedelta.py` nei due modi; fatti chiave ritrovati, a mano | frasi ≥ 95%, nessun fatto chiave inventato, ritrovati ≥ 80% | circa 30 $ |
-| 9 Conferma | codice finale su un terzo insieme mai visto, una volta | limite inferiore ≥ 70%; `verificata` ≥ 95% | circa 5 $ |
+| 0 Snapshot | commit, exact models, settings of every run | — | 0 |
+| 1 Integrity | offline tests, replay, ruff, coverage ≥ 80% | all green | 0 |
+| 2 Yardstick | judge tests; re-judging of the runs; review sheet of the expected answers; 50 judge verdicts re-read by hand | judge errors ≤ 2%; every expected answer `ok` or excluded | cents and one person's time |
+| 3 Baseline | holdout questions ×3 with the corrected yardstick; answers from memory (haiku, sonnet, opus) | numbers only | about $14 |
+| 4 Calibration | set B (36 questions, other seeds) for the score weights; 20 unanswerable questions | invented answers ≤ 10% | about $5 |
+| 5 A/B checks | every check on and off on the holdout questions, paired | `verified` correct ≥ 95% (lower bound ≥ 85%); correct answers not dropping | about $5 per check |
+| 6 Stability | same question ×3 | same value ≥ 85%; same status ≥ 85% | in the data of rounds 3 and 5 |
+| 7 Sources | 150 proofs of links and values re-read live | ≥ 90% supported | cents |
+| 8 Documents | 6 complete investigations; `faithfulness.py` in both modes; key facts recovered, by hand | sentences ≥ 95%, no invented key fact, recovered ≥ 80% | about $30 |
+| 9 Confirmation | final code on a third, never-seen set, once | lower bound ≥ 70%; `verified` ≥ 95% | about $5 |
 
-Le domande di controllo servono nei giri 3 e 5 per *accettare o rifiutare* un controllo, mai per scrivere regole su
-una domanda. Dopo il giro 5 sono consumate: il giro 9 vuole un insieme nuovo.
+The holdout questions are used in rounds 3 and 5 to *accept or reject* a check, never to write rules for a question.
+After round 5 they are used up: round 9 needs a new set.
 
-## 8. Piano dei test dei controlli
+## 8. Test plan for the checks
 
-Ogni controllo passa da sei livelli, dal meno caro al più caro. Un controllo entra nel codice dopo i livelli 1–4
-(gratis); resta nel codice solo se passa il 5 e il 6.
+Every check goes through six levels, from the cheapest to the most expensive. A check enters the code after levels
+1–4 (free); it stays in the code only if it passes 5 and 6.
 
-| Livello | Che cosa prova | Come | Criterio | Stato all'11/11 |
+| Level | What it tests | How | Criterion | Status as of 11 Nov |
 |---|---|---|---|---|
-| 1 Tabelle | la regola, caso per caso | `test/test_validation.py`: valori e righe scritti a mano, giusti e sbagliati | tutti | fatto per G1, G3, G4, G7 |
-| 2 A tappeto | la regola su centinaia di casi generati | ogni data (192) in 6 lingue e in forma numerica si ritrova; la stessa data con giorno, mese o anno cambiato di uno è rifiutata; ogni numero cambiato è rifiutato | 0 errori | fatto per G1 (2.300 date giuste, 4.600 cambiate) |
-| 3 Casi veri | i difetti visti nelle corse | un test per caso, con le righe vere: PostgreSQL (estratto contro riquadro), Aida (1885 e 1886), C++ (ritorno su Wheeler), Python (−2 e 2 m), Ducato di Savoia e Presa di Roma (valore giusto contato sbagliato) | tutti | fatto |
-| 4 Rigioco | il controllo non cambia le catene che non deve cambiare | le 39 catene registrate, senza rete né Claude: ogni catena che cambia va guardata e spiegata | ogni differenza spiegata e scritta in `da_registrare.txt` | 37 uguali, 2 cambiate apposta (sotto) |
-| 5 Corse salvate | quante risposte tocca, giuste e sbagliate | il controllo ricalcolato sugli esiti salvati (`esiti_rigiudicati.json`) | toglie il sigillo a più sbagliate che giuste | G4: 1 sbagliata e 1 giusta su 87 risposte |
-| 6 Dal vivo, a coppie | l'effetto vero | stesse domande di controllo con il controllo acceso e spento; McNemar | `confermata` giuste in salita, giuste totali non in calo | da fare (a pagamento) |
+| 1 Tables | the rule, case by case | `test/test_validation.py`: values and rows written by hand, correct and wrong | all | done for G1, G3, G4, G7 |
+| 2 Exhaustive | the rule on hundreds of generated cases | every date (192) in 6 languages and in numeric form is found; the same date with day, month or year changed by one is rejected; every changed number is rejected | 0 errors | done for G1 (2,300 correct dates, 4,600 altered) |
+| 3 Real cases | the defects seen in the runs | one test per case, with the real rows: PostgreSQL (snippet against infobox), Aida (1885 and 1886), C++ (return to Wheeler), Python (−2 and 2 m), Duchy of Savoy and Capture of Rome (correct value counted wrong) | all | done |
+| 4 Replay | the check does not change chains it must not change | the 39 recorded chains, without network or Claude: every chain that changes must be inspected and explained | every difference explained and written in `to_record.txt` | 37 identical, 2 changed on purpose (below) |
+| 5 Saved runs | how many answers it touches, correct and wrong | the check recomputed on the saved outcomes (`rejudged_outcomes.json`) | removes the seal from more wrong answers than correct ones | G4: 1 wrong and 1 correct out of 87 answers |
+| 6 Live, paired | the real effect | same holdout questions with the check on and off; McNemar | `confirmed` correct going up, total correct not dropping | to do (paid) |
 
-**Che cosa ha già trovato il livello 4** (tre regole sbagliate, corrette prima di qualunque corsa a pagamento):
-- G7 nella prima forma segnava «disaccordo» in 33 catene su 39: ogni candidato scartato con una riga di Wikipedia
-  (i fratelli di una relazione uno-a-molti: gli allievi, i derivati). Ora vale solo il riquadro della voce di prima
-  contro un candidato scelto con una fonte più debole.
-- G3 senza le parentesi prendeva «I promessi sposi (Petrella)» per il romanzo e «Solférino (Landes)» per Solferino.
-  Ora conta il nome intero o la stessa voce di Wikipedia.
-- G1 rifiutava «26 Ιουλίου 1985» (mese in greco). Ora una riga senza mesi riconosciuti non si può smentire: bastano
-  giorno e anno.
+**What level 4 has already found** (three wrong rules, fixed before any paid run):
+- G7 in its first form flagged “disagreement” in 33 chains out of 39: every discarded candidate with a Wikipedia row
+  (the siblings of a one-to-many relation: the students, the derivatives). Now only the infobox of the previous
+  article counts, against a candidate chosen with a weaker source.
+- G3 without the parentheses took “I promessi sposi (Petrella)” for the novel and “Solférino (Landes)” for Solferino.
+  Now it counts the full name or the same Wikipedia article.
+- G1 rejected “26 Ιουλίου 1985” (month in Greek). Now a row with no recognised months cannot be refuted: day and year
+  are enough.
 
-Le due catene cambiate apposta: Divina Commedia (la registrazione finiva il budget girando tra Kyparissia e Tripyla:
-G3 ferma il giro) e Penicillina (un anello forte solo per un estratto: G4 lo rende debole e la catena cerca ancora).
+The two chains changed on purpose: Divine Comedy (the recording used up the budget going round between Kyparissia and
+Tripyla: G3 stops the loop) and Penicillin (a link strong only because of a snippet: G4 makes it weak and the chain
+keeps searching).
 
-**Test ancora da scrivere, in ordine:**
+**Tests still to be written, in order:**
 
-| # | Test | Che cosa dimostra | Costo |
+| # | Test | What it shows | Cost |
 |---|---|---|---|
-| T1 | **Sabotaggio (fatto):** spento un controllo alla volta, almeno un test deve fallire (`bench/sabotage.py`, su una copia del codice). 17 sabotaggi, 17 scoperti; alla prima corsa ne mancava uno (il registro dei disaccordi non collegato): test aggiunto | nessun controllo è senza test | 0 |
-| T2 | **Pagina avvelenata** (`test_browser.py`, server locale): una pagina che dà un valore diverso dal riquadro; un estratto che contraddice la pagina letta; una riga che nomina il valore di un'altra entità | G1, G4 e G7 tengono con pagine vere, non solo con oggetti finti | 0 |
-| T3 | **Catena finta intera (fatto)** (`test_catena.py`, modello finto): il modello dà un valore che non è nella riga; torna sulla partenza; un legame da un estratto; il candidato del riquadro scartato; in tutti i casi la risposta finale non è «confermata» o il candidato è scartato con traccia | i controlli sono collegati alla risposta, non solo scritti | 0 |
-| T4 | **Domande senza risposta** (20, scritte a mano: entità inventate, relazioni che non esistono, valore mai pubblicato) | lo strumento dice «non trovata» invece di inventare | circa 2 $ |
-| T5 | **Seconda lettura (G2):** modello finto che dà due valori diversi nelle due letture → `contestata`; uguali → passa | G2 | 0 |
-| T6 | **Revisione contraria (G6):** strade vere sbagliate delle corse (C++, Ducato di Savoia, ENIAC, Marignano) e 10 giuste, date al revisore | quante sbagliate ferma e quante giuste lascia passare, prima di collegarlo | centesimi |
-| T7 | **Riscontro (G5):** voci registrate in due lingue che concordano, discordano (Aida) o mancano | G5 | 0 con il rigioco |
-| T8 | **Giudice:** 50 verdetti del giudice riletti a mano; le coppie attesa/risposta diventano test del confronto | errori del giudice ≤ 2% | tempo di una persona |
-| T9 | **Risposte attese:** ogni risposta attesa confrontata con il riquadro di it.wiki ed en.wiki; quelle che non coincidono segnate | il metro misura lo strumento, non Wikidata | 0 e tempo di una persona |
-| T10 | **Stato e documento:** una risposta `incerta` non compare mai come fatto nella sintesi; `contestata` ha le due versioni; la copertina conta gli stati | lo strato del documento | 0 |
-| T11 | **Stabilità:** stessa domanda tre volte: stesso valore e stesso stato | il sigillo non dipende dal caso | nei dati del giro 3 |
-| T12 | **Due persone** rileggono 40 risposte `verificata` con le fonti aperte; accordo tra loro (kappa) | la misura finale non dipende da un solo lettore né dal giudice | tempo di due persone |
+| T1 | **Sabotage (done):** with one check switched off at a time, at least one test must fail (`bench/sabotage.py`, on a copy of the code). 17 sabotages, 17 caught; on the first run one was missing (the disagreement register not wired in): test added | no check is without a test | 0 |
+| T2 | **Poisoned page** (`test_browser.py`, local server): a page that gives a value different from the infobox; a snippet that contradicts the page read; a row that names the value of another entity | G1, G4 and G7 hold with real pages, not just with fake objects | 0 |
+| T3 | **Whole fake chain (done)** (`test_chain.py`, fake model): the model gives a value that is not in the row; returns to the starting point; a tie from a snippet; the infobox candidate discarded; in every case the final answer is not “confirmed” or the candidate is discarded with a trace | the checks are wired to the answer, not just written | 0 |
+| T4 | **Unanswerable questions** (20, written by hand: invented entities, relations that do not exist, value never published) | the tool says “not found” instead of inventing | about $2 |
+| T5 | **Second reading (G2):** fake model giving two different values in the two readings → `contested`; equal → passes | G2 | 0 |
+| T6 | **Adversarial review (G6):** real wrong routes from the runs (C++, Duchy of Savoy, ENIAC, Marignano) and 10 correct ones, given to the reviewer | how many wrong ones it stops and how many correct ones it lets through, before wiring it in | cents |
+| T7 | **Corroboration (G5):** articles recorded in two languages that agree, disagree (Aida) or are missing | G5 | 0 with the replay |
+| T8 | **Judge:** 50 judge verdicts re-read by hand; the expected/answer pairs become tests of the comparison | judge errors ≤ 2% | one person's time |
+| T9 | **Expected answers:** every expected answer compared with the it.wiki and en.wiki infoboxes; those that do not match are flagged | the yardstick measures the tool, not Wikidata | 0 and one person's time |
+| T10 | **Status and document:** an `uncertain` answer never appears as fact in the summary; `contested` has both versions; the cover page counts the statuses | the document layer | 0 |
+| T11 | **Stability:** same question three times: same value and same status | the seal does not depend on chance | in the data of round 3 |
+| T12 | **Two people** re-read 40 `verified` answers with the sources open; agreement between them (kappa) | the final measurement does not depend on a single reader or on the judge | two people's time |
 
-Regole dei test:
-- Il test si scrive prima del controllo e deve fallire sul codice di prima.
-- Ogni rifiuto di un controllo lascia una riga in `storia` (`valore non nella riga`, `già nella strada`) e l'esito in
-  `catena.controlli`: senza traccia un controllo non si può misurare.
-- I casi veri restano nei test anche quando il difetto è corretto.
-- Un controllo che sul rigioco cambia una catena giusta senza spiegazione non entra.
+Test rules:
+- The test is written before the check and must fail on the previous code.
+- Every rejection by a check leaves a row in `history` (`value not in the row`, `already on the route`) and the
+  outcome in `chain.checks`: without a trace a check cannot be measured.
+- The real cases stay in the tests even after the defect is fixed.
+- A check that, on the replay, changes a correct chain without explanation does not go in.
 
-## 9. Decisioni aperte
+## 9. Open decisions
 
-1. **Wikidata** come riscontro facoltativo (G5) e per i nuovi insiemi di domande (giri 4 e 9): vuole un indirizzo di
-   contatto. Scelte: l'e-mail dell'account Claude, un altro indirizzo, oppure niente Wikidata (G5 solo con Wikipedia in
-   altre lingue, insiemi scritti a mano).
-2. **Risposte con un anello debole:** mostrate come `incerta` con il valore (consigliato) o nascoste come «non trovata».
-3. **Modello della revisione (G6):** Sonnet (consigliato, circa +0,02 $ a domanda) o lo stesso della catena.
-4. **Spesa:** fasi A e B centesimi; C, D e campagna circa 60–70 $ di abbonamento in più finestre. Ogni giro a pagamento
-   parte solo dopo un sì.
+1. **Wikidata** as optional corroboration (G5) and for the new question sets (rounds 4 and 9): it needs a contact
+   address. Options: the Claude account e-mail, another address, or no Wikidata (G5 only with Wikipedia in other
+   languages, sets written by hand).
+2. **Answers with a weak link:** shown as `uncertain` with the value (recommended) or hidden as “not found”.
+3. **Review model (G6):** Sonnet (recommended, about +$0.02 per question) or the same as the chain.
+4. **Spending:** phases A and B cents; C, D and the campaign about $60–70 of subscription over several windows. Every
+   paid round starts only after a yes.
 
-## 10. Stato dei lavori
+## 10. Status of the work
 
-Aggiornato al 12/11/2026. I risultati delle corse a pagamento si aggiungono qui sotto quando arrivano.
+Updated 12 Nov 2026. The results of the paid runs are added below as they come in.
 
-**Fatto e protetto dai test** (455 test senza rete, 35 sabotaggi su 35 scoperti):
-- Fase A, il metro: giudice con il segno, valore del programma, errori del giudice fuori dal conto, durate pulite,
-  `rigiudica.py`, `rapporto.py` (giuste per stato, che cosa segnala ogni controllo, regola di decisione).
-- Fase B, controlli del programma: G1 valore nella riga, G3 strada senza ritorni, G4 un estratto non conferma,
-  G7 registro dei disaccordi (solo riquadro della voce di prima contro un candidato con fonte più debole).
-- Fase C, controlli con il modello (`Catena.revisione_finale`): G2 seconda lettura, G5 riscontro in altre voci e
-  pagine, G6 revisione contraria con Sonnet, che riceve anche le righe delle altre voci di ogni anello. Non cambiano
-  la risposta: ne decidono lo stato (`validazione.stato`). La riga «Fiducia» la scrive il programma.
-- Fase D: stato e motivi salvati con ogni domanda; la regia riceve lo stato; nel documento le `incerta` stanno solo
-  nei riquadri «Punti aperti» scritti dal programma; interfaccia con lo stato accanto a ogni domanda; `fedelta.py
-  --su fonti` sulle righe delle pagine citate.
-- Difetti B5 e B6 corretti (esiti al candidato e al controllo giusti), con i test che li riproducevano.
-- T1, T3, T4 (domande scritte e punteggio), T5, T7, T10 del piano dei test.
+**Done and protected by tests** (455 offline tests, 35 sabotages out of 35 caught):
+- Phase A, the yardstick: judge with the sign, value from the program, judge errors left out of the count, clean
+  durations, `rejudge.py`, `report.py` (correct answers by status, what each check flags, decision rule).
+- Phase B, program checks: G1 value in the row, G3 route without returns, G4 a snippet does not confirm,
+  G7 disagreement register (only the infobox of the previous article against a candidate with a weaker source).
+- Phase C, model checks (`Chain.final_review`): G2 second reading, G5 corroboration in other articles and pages, G6
+  adversarial review with Sonnet, which also receives the rows of the other articles of every link. They do not
+  change the answer: they decide its status (`validation.status`). The “Confidence” row is written by the program.
+- Phase D: status and reasons saved with every question; the director receives the status; in the document,
+  `uncertain` answers appear only in the “Open points” boxes written by the program; interface with the status next
+  to every question; `faithfulness.py --on sources` on the rows of the cited pages.
+- Defects B5 and B6 fixed (outcomes assigned to the right candidate and the right check), with the tests that
+  reproduced them.
+- T1, T3, T4 (questions written and scored), T5, T7, T10 of the test plan.
 
-**Scelte fatte strada facendo:**
-- Niente Wikidata: il riscontro usa le altre voci di Wikipedia; gli insiemi nuovi di domande si scrivono a mano.
-- Il `verso` della relazione non entra nel piano della catena: il verso lo controlla la revisione (G6), senza
-  cambiare le istruzioni che guidano la ricerca.
-- I controlli con il modello non fermano né deviano la catena (prima versione): decidono solo lo stato. Farle
-  cercare un altro candidato dopo un'obiezione è il passo successivo, da misurare a parte.
-- Le corse del banco partono con `bench/run.sh`, staccate dalla sessione, da una copia ferma del codice.
+**Choices made along the way:**
+- No Wikidata: corroboration uses the other Wikipedia articles; the new question sets are written by hand.
+- The `direction` of the relation does not go into the chain's plan: direction is checked by the review (G6), without
+  changing the prompts that guide the search.
+- The model checks neither stop nor divert the chain (first version): they only decide the status. Making the chain
+  look for another candidate after an objection is the next step, to be measured separately.
+- Bench runs are started with `bench/run.sh`, detached from the session, from a frozen copy of the code.
 
-**Non fatto:**
-- T2 (pagina avvelenata con il browser vero): servirebbe un motore di ricerca finto e un lettore finto per tutta la
-  raccolta; i controlli sono provati sugli oggetti della catena e dal vivo.
-- T6, T8, T9, T11, T12 e i giri 4, 8 e 9 della campagna: dipendono dalle corse a pagamento o dal tempo di una persona.
-- B7 («confermato da N strade» con le fonti diverse): cambia il motivo finale scritto nelle catene registrate, si fa
-  insieme alla nuova registrazione.
-- Codice morto ancora da togliere; `test_contratti.py` e la CI mai eseguiti.
+**Not done:**
+- T2 (poisoned page with the real browser): it would need a fake search engine and a fake reader for the whole
+  collection step; the checks are tested on the chain's objects and live.
+- T6, T8, T9, T11, T12 and rounds 4, 8 and 9 of the campaign: they depend on paid runs or on a person's time.
+- B7 (“confirmed by N routes” with distinct sources): it changes the final reason written in the recorded chains, so
+  it will be done together with the new recording.
+- Dead code still to be removed; `test_contracts.py` and the CI never run.
 
-### Risultati delle corse (12/11/2026)
+### Run results (12 Nov 2026)
 
-**Risposte attese** (`bench/check_references.py`, poi a mano): su 36 domande di controllo 27 buone, 6 contestate
-(Wikipedia dà un altro valore o un altro passaggio: per il luogo di nascita di Guido van Rossum, Haarlem per Wikidata,
-Amsterdam per it.wiki, L'Aia per en.wiki), 3 ambigue (calendario giuliano o gregoriano; istituito o operativo). Le
-note stanno in `bench/questions_holdout.json`. I numeri si danno sempre nei due modi: togliere domande dopo aver visto
-gli errori può far sembrare lo strumento migliore.
+**Expected answers** (`bench/check_references.py`, then by hand): out of 36 holdout questions, 27 good, 6 contested
+(Wikipedia gives another value or another step: for Guido van Rossum's birthplace, Haarlem according to Wikidata,
+Amsterdam according to it.wiki, The Hague according to en.wiki), 3 ambiguous (Julian or Gregorian calendar;
+established or operational). The notes are in `bench/questions_holdout.json`. The numbers are always given both ways:
+removing questions after seeing the errors can make the tool look better.
 
-| Corsa | Codice | Giuste, tutte | Giuste, risposte attese buone |
+| Run | Code | Correct, all | Correct, good expected answers |
 |---|---|---|---|
-| `holdout-1` | prima dei controlli | 25/35 = 71% | 24/27 = 89% (95%: 72–96%) |
-| `controllo-c1` | tutti i controlli | 24/33 | 22/26 = 85% (95%: 67–94%) |
-| `controllo-d1` | la revisione vede le altre voci | 24/36 | 22/27 = 81% (95%: 63–92%) |
+| `holdout-1` | before the checks | 25/35 = 71% | 24/27 = 89% (95%: 72–96%) |
+| `control-c1` | all checks | 24/33 | 22/26 = 85% (95%: 67–94%) |
+| `control-d1` | the review sees the other articles | 24/36 | 22/27 = 81% (95%: 63–92%) |
 
-Le risposte giuste non cambiano oltre il rumore (McNemar p = 1,0 nei due confronti): i controlli non guidano la
-ricerca, danno lo stato. Il calo sulle domande nuove visto all'inizio (69%) veniva per la maggior parte dalle risposte
-attese sbagliate, non dallo strumento.
+The correct answers do not change beyond the noise (McNemar p = 1.0 in both comparisons): the checks do not steer the
+search, they assign the status. The drop on new questions seen at the start (69%) came mostly from wrong expected
+answers, not from the tool.
 
-**Stato della risposta, c1 e d1 insieme, risposte attese buone:**
+**Answer status, c1 and d1 together, good expected answers:**
 
-| Stato | Giuste | Sbagliate |
+| Status | Correct | Wrong |
 |---|---|---|
-| verificata | 9 | 0 |
-| sostenuta | 11 | 0 |
-| contestata | 2 | 0 |
-| incerta | 22 | 9 |
+| verified | 9 | 0 |
+| supported | 11 | 0 |
+| contested | 2 | 0 |
+| uncertain | 22 | 9 |
 
-- **Nessuna risposta sbagliata è stata data come fatto**: 20 su 20 tra verificata e sostenuta. Con il vecchio
-  «confermata» erano 13 su 17.
-- Regola di decisione: passa «verificata e sostenuta più giuste di contestata e incerta» (20/20 contro 24/33); non
-  passa ancora «verificata ≥ 95% con limite inferiore ≥ 85%»: 9 su 9 sono troppo poche (limite inferiore 70%).
-- **`incerta` è troppo larga**: 22 risposte giuste. La causa è l'«anello debole», che da solo porta a `incerta` ed è un
-  segnale povero (21 giuste, 7 sbagliate). Il segnale forte è la revisione: «regge: sì» 29 giuste e 0 sbagliate;
-  obiezione con riga 4 e 4.
-- Ripetendo (c1 e d1, 33 domande): stesso valore 25, stesso stato 19. Delle 8 domande che cambiano valore, 7 sono
-  `incerta` in tutte e due le corse: l'instabilità sta dove lo stato già avverte.
-- Il caso che ha portato a d1 (luogo di nascita conteso, risposta `verificata` in c1) in d1 è `incerta`, con la riga
-  dell'altra voce come motivo.
-- Costo: 4,4 e 5,4 $ per corsa, circa 8 minuti a domanda (prima 16).
+- **No wrong answer was given as fact**: 20 out of 20 among verified and supported. With the old “confirmed” it was
+  13 out of 17.
+- Decision rule: “verified and supported more often correct than contested and uncertain” passes (20/20 against
+  24/33); “verified ≥ 95% with lower bound ≥ 85%” does not pass yet: 9 out of 9 is too few (lower bound 70%).
+- **`uncertain` is too broad**: 22 correct answers. The cause is the “weak link”, which on its own leads to
+  `uncertain` and is a poor signal (21 correct, 7 wrong). The strong signal is the review: “holds: yes” 29 correct
+  and 0 wrong; objection with a row 4 and 4.
+- On repetition (c1 and d1, 33 questions): same value 25, same status 19. Of the 8 questions that change value, 7 are
+  `uncertain` in both runs: the instability is where the status already warns.
+- The case that led to d1 (contested birthplace, answer `verified` in c1) is `uncertain` in d1, with the other
+  article's row as the reason.
+- Cost: $4.4 and $5.4 per run, about 8 minutes per question (16 before).
 
-**Difetti trovati dalle corse e corretti:** tre domande perse dal banco a 3 ore mentre aspettavano il rinnovo del
-limite di sessione; due valori uguali segnati «discordi» perché uno aveva una nota dietro.
+**Defects found by the runs and fixed:** three questions lost by the bench at 3 hours while waiting for the session
+limit to reset; two equal values marked “disagree” because one had a note after it.
 
-**Prossimo passo:** restringere `incerta` (anello debole ma revisione «regge: sì» e riscontro concorde) usando solo
-la corsa di taratura sulle 40 domande, poi una corsa di conferma sulle domande di controllo.
+**Next step:** narrow `uncertain` (weak link but review “holds: yes” and corroboration agrees) using only the
+calibration run on the 40 questions, then a confirmation run on the holdout questions.
 
-### Taratura, regola ristretta e domande senza risposta (13/11/2026)
+### Calibration, narrowed rule and unanswerable questions (13 Nov 2026)
 
-**Taratura sulle 40 domande regolate** (`taratura-1`, 33/40 giuste, 6,6 $): l'anello debole da solo era un segnale
-povero anche qui (21 giuste, 6 sbagliate). Con la revisione che regge senza obiezioni: 6 giuste e 0 sbagliate.
-Regola nuova, decisa solo su questa corsa: **un anello debole porta a `incerta` solo se la revisione non regge**;
-se regge, la risposta è al massimo `sostenuta`, con il limite scritto.
+**Calibration on the 40 tuned questions** (`calibration-1`, 33/40 correct, $6.6): the weak link on its own was a poor
+signal here too (21 correct, 6 wrong). With the review holding and no objections: 6 correct and 0 wrong.
+New rule, decided on this run only: **a weak link leads to `uncertain` only if the review does not hold**; if it holds,
+the answer is at most `supported`, with the limit written down.
 
-**La regola nuova sulle corse già fatte** (`rigiudica.py` ricalcola lo stato dagli esiti salvati, senza rifare niente):
+**The new rule on the runs already done** (`rejudge.py` recomputes the status from the saved outcomes, without
+redoing anything):
 
-| Stato | Domande di controllo, c1 e d1 (risposte attese buone) | Taratura, 40 domande |
+| Status | Holdout questions, c1 and d1 (good expected answers) | Calibration, 40 questions |
 |---|---|---|
-| verificata | 9 giuste, 0 sbagliate | 1, 0 |
-| sostenuta | 23 giuste, 0 sbagliate | 15, 0 |
-| contestata | 3 giuste, 0 sbagliate | 1, 0 |
-| incerta | 10 giuste, 9 sbagliate | 16, 6 |
+| verified | 9 correct, 0 wrong | 1, 0 |
+| supported | 23 correct, 0 wrong | 15, 0 |
+| contested | 3 correct, 0 wrong | 1, 0 |
+| uncertain | 10 correct, 9 wrong | 16, 6 |
 
-- Sulle domande di controllo **32 risposte su 32 date come fatto sono giuste** (limite inferiore al 95%: 89%), e
-  `incerta` ora separa davvero: 10 giuste su 19. Tutte le risposte sbagliate stanno in `incerta`.
-- Il criterio «`verificata` ≥ 95% con limite inferiore ≥ 85%» resta non dimostrato per lo stato `verificata` da
-  solo (9 su 9, limite inferiore 70%); per `verificata` e `sostenuta` insieme è raggiunto. Le due corse sono
-  ripetizioni delle stesse domande: la conferma indipendente è il terzo insieme di domande.
-- **Lo stato non è stabile quanto il valore**: ripetendo, stesso valore in 28 domande su 36, stesso stato in 19. Il
-  verdetto della revisione cambia tra «regge» e «non provato» da una corsa all'altra. Cambia tra `sostenuta` e
-  `incerta`, non tra giusto dato per fatto e sbagliato dato per fatto; da migliorare (due revisioni, vale la più severa).
+- On the holdout questions **32 answers out of 32 given as fact are correct** (95% lower bound: 89%), and
+  `uncertain` now really separates: 10 correct out of 19. All the wrong answers are in `uncertain`.
+- The criterion “`verified` ≥ 95% with lower bound ≥ 85%” remains unproven for the `verified` status on its own
+  (9 out of 9, lower bound 70%); for `verified` and `supported` together it is met. The two runs are repetitions of
+  the same questions: the independent confirmation is the third question set.
+- **The status is not as stable as the value**: on repetition, same value in 28 questions out of 36, same status in
+  19. The review's verdict switches between “holds” and “not proven” from one run to the next. It switches between
+  `supported` and `uncertain`, not between correct-given-as-fact and wrong-given-as-fact; to be improved (two
+  reviews, the stricter one counts).
 
-**Venti domande senza risposta** (`senza-risposta-1`, 3,1 $; entità inventate, relazioni che non esistono, dati mai
-esistiti):
+**Twenty unanswerable questions** (`unanswerable-1`, $3.1; invented entities, relations that do not exist, facts
+that never existed):
 
-| Che cosa ha fatto la catena | Domande |
+| What the chain did | Questions |
 |---|---|
-| «Non trovata» (giusto) | 5 |
-| Un valore, segnato `incerta` | 13 |
-| Un valore dato come fatto (`sostenuta`) | 2 |
+| “Not found” (correct) | 5 |
+| A value, marked `uncertain` | 13 |
+| A value given as fact (`supported`) | 2 |
 
-- **La catena da sola inventa**: in 15 casi su 20 trova una strada «abbastanza simile» e dà un valore (obiettivo: al
-  massimo 2). È il difetto più serio rimasto, e non è dei controlli: è della ricerca, che accetta la premessa della
-  domanda.
-- I controlli ne fermano 13 su 15 (`incerta`, in 10 con un'obiezione della revisione che dice proprio che la premessa
-  è falsa: «Newton non ha una moglie», «non si aggiudicarono mai il premio»). Nel documento finiscono nei «Punti
-  aperti», non nel testo.
-- 2 su 20 passano come fatto: il relatore del «dottorato» di Leonardo da Vinci e il codice postale del villaggio natale
-  di Spartaco. La revisione non ha obiettato.
-- Tutte le entità inventate (8 su 8) hanno avuto un valore: la catena sostituisce l'entità che non esiste con una
-  vicina. Rimedio da provare: un controllo sulla partenza (l'entità nominata dalla domanda esiste, con quel nome e
-  quei tratti?) prima di cercare, e «non trovata» quando la revisione smentisce la premessa.
+- **The chain on its own invents**: in 15 cases out of 20 it finds a “similar enough” route and gives a value
+  (target: at most 2). It is the most serious remaining defect, and it is not in the checks: it is in the search,
+  which accepts the question's premise.
+- The checks stop 13 of the 15 (`uncertain`, in 10 cases with a review objection that says precisely that the premise
+  is false: “Newton had no wife”, “they never won the prize”). In the document they end up in the “Open points”, not
+  in the text.
+- 2 out of 20 pass as fact: the advisor of Leonardo da Vinci's “doctorate” and the postcode of Spartacus's home
+  village. The review did not object.
+- All the invented entities (8 out of 8) got a value: the chain replaces the non-existent entity with a nearby one.
+  Remedy to try: a check on the starting point (does the entity named by the question exist, with that name and those
+  traits?) before searching, and “not found” when the review refutes the premise.
 
-**Rigioco**: le 40 catene sono state registrate di nuovo con i controlli; 39 si ripetono uguali senza rete né Claude,
-una (finita per budget) non è ripetibile. Le vecchie registrazioni stanno in `risultati/rigioco-vecchio` (70 MB, si
-possono cancellare).
+**Replay**: the 40 chains have been recorded again with the checks; 39 repeat identically without network or Claude,
+one (ended by budget) is not repeatable. The old recordings are in `results/replay-old` (70 MB, can be deleted).
 
-**Spesa delle corse** dall'11/11: circa 20 $ (c1 5,1; d1 5,4; taratura 6,6; senza risposta 3,1).
+**Spending on runs** since 11 Nov: about $20 (c1 5.1; d1 5.4; calibration 6.6; unanswerable 3.1).
 
-**B7** («confermato da N strade») resta com'è: cambierebbe il motivo finale scritto in tutte le registrazioni per una
-frase che non entra nello stato.
+**B7** (“confirmed by N routes”) stays as it is: it would change the final reason written in all the recordings for a
+sentence that does not enter the status.
 
-### Risposte inventate: premessa smentita e catena respinta (13/11/2026)
+### Invented answers: refuted premise and rejected chain (13 Nov 2026)
 
-Due regole nuove in `Catena.revisione_finale`, tutte e due con le parole di una riga controllate dal programma:
-- **premessa smentita**: la revisione dice che cosa la domanda dà per vero e, se una riga lo nega (o mostra che la
-  strada è partita da un'altra cosa), la risposta è «non trovata» con il motivo; il valore resta in `valore_scartato`;
-- **catena respinta**: obiezione con riga, premessa non provata e anello debole insieme.
+Two new rules in `Chain.final_review`, both with the words of a row checked by the program:
+- **refuted premise**: the review states what the question takes for granted and, if a row denies it (or shows that
+  the route started from something else), the answer is “not found” with the reason; the value is kept in
+  `discarded_value`;
+- **rejected chain**: objection with a row, premise not proven and weak link together.
 
-Prima della corsa vera, `bench/review_probe.py` (rifà solo la revisione sulle corse salvate, circa 1,5 $): sulle 40
-domande di taratura nessuna risposta giusta persa su 33.
+Before the real run, `bench/review_probe.py` (redoes only the review on the saved runs, about $1.5): on the 40
+calibration questions, no correct answer lost out of 33.
 
-| | Prima (`senza-risposta-1`) | Dopo (`senza-risposta-2`) |
+| | Before (`unanswerable-1`) | After (`unanswerable-2`) |
 |---|---|---|
-| «Non trovata» (giusto) | 5 su 20 | **14 su 20** |
-| Valore dato come fatto | 2 | **0** |
-| Valore segnato `incerta` o `contestata` | 13 | 6 |
+| “Not found” (correct) | 5 out of 20 | **14 out of 20** |
+| Value given as fact | 2 | **0** |
+| Value marked `uncertain` or `contested` | 13 | 6 |
 
-Sulle domande di controllo (`controllo-f1`, risposte attese buone): 25 giuste su 27 = 93% (95%: 77–98%), contro 24 su
-27 di prima dei controlli (McNemar p = 0,69: nessuna differenza dimostrata, e nessun calo); **20 risposte su 20 date
-come fatto sono giuste**; una sola risposta rifiutata, ed era sbagliata. Nessuna risposta giusta persa.
+On the holdout questions (`control-f1`, good expected answers): 25 correct out of 27 = 93% (95%: 77–98%), against 24
+out of 27 before the checks (McNemar p = 0.69: no difference shown, and no drop); **20 answers out of 20 given as fact
+are correct**; only one answer rejected, and it was wrong. No correct answer lost.
 
-Restano 6 domande senza risposta su 20 con un valore, tutte segnate: due entità inventate (la catena prende un'entità
-vicina e la revisione non ha una riga per dirlo) e quattro in cui la strada trovata «somiglia». L'obiettivo del 10% non
-è raggiunto (30%); nessuna però arriva nel documento come fatto. Il passo che manca è nella ricerca, non nei
-controlli: controllare che l'entità nominata dalla domanda esista con quel nome prima di cercare (cambia le istruzioni
-del piano della catena: vuole una nuova registrazione).
+There remain 6 unanswerable questions out of 20 with a value, all flagged: two invented entities (the chain takes a
+nearby entity and the review has no row to say so) and four in which the route found “looks similar”. The 10% target
+is not met (30%); none, however, reaches the document as fact. The missing step is in the search, not in the checks:
+checking that the entity named by the question exists under that name before searching (it changes the prompts of the
+chain's plan: it needs a new recording).
 
-**Insieme di conferma** (`bench/questions_confirmation.json`, scritto a mano il 13/11): 13 domande con la risposta
-controllata sulle voci italiane e inglesi (tenute solo quelle in cui le due lingue coincidono; 10 scartate per
-altitudini diverse) e 10 domande senza risposta nuove. Si usa una volta sola, sul codice finale.
+**Confirmation set** (`bench/questions_confirmation.json`, written by hand on 13 Nov): 13 questions with the answer
+checked against the Italian and English articles (only those where the two languages agree were kept; 10 discarded
+for differing altitudes) and 10 new unanswerable questions. It is used only once, on the final code.
 
-### Conferma su domande mai viste (13/11/2026, `conferma-1`, una volta sola, 1,9 $)
+### Confirmation on never-seen questions (13 Nov 2026, `confirmation-1`, once only, $1.9)
 
-| | Risultato |
+| | Result |
 |---|---|
-| Domande con risposta (13) | 12 giuste = 92% (95%: 67–99%) |
-| Risposte date come fatto (`verificata` 8, `sostenuta` 4) | **12 giuste su 12** |
-| La risposta sbagliata | `incerta`: la revisione ha obiettato citando la riga con il nome giusto («ebbe Oswald Veblen come relatore») |
-| Domande senza risposta (10) | 6 «non trovata»; 4 con un valore, tutte `incerta`; **nessuna data come fatto** |
+| Questions with an answer (13) | 12 correct = 92% (95%: 67–99%) |
+| Answers given as fact (`verified` 8, `supported` 4) | **12 correct out of 12** |
+| The wrong answer | `uncertain`: the review objected, quoting the row with the right name (“had Oswald Veblen as advisor”) |
+| Unanswerable questions (10) | 6 “not found”; 4 with a value, all `uncertain`; **none given as fact** |
 
-È il numero indipendente: queste domande non hanno mai deciso niente. Sono poche e, quelle con risposta, più facili
-delle domande di controllo (2 o 3 passi, partenze molto note): conferma la direzione, non stringe gli intervalli.
-Insieme alle domande di controllo sul codice finale (`controllo-f1`): 32 risposte su 32 date come fatto sono giuste
-(limite inferiore al 95%: 89%); le domande senza risposta danno un valore in 10 casi su 30, mai come fatto.
+This is the independent number: these questions never decided anything. They are few and, those with an answer,
+easier than the holdout questions (2 or 3 steps, very well-known starting points): it confirms the direction, it does
+not tighten the intervals. Together with the holdout questions on the final code (`control-f1`): 32 answers out of 32
+given as fact are correct (95% lower bound: 89%); the unanswerable questions give a value in 10 cases out of 30, never
+as fact.
 
-### Tre indagini complete sul codice finale (13–14/11/2026)
+### Three complete investigations on the final code (13–14 Nov 2026)
 
-| Indagine | Domande | verificata | sostenuta | contestata | incerta | Costo |
+| Investigation | Questions | verified | supported | contested | uncertain | Cost |
 |---|---|---|---|---|---|---|
-| Canale di Suez | 28 | 8 | 16 | 0 | 4 | 3,0 $ |
-| Olivetti | 40 | 5 | 24 | 4 | 7 | 3,7 $ |
-| Telescopio James Webb | 36 (30 con risposta) | 2 | 16 | 4 | 8 | 3,7 $ |
+| Suez Canal | 28 | 8 | 16 | 0 | 4 | $3.0 |
+| Olivetti | 40 | 5 | 24 | 4 | 7 | $3.7 |
+| James Webb Space Telescope | 36 (30 with an answer) | 2 | 16 | 4 | 8 | $3.7 |
 
-- **La regola del documento tiene dal vivo**: 19 risposte incerte nei tre documenti, tutte nei riquadri «Punti
-  aperti»; nessuna entra nel testo da sola (8 valori ci sono anche nel testo perché un'altra risposta, non incerta,
-  porta lo stesso valore con la sua fonte).
-- L'indagine Olivetti si è fermata con la regola nuova («la copertura non cresce più: molti fatti chiave sono incerti
-  o contestati»): la regia reagisce allo stato.
-- Nota sulla prova, non sul prodotto: le indagini sono partite con l'attesa del limite di sessione accesa; il tempo
-  dell'indagine e quello della domanda contano anche quell'attesa (Suez ferma a 2 giri, 5 domande del James Webb
-  scadute). Nell'applicazione il limite ferma l'indagine, che si riprende.
+- **The document rule holds live**: 19 uncertain answers in the three documents, all in the “Open points” boxes;
+  none enters the text on its own (8 values also appear in the text because another answer, not uncertain, carries the
+  same value with its source).
+- The Olivetti investigation stopped under the new rule (“coverage no longer grows: many key facts are uncertain or
+  contested”): the director reacts to the status.
+- A note on the test, not on the product: the investigations were started with the session-limit wait switched on;
+  the investigation time and the question time also include that wait (Suez stopped at 2 cycles, 5 James Webb
+  questions timed out). In the application the limit stops the investigation, which can be resumed.
 
-**Fedeltà delle frasi** (`bench/faithfulness.py`, 40 frasi citate a caso per documento, giudice Sonnet):
+**Sentence faithfulness** (`bench/faithfulness.py`, 40 cited sentences at random per document, Sonnet judge):
 
-| Indagine | Contro le risposte: sostenute / in parte / no | Contro le righe delle fonti: sostenute / in parte / no |
+| Investigation | Against the answers: supported / partly / no | Against the source rows: supported / partly / no |
 |---|---|---|
-| Canale di Suez | 38 / 2 / 0 | 28 / 7 / 5 |
+| Suez Canal | 38 / 2 / 0 | 28 / 7 / 5 |
 | Olivetti | 31 / 9 / 0 | 27 / 8 / 5 |
-| Telescopio James Webb | 36 / 3 / 1 | 23 / 10 / 7 |
+| James Webb Space Telescope | 36 / 3 / 1 | 23 / 10 / 7 |
 
-- Contro le risposte: 105 frasi su 120 sostenute (88%), 1 non sostenuta. **L'obiettivo del 95% è raggiunto in un
-  documento su tre.** Le «in parte» sono frasi che aggiungono o cambiano un dettaglio rispetto alla risposta.
-- Contro le righe delle fonti il numero è più basso (65%) ma misura meno di quel che sembra: si salvano solo le righe
-  della strada della catena, non tutto quello che chi ha scritto la risposta aveva davanti; e molte frasi «non
-  sostenute» parlano delle fonti stesse («viene da una sola fonte», «la data non è indicata»), non di fatti.
-- Tra le non sostenute c'è almeno un fatto che sembra inventato da chi scrive la sezione («fino al 1964 la presidenza
-  fu di Elio Schiavo»): l'obiettivo «nessun fatto chiave inventato» non è dimostrato.
-- **Lo strato più debole adesso è la scrittura delle sezioni**: i controlli proteggono le risposte, non le frasi che
-  Claude scrive a partire da esse. Passo successivo: controllare ogni frase della sezione contro la risposta che cita
-  mentre il documento si scrive (stessa logica della revisione: una frase senza appoggio si toglie o si riscrive), e
-  salvare tutte le righe viste da chi scrive, non solo quelle della strada.
+- Against the answers: 105 sentences out of 120 supported (88%), 1 not supported. **The 95% target is met in one
+  document out of three.** The “partly” ones are sentences that add or change a detail relative to the answer.
+- Against the source rows the number is lower (65%), but it measures less than it seems: only the rows of the chain's
+  route are saved, not everything the writer of the answer had in front of them; and many “not supported” sentences
+  are about the sources themselves (“comes from a single source”, “the date is not given”), not about facts.
+- Among the unsupported ones there is at least one fact that seems invented by the section writer (“until 1964 the
+  presidency was held by Elio Schiavo”): the target “no invented key fact” is not shown.
+- **The weakest layer now is section writing**: the checks protect the answers, not the sentences Claude writes from
+  them. Next step: check every sentence of the section against the answer it cites while the document is being written
+  (same logic as the review: a sentence without support is removed or rewritten), and save all the rows seen by the
+  writer, not just those of the route.
 
-### Bilancio (14/11/2026)
+### Assessment (14 Nov 2026)
 
-| Obiettivo fissato all'inizio | Risultato |
+| Target set at the start | Result |
 |---|---|
-| Risposte giuste su domande nuove, limite inferiore ≥ 70% | 25/27 = 93% (limite inferiore 77%) sulle domande di controllo; 12/13 sull'insieme di conferma: **raggiunto** |
-| Risposte date come fatto giuste ≥ 95%, limite inferiore ≥ 85% | 32 su 32 (limite inferiore 89%) tra controllo e conferma: **raggiunto** per `verificata` e `sostenuta` insieme; non dimostrabile per `verificata` da sola con questi numeri |
-| Stesso valore ripetendo ≥ 85% | 28 su 36 = 78%: **non raggiunto**; le domande instabili sono quasi tutte `incerta` |
-| Stesso stato ripetendo ≥ 85% | 19 su 36: **non raggiunto** (il verdetto della revisione oscilla tra «regge» e «non provato») |
-| Risposte inventate ≤ 10% | valore dato in 10 casi su 30 domande senza risposta: **non raggiunto**; dato come fatto: 0 su 30 |
-| Frasi del documento sostenute ≥ 95% | 88% contro le risposte: **non raggiunto** |
-| Limiti di budget e di tempo rispettati | sì nelle tre indagini |
+| Correct answers on new questions, lower bound ≥ 70% | 25/27 = 93% (lower bound 77%) on the holdout questions; 12/13 on the confirmation set: **met** |
+| Answers given as fact correct ≥ 95%, lower bound ≥ 85% | 32 out of 32 (lower bound 89%) across holdout and confirmation: **met** for `verified` and `supported` together; not demonstrable for `verified` alone with these numbers |
+| Same value on repetition ≥ 85% | 28 out of 36 = 78%: **not met**; the unstable questions are almost all `uncertain` |
+| Same status on repetition ≥ 85% | 19 out of 36: **not met** (the review's verdict swings between “holds” and “not proven”) |
+| Invented answers ≤ 10% | value given in 10 cases out of 30 unanswerable questions: **not met**; given as fact: 0 out of 30 |
+| Document sentences supported ≥ 95% | 88% against the answers: **not met** |
+| Budget and time limits respected | yes in all three investigations |
 
-Spesa totale delle corse dall'11 al 14/11: circa 47 $ di abbonamento.
+Total spending on runs from 11 to 14 Nov: about $47 of subscription.
 
-### Controllo delle frasi delle sezioni (15/11/2026)
+### Checking the section sentences (15 Nov 2026)
 
-`documento.controlla_sezione`: il programma segnala le frasi con un numero che le risposte non danno, la regia rilegge
-le frasi contro le risposte, le frasi segnalate tornano una volta a chi scrive, quelle ancora senza appoggio le toglie
-il programma. I tre documenti sono stati riscritti (i vecchi restano accanto come `documento_prima_del_controllo.*`):
+`document.check_section`: the program flags sentences with a number that the answers do not give, the director
+re-reads the sentences against the answers, flagged sentences go back once to the writer, and those still without
+support are removed by the program. The three documents have been rewritten (the old ones are kept alongside as
+`document_before_check.*`):
 
-| Indagine | Frasi segnalate e fatte riscrivere | Tolte dal programma | Sostenute prima | Sostenute dopo | Regia, prima e dopo |
+| Investigation | Sentences flagged and rewritten | Removed by the program | Supported before | Supported after | Director, before and after |
 |---|---|---|---|---|---|
-| Canale di Suez | 3 | 0 | 38 / 40 | 39 / 40 | 0,42 → 1,18 $ |
-| Olivetti | 8 | 0 | 31 / 40 | 35 / 40 | 0,61 → 1,75 $ |
-| Telescopio James Webb | 3 | 0 | 36 / 40 | 33 / 40 | 0,59 → 1,33 $ |
+| Suez Canal | 3 | 0 | 38 / 40 | 39 / 40 | $0.42 → $1.18 |
+| Olivetti | 8 | 0 | 31 / 40 | 35 / 40 | $0.61 → $1.75 |
+| James Webb Space Telescope | 3 | 0 | 36 / 40 | 33 / 40 | $0.59 → $1.33 |
 
-- Frasi «non sostenute» nel campione: da 1 a **0**. La frase inventata sulla presidenza Olivetti «fino al 1964» non
-  c'è più (ora dice quello che le fonti dicono, senza la data).
-- Frasi del tutto sostenute: 105 su 120 prima, 107 su 120 dopo (88% e 89%): **nessun miglioramento misurabile**, e
-  l'obiettivo del 95% resta non raggiunto. Le «in parte» rimaste sono quasi tutte sfumature («una seconda fonte»,
-  «nel mondo», «massima») o frasi che parlano delle fonti; il giudice e chi rilegge sono lo stesso modello e non
-  concordano frase per frase.
-- Il costo della regia cresce di circa 0,75 $ a documento (la riscrittura delle sezioni è compresa in questa cifra;
-  la sola rilettura costa meno).
-- Che cosa dà di sicuro: nessun numero o data nel testo che non stia nelle risposte (controllo del programma, senza
-  costo) e nessuna frase che chi rilegge giudica senza appoggio. Che cosa non dà: frasi senza sfumature aggiunte.
-  Per quello servirebbe scrivere le sezioni per composizione di frasi già controllate, non per riscrittura libera.
+- “Not supported” sentences in the sample: from 1 to **0**. The invented sentence about the Olivetti presidency
+  “until 1964” is gone (it now says what the sources say, without the date).
+- Fully supported sentences: 105 out of 120 before, 107 out of 120 after (88% and 89%): **no measurable improvement**,
+  and the 95% target remains unmet. The remaining “partly” ones are almost all nuances (“a second source”, “in the
+  world”, “maximum”) or sentences about the sources; the judge and the re-reader are the same model and do not agree
+  sentence by sentence.
+- The director's cost grows by about $0.75 per document (rewriting the sections is included in this figure; the
+  re-reading alone costs less).
+- What it certainly gives: no number or date in the text that is not in the answers (program check, at no cost) and
+  no sentence that the re-reader judges unsupported. What it does not give: sentences without added nuances. For that,
+  the sections would have to be written by composing already-checked sentences, not by free rewriting.
 
-### Due revisioni e nome della partenza (15–16/11/2026)
+### Two reviews and the starting-point name (15–16 Nov 2026)
 
-Due modifiche, tutte e due dopo la catena (non cambiano la ricerca):
-- **due revisioni indipendenti, vale la più severa** (`validazione.unisci_revisioni`);
-- **il nome con cui la domanda chiama la sua partenza** (la revisione lo copia dalla domanda, il programma controlla
-  che sia davvero nella domanda) **deve stare in almeno una pagina letta** (`validazione.nome_assente`): altrimenti
-  «non trovata».
+Two changes, both after the chain (they do not change the search):
+- **two independent reviews, the stricter one counts** (`validation.merge_reviews`);
+- **the name by which the question calls its starting point** (the review copies it from the question, the program
+  checks that it really is in the question) **must appear in at least one page read** (`validation.missing_name`):
+  otherwise “not found”.
 
-Corse a bassa priorità, una domanda alla volta (`BASSA_PRIORITA=1 bench/run.sh … --parallelo 1`):
+Low-priority runs, one question at a time (`LOW_PRIORITY=1 bench/run.sh … --parallel 1`):
 
-| | Prima (codice del 13/11) | Dopo (codice del 15/11) |
+| | Before (code of 13 Nov) | After (code of 15 Nov) |
 |---|---|---|
-| 20 domande senza risposta: «non trovata» | 14 | **17** (3 con un valore, tutte `incerta`) |
-| 10 domande senza risposta dell'insieme di conferma | 6 | **8** |
-| Valori inventati dati come fatto | 0 | 0 |
-| Domande di controllo, risposte attese buone | 25 su 27 | **19 su 27** |
-| Insieme di conferma, 13 domande con risposta | 12 giuste | 11 giuste |
+| 20 unanswerable questions: “not found” | 14 | **17** (3 with a value, all `uncertain`) |
+| 10 unanswerable questions from the confirmation set | 6 | **8** |
+| Invented values given as fact | 0 | 0 |
+| Holdout questions, good expected answers | 25 out of 27 | **19 out of 27** |
+| Confirmation set, 13 questions with an answer | 12 correct | 11 correct |
 
-- Sulle domande senza risposta il valore inventato resta in 5 casi su 30 (17%; l'obiettivo era 10%), mai come fatto.
-- **Il calo sulle domande di controllo non viene dai controlli ma dalla catena, che cambia da una corsa all'altra**: in
-  5 delle 8 risposte sbagliate la ricerca ha trovato un altro valore prima di ogni revisione (C++, ENIAC, Museo del
-  Louvre, Madama Butterfly, Isaac Newton: le stesse domande instabili delle altre corse). Nelle quattro corse fatte
-  con i controlli le giuste sono state 23, 22, 25 e 19 su 27: in media l'82%, con tre domande in più o in meno da
-  una corsa all'altra. Il 93% del 13/11 era una corsa fortunata; il numero onesto è «tra il 70 e il 93%, in media
-  82%».
-- I rifiuti sulle domande di controllo sono stati 2: uno di una risposta sbagliata, **uno di una risposta giusta**
-  (Decameron: 50 m, catena respinta). È il prezzo misurato delle regole che fermano le risposte inventate.
-- Risposte date come fatto, corse del 13/11 e del 15/11 insieme: `verificata` 15 giuste su 15, `sostenuta` 22 su 23.
-  L'unica sbagliata è un passaggio su cui le fonti non concordano (dove morì la madre di Newton: Stamford per
-  Wikidata, Colsterworth per la pagina letta), che la revisione non ha visto.
-- La stabilità dello stato non è migliorata in modo misurabile: tra le due corse stesso valore in 26 domande su 36,
-  stesso stato in 21 (prima 28 e 19). Con una catena che cambia valore una volta su quattro, lo stato non può essere
-  più stabile del valore.
+- On the unanswerable questions the invented value remains in 5 cases out of 30 (17%; the target was 10%), never as
+  fact.
+- **The drop on the holdout questions does not come from the checks but from the chain, which changes from one run to
+  the next**: in 5 of the 8 wrong answers the search found another value before any review (C++, ENIAC, Louvre
+  Museum, Madama Butterfly, Isaac Newton: the same unstable questions as in the other runs). In the four runs done
+  with the checks the correct answers were 23, 22, 25 and 19 out of 27: 82% on average, with three questions more or
+  fewer from one run to the next. The 93% of 13 Nov was a lucky run; the honest number is “between 70 and 93%, 82% on
+  average”.
+- There were 2 rejections on the holdout questions: one of a wrong answer, **one of a correct answer** (Decameron:
+  50 m, rejected chain). It is the measured price of the rules that stop invented answers.
+- Answers given as fact, runs of 13 Nov and 15 Nov together: `verified` 15 correct out of 15, `supported` 22 out of
+  23. The only wrong one is a step on which the sources disagree (where Newton's mother died: Stamford according to
+  Wikidata, Colsterworth according to the page read), which the review did not see.
+- The stability of the status did not improve measurably: between the two runs, same value in 26 questions out of
+  36, same status in 21 (previously 28 and 19). With a chain that changes value one time in four, the status cannot be
+  more stable than the value.
 
-**Che cosa resta, in ordine:** la catena non è ripetibile sulle domande difficili (stessa domanda, altra strada e
-altro valore): è il limite più grande rimasto, e sta nella ricerca, non nella validazione. Poi: i passaggi su cui le
-fonti non concordano e che la revisione non vede; le frasi delle sezioni con sfumature aggiunte.
+**What remains, in order:** the chain is not repeatable on hard questions (same question, different route and
+different value): this is the biggest remaining limit, and it lies in the search, not in validation. Then: the steps
+on which the sources disagree and that the review does not see; the section sentences with added nuances.
 
-### Seconda ricerca per le risposte incerte (16–17/11/2026)
+### Second search for uncertain answers (16–17 Nov 2026)
 
-`web/riprova.py`: una risposta `incerta` si cerca una seconda volta, da capo, con il budget e il tempo rimasti alla
-domanda. Stesso valore: `sostenuta` («due ricerche indipendenti»); altro valore: `contestata`, con tutti e due; nessun
-valore: resta `incerta`. Se la seconda ricerca ha uno stato migliore, la risposta principale è la sua.
+`web/retry.py`: an `uncertain` answer is searched a second time, from scratch, with the budget and time left for the
+question. Same value: `supported` (“two independent searches”); different value: `contested`, with both; no value:
+stays `uncertain`. If the second search has a better status, the main answer is its answer.
 
-Prima di costruirla, sulle corse salvate (coppie di corse delle stesse domande di controllo): una risposta `incerta`
-ritrovata uguale era giusta 28 volte su 30; con un altro valore 14 su 51; sulle domande senza risposta 40 valori
-inventati su 42 non si ripetevano.
+Before building it, on the saved runs (pairs of runs on the same holdout questions): an `uncertain` answer found again
+with the same value was correct 28 times out of 30; with a different value 14 out of 51; on the unanswerable questions,
+40 invented values out of 42 did not repeat.
 
-Corse a bassa priorità (`controllo-h1`, `senza-risposta-4`):
+Low-priority runs (`control-h1`, `unanswerable-4`):
 
-| | Corsa del 15/11 | Con la seconda ricerca |
+| | Run of 15 Nov | With the second search |
 |---|---|---|
-| Domande di controllo, risposte attese buone | 19 su 27 | **26 su 27** (l'altra: «non trovata») |
-| Risposte date come fatto | 17 giuste su 18 | **17 giuste su 17** |
-| `contestata` | 1 | 5, tutte con il valore giusto come principale |
-| `incerta` | 5 (1 giusta) | 4 (tutte giuste) |
-| Domande senza risposta: «non trovata» | 17 su 20 | **19 su 20** (1 valore, `incerta`) |
-| Costo, domande di controllo | 4,6 $ (36 domande) | 7,1 $ |
+| Holdout questions, good expected answers | 19 out of 27 | **26 out of 27** (the other: “not found”) |
+| Answers given as fact | 17 correct out of 18 | **17 correct out of 17** |
+| `contested` | 1 | 5, all with the correct value as the main one |
+| `uncertain` | 5 (1 correct) | 4 (all correct) |
+| Unanswerable questions: “not found” | 17 out of 20 | **19 out of 20** (1 value, `uncertain`) |
+| Cost, holdout questions | $4.6 (36 questions) | $7.1 |
 
-- Seconde ricerche sulle domande di controllo con risposta attesa buona: 6. Due hanno ridato lo stesso valore (giusto,
-  ora `sostenuta`), due un altro valore (`contestata`), due nessun valore.
-- **Nessuna risposta sbagliata tra le 27**, e nessuna data come fatto a torto; nessun valore inventato dato come fatto.
-- Con prudenza: la catena cambia da una corsa all'altra (23, 22, 25, 19 e ora 26 giuste su 27). Una corsa sola non
-  dimostra che la seconda ricerca alzi le risposte giuste; dimostra che non le abbassa e che lo stato regge. Il costo
-  cresce di circa metà.
-- Sulle domande con la risposta attesa contestata la seconda ricerca ridà lo stesso valore (4 su 5): due ricerche che
-  leggono le stesse pagine concordano anche quando la fonte è in disaccordo con Wikidata. La seconda ricerca misura la
-  ripetibilità della catena, non la verità della fonte.
+- Second searches on the holdout questions with a good expected answer: 6. Two gave the same value again (correct, now
+  `supported`), two a different value (`contested`), two no value.
+- **No wrong answer among the 27**, and none wrongly given as fact; no invented value given as fact.
+- With caution: the chain changes from one run to the next (23, 22, 25, 19 and now 26 correct out of 27). A single run
+  does not show that the second search raises the correct answers; it shows that it does not lower them and that the
+  status holds. The cost grows by about half.
+- On the questions with a contested expected answer, the second search gives the same value again (4 out of 5): two
+  searches that read the same pages agree even when the source disagrees with Wikidata. The second search measures the
+  repeatability of the chain, not the truth of the source.
 
-**Bilancio aggiornato (17/11):** risposte date come fatto giuste nelle ultime tre corse sulle domande di controllo
-54 su 55; valori inventati sulle domande senza risposta 1 su 20, mai come fatto (obiettivo 10%: raggiunto in questa
-corsa); frasi dei documenti sostenute 89% (obiettivo 95%: non raggiunto); stesso stato ripetendo: da misurare di
-nuovo con la seconda ricerca. Spesa totale delle corse: circa 75 $.
+**Updated assessment (17 Nov):** answers given as fact that are correct in the last three runs on the holdout
+questions: 54 out of 55; invented values on the unanswerable questions 1 out of 20, never as fact (10% target: met in
+this run); document sentences supported 89% (95% target: not met); same status on repetition: to be measured again
+with the second search. Total spending on runs: about $75.

@@ -28,33 +28,33 @@ from chain_research.web.sources.limits import limiter  # noqa: E402
 
 API = "https://www.wikidata.org/w/api.php"
 QUESTIONS_MODEL = "sonnet"
-# Titles of it.wikipedia articles (looked up with sites=itwiki).
+# Titles of en.wikipedia articles (looked up with sites=enwiki).
 SEEDS = {
-    "computing": ["Python", "PostgreSQL", "Apache HTTP Server", "Vim (software)", "GIMP", "Ubuntu",
-                    "Android (sistema operativo)", "Java (linguaggio di programmazione)", "C++", "Perl", "PHP",
-                    "Ruby (linguaggio di programmazione)", "MySQL", "VLC media player", "Inkscape", "Audacity", "Bitcoin",
-                    "Unix", "Commodore 64", "ENIAC", "Apple II", "Pascal (linguaggio di programmazione)", "Fortran", "Lisp",
-                    "MS-DOS", "Tetris"],
-    "history": ["Guerra dei trent'anni", "Battaglia di Austerlitz", "Battaglia di Hastings", "Guerra di secessione americana",
-               "Magna Carta", "Trattato di Versailles (1919)", "Congresso di Berlino", "Impero ottomano", "Repubblica di Genova",
-               "Ducato di Savoia", "Spedizione dei Mille", "Battaglia di Trafalgar", "Battaglia di Legnano", "Pace di Augusta",
-               "Editto di Nantes", "Presa di Roma", "Regno di Sardegna", "Granducato di Toscana", "Battaglia di Pavia",
-               "Trattato di Tordesillas", "Battaglia di Poitiers (732)", "Battaglia di Marignano", "Pace di Utrecht",
-               "Regno di Napoli", "Sacco di Roma (1527)", "Battaglia di Caporetto", "Trattato di Campoformio",
-               "Battaglia di Marengo", "Vespri siciliani", "Giovine Italia"],
+    "computing": ["Python (programming language)", "PostgreSQL", "Apache HTTP Server", "Vim (text editor)", "GIMP",
+                  "Ubuntu", "Android (operating system)", "Java (programming language)", "C++", "Perl", "PHP",
+                  "Ruby (programming language)", "MySQL", "VLC media player", "Inkscape", "Audacity", "Bitcoin", "Unix",
+                  "Commodore 64", "ENIAC", "Apple II", "Pascal (programming language)", "Fortran",
+                  "Lisp (programming language)", "MS-DOS", "Tetris"],
+    "history": ["Thirty Years' War", "Battle of Austerlitz", "Battle of Hastings", "American Civil War", "Magna Carta",
+                "Treaty of Versailles", "Congress of Berlin", "Ottoman Empire", "Republic of Genoa", "Duchy of Savoy",
+                "Expedition of the Thousand", "Battle of Trafalgar", "Battle of Legnano", "Peace of Augsburg",
+                "Edict of Nantes", "Capture of Rome", "Kingdom of Sardinia", "Grand Duchy of Tuscany",
+                "Battle of Pavia", "Treaty of Tordesillas", "Battle of Tours", "Battle of Marignano",
+                "Peace of Utrecht", "Kingdom of Naples", "Sack of Rome (1527)", "Battle of Caporetto",
+                "Treaty of Campo Formio", "Battle of Marengo", "Sicilian Vespers", "Young Italy"],
     "science": ["Albert Einstein", "Isaac Newton", "Gregor Mendel", "Louis Pasteur", "Nikola Tesla",
-                "Telescopio spaziale James Webb", "Voyager 1", "Apollo 11", "Sputnik 1", "Antonio Meucci", "Guglielmo Marconi",
-                "Rita Levi-Montalcini", "Camillo Golgi", "Lazzaro Spallanzani", "Dmitrij Ivanovič Mendeleev", "Max Planck",
-                "Niels Bohr", "Erwin Schrödinger", "Michael Faraday", "James Clerk Maxwell", "Stephen Hawking", "Carlo Rubbia",
-                "Giulio Natta", "Enrico Forlanini"],
-    "geography_culture": ["Monte Rosa", "Lago Maggiore", "Colosseo", "Torre di Pisa", "Basilica di San Marco",
-                          "Reggia di Caserta", "Museo del Louvre", "Museo del Prado", "Teatro La Fenice", "Teatro di San Carlo",
-                          "Aida", "La traviata", "Decameron", "Il nome della rosa", "Il Gattopardo", "Orlando furioso",
-                          "Gerusalemme liberata", "Gioconda", "Ultima Cena (Leonardo)", "Nascita di Venere (Botticelli)",
-                          "Sagrada Família", "Etna", "Stromboli", "Cervino", "Tosca (opera)", "Rigoletto", "Cavalleria rusticana",
-                          "Il barbiere di Siviglia (Rossini)", "Turandot (Puccini)", "Madama Butterfly", "Pietà vaticana",
-                          "David (Michelangelo)", "Guernica (Picasso)", "Il deserto dei Tartari", "Se questo è un uomo",
-                          "Mole Antonelliana", "Palazzo Pitti", "Basilica di San Pietro in Vaticano"],
+                "James Webb Space Telescope", "Voyager 1", "Apollo 11", "Sputnik 1", "Antonio Meucci",
+                "Guglielmo Marconi", "Rita Levi-Montalcini", "Camillo Golgi", "Lazzaro Spallanzani", "Dmitri Mendeleev",
+                "Max Planck", "Niels Bohr", "Erwin Schrödinger", "Michael Faraday", "James Clerk Maxwell",
+                "Stephen Hawking", "Carlo Rubbia", "Giulio Natta", "Enrico Forlanini"],
+    "geography_culture": ["Monte Rosa", "Lake Maggiore", "Colosseum", "Leaning Tower of Pisa", "St Mark's Basilica",
+                          "Royal Palace of Caserta", "Louvre", "Museo del Prado", "La Fenice", "Teatro di San Carlo",
+                          "Aida", "La traviata", "The Decameron", "The Name of the Rose", "The Leopard", "Orlando Furioso",
+                          "Jerusalem Delivered", "Mona Lisa", "The Last Supper (Leonardo)", "The Birth of Venus",
+                          "Sagrada Família", "Mount Etna", "Stromboli", "Matterhorn", "Tosca", "Rigoletto",
+                          "Cavalleria rusticana", "The Barber of Seville", "Turandot", "Madama Butterfly",
+                          "Pietà (Michelangelo)", "David (Michelangelo)", "Guernica (Picasso)", "The Tartar Steppe",
+                          "If This Is a Man", "Mole Antonelliana", "Palazzo Pitti", "St. Peter's Basilica"],
 }
 # Ties to follow: those that usually have a single value. Kept only if they have exactly one on that entity.
 TIES = {"P170": "creator", "P112": "founder", "P50": "author", "P57": "director", "P84": "architect", "P86": "composer",
@@ -98,12 +98,12 @@ class Wikidata:
         contact = email_account_claude()
         if not contact:
             sys.exit("Wikidata needs a contact: no Claude account email found.")
-        self.client = SourceClient("Wikidata", user_agent=f"ricerca-catena-bench/0.1 (test question generator; {contact})",
+        self.client = SourceClient("Wikidata", user_agent=f"chain-research-bench/0.1 (test question generator; {contact})",
                                   domains={"wikidata.org"}, limiter=limiter("wikidata", 1.0))
         self.memory: dict[str, dict] = {}
 
     def from_title(self, title: str) -> str | None:
-        data = self.client.get_json(API, params={"action": "wbgetentities", "sites": "itwiki", "titles": title, "props": "info",
+        data = self.client.get_json(API, params={"action": "wbgetentities", "sites": "enwiki", "titles": title, "props": "info",
                                                  "format": "json", "formatversion": 2})
         return next((q for q in data.get("entities", {}) if q.startswith("Q")), None)
 

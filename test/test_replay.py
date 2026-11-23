@@ -1,7 +1,7 @@
-"""Le catene registrate dal banco, ripercorse senza rete né Claude: risposta, valore e azioni devono restare uguali.
+"""The chains recorded by the bench, replayed without network or Claude: answer, value and actions must stay the same.
 
-Registrazione: `bench/bench.py --nome X --registra risultati/rigioco`. La cartella è fuori da git (decine di MB): senza
-registrazioni questi test si saltano. Un prompt cambiato cambia le richieste: allora si registra di nuovo.
+Recording: `bench/bench.py --name X --record results/replay`. The folder is outside git (tens of MB): without
+recordings these tests are skipped. A changed prompt changes the requests: then record again.
 """
 import json
 import os
@@ -18,21 +18,21 @@ from chain_research.model import replay
 from chain_research.proofs.concepts import Concepts
 from chain_research.web.collector import BLOCK, Collector
 
-CHAINS = sorted((ROOT / "results" / "rigioco").glob("*/atteso.json"))
+CHAINS = sorted((ROOT / "results" / "replay").glob("*/expected.json"))
 
 
 @pytest.mark.replay
-@pytest.mark.parametrize("file", CHAINS or [None], ids=[f.parent.name for f in CHAINS] or ["nessuna"])
-def test_chain_replayed_equal(file: Path | None, tmp_path: Path) -> None:
+@pytest.mark.parametrize("file", CHAINS or [None], ids=[f.parent.name for f in CHAINS] or ["none"])
+def test_recorded_chain_replays_unchanged(file: Path | None, tmp_path: Path) -> None:
     if file is None:
-        pytest.skip("nessuna catena registrata")
-    outdated = file.parent / "da_registrare.txt"
-    if outdated.is_file():  # il codice è cambiato apposta su questa catena: va registrata di nuovo (costa)
-        pytest.skip(f"da registrare di nuovo: {outdated.read_text(encoding='utf-8').strip()[:200]}")
+        pytest.skip("no recorded chain")
+    outdated = file.parent / "to_record.txt"
+    if outdated.is_file():  # the code changed on purpose for this chain: record it again (costs)
+        pytest.skip(f"to record again: {outdated.read_text(encoding='utf-8').strip()[:200]}")
     expected = json.loads(file.read_text(encoding="utf-8"))
-    # Le catene registrate prima dei controlli con il modello (11/11) non ne hanno le richieste.
+    # Chains recorded before the model checks (11 Nov) do not have their requests.
     expected["options"].setdefault("model_checks", False)
-    expected["options"]["second_research"] = False   # le registrazioni sono di una ricerca sola
+    expected["options"]["second_research"] = False   # recordings cover a single research
     request = {"question": expected["question"], "options": expected["options"], "pieces_folder": str(tmp_path / "pieces"),
                  "profile": str(tmp_path / "profile")}
     output = subprocess.run([sys.executable, "-m", "chain_research.question"], cwd=ROOT, capture_output=True, text=True,
@@ -44,9 +44,9 @@ def test_chain_replayed_equal(file: Path | None, tmp_path: Path) -> None:
     assert outcome is not None, [m for m in messages if "error" in m] or output.stderr[-800:]
     assert (outcome["value"], outcome["found"], outcome["end_reason"]) == (expected["value"], expected["found"],
                                                                         expected["end_reason"])
-    # La riga «Fiducia» la scrive il programma dallo stato dei controlli: una regola dello stato cambiata la cambia,
-    # e ha i suoi test (test_validazione.py). Qui conta che la catena e il testo scritto restino uguali.
-    without_confidence = lambda text: re.sub(r"\*\*Fiducia:?\*\*:?[^\n]*", "", text or "")  # noqa: E731
+    # The "Confidence" line is written by the program from the status of the checks: a changed status rule changes it,
+    # and has its own tests (test_validation.py). What matters here is that the chain and the written text stay the same.
+    without_confidence = lambda text: re.sub(r"\*\*Confidence:?\*\*:?[^\n]*", "", text or "")  # noqa: E731
     assert outcome["chain"]["actions"] == expected["actions"]
     assert without_confidence(outcome["answer"]) == without_confidence(expected["answer"])
 
@@ -57,63 +57,63 @@ def test_record_and_replay(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> N
     assert [replay.through("t", "x", lambda: next(answers)) for _ in range(2)] == ["first", "second"]
 
     def broken():
-        raise ValueError("guasto")
+        raise ValueError("fault")
     with pytest.raises(ValueError):
         replay.through("t", "y", broken)
     monkeypatch.delenv("CHAIN_RECORD")
     monkeypatch.setenv("CHAIN_REPLAY", str(tmp_path))
     monkeypatch.setattr(replay, "_readings", type(replay._readings)())
-    forbidden = lambda: pytest.fail("nel rigioco non si esce")  # noqa: E731
+    forbidden = lambda: pytest.fail("no outside calls in replay")  # noqa: E731
     assert [replay.through("t", "x", forbidden) for _ in range(2)] == ["first", "second"]
-    with pytest.raises(replay.FailedWhenRecorded, match="guasto"):
+    with pytest.raises(replay.FailedWhenRecorded, match="fault"):
         replay.through("t", "y", forbidden)
     with pytest.raises(replay.UnrecordedRequest):
-        replay.through("t", "x", forbidden)  # una volta in più di quelle registrate
+        replay.through("t", "x", forbidden)  # one more time than recorded
     with pytest.raises(replay.UnrecordedRequest):
-        replay.through("t", "mai vista", forbidden)
+        replay.through("t", "never seen", forbidden)
 
 
-def test_today_fixed(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_fixed_today(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CHAIN_TODAY", "2026-01-02")
     assert replay.today() == "2026-01-02" and Collector("question").today == "2026-01-02"
 
 
-def test_saved_blocks_in_order_of_reading(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Il primo blocco finisce per ultimo: il grafo deve comunque averlo per primo."""
+def test_blocks_saved_in_reading_order(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The first block finishes last: the graph must still have it first."""
     r = Collector("question", options={"claude_model": "haiku"})
     r.concepts = Concepts(tmp_path / "c.sqlite")
 
     def ask(_point, _rules, text, _schema=None):
-        if "parte 1 di" in text:
+        if "part 1 of" in text:
             time.sleep(0.3)
-        return {"notes": "- fatto", "relevance": 3, "concepts": [{"name": "Alfa", "sentence": "Alfa"}]}
+        return {"notes": "- fact", "relevance": 3, "concepts": [{"name": "Alfa", "sentence": "Alfa"}]}
     monkeypatch.setattr(r.thinker, "ask", ask)
-    r._annotate(1, "https://esempio.org/a", "A", "Alfa " * (BLOCK // 2))
+    r._annotate(1, "https://example.org/a", "A", "Alfa " * (BLOCK // 2))
     r._evaluate_completed(wait_for=True)
-    numbers = [x[0] for x in r.concepts.graph.db.execute("SELECT numero FROM segmento ORDER BY id")]
+    numbers = [x[0] for x in r.concepts.graph.db.execute("SELECT number FROM segment ORDER BY id")]
     assert numbers == sorted(numbers) and len(numbers) >= 2
 
 
-def test_writing_replay_also_with_input_changed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_writing_replays_even_with_changed_input(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     from chain_research.model import claude_json
-    row = json.dumps({"type": "result", "subtype": "success", "is_error": False, "total_cost_usd": 0.01, "result": "TESTO"})
+    row = json.dumps({"type": "result", "subtype": "success", "is_error": False, "total_cost_usd": 0.01, "result": "TEXT"})
     monkeypatch.setenv("CHAIN_RECORD", str(tmp_path))
     monkeypatch.setattr(claude_json, "_run", lambda *_to: row)
-    assert claude_json.ask("rules", "ingresso di allora", None, "writing", model="haiku")[0] == "TESTO"
-    assert claude_json.ask("rules", "una lettura", None, "reading", model="haiku")[0] == "TESTO"
+    assert claude_json.ask("rules", "input of then", None, "writing", model="haiku")[0] == "TEXT"
+    assert claude_json.ask("rules", "a reading", None, "reading", model="haiku")[0] == "TEXT"
     monkeypatch.delenv("CHAIN_RECORD")
     monkeypatch.setenv("CHAIN_REPLAY", str(tmp_path))
     monkeypatch.setattr(replay, "_readings", type(replay._readings)())
-    monkeypatch.setattr(claude_json, "_run", lambda *_to: pytest.fail("nel rigioco non si esce"))
-    assert claude_json.ask("rules", "ingresso con lo stato di adesso", None, "writing", model="haiku")[0] == "TESTO"
-    with pytest.raises(replay.UnrecordedRequest):          # solo scrittura e revisione: una lettura cambiata resta un errore
-        claude_json.ask("rules", "un'altra lettura", None, "reading", model="haiku")
-    assert claude_json.ask("rules", "ingresso di allora", None, "writing", model="haiku")[0] == "TESTO"
-    monkeypatch.setenv("CHAIN_RECORD", str(tmp_path))        # due scritture registrate: non si sa quale, errore
+    monkeypatch.setattr(claude_json, "_run", lambda *_to: pytest.fail("no outside calls in replay"))
+    assert claude_json.ask("rules", "input with the current status", None, "writing", model="haiku")[0] == "TEXT"
+    with pytest.raises(replay.UnrecordedRequest):          # only writing and review: a changed reading stays an error
+        claude_json.ask("rules", "another reading", None, "reading", model="haiku")
+    assert claude_json.ask("rules", "input of then", None, "writing", model="haiku")[0] == "TEXT"
+    monkeypatch.setenv("CHAIN_RECORD", str(tmp_path))        # two writings recorded: which one is unknown, error
     monkeypatch.delenv("CHAIN_REPLAY")
     monkeypatch.setattr(claude_json, "_run", lambda *_to: row)
-    claude_json.ask("rules", "seconda scrittura", None, "writing", model="haiku")
+    claude_json.ask("rules", "second writing", None, "writing", model="haiku")
     monkeypatch.delenv("CHAIN_RECORD")
     monkeypatch.setenv("CHAIN_REPLAY", str(tmp_path))
-    with pytest.raises(replay.UnrecordedRequest, match="2 risposte"):
-        claude_json.ask("rules", "terzo ingresso", None, "writing", model="haiku")
+    with pytest.raises(replay.UnrecordedRequest, match="2 answers"):
+        claude_json.ask("rules", "third input", None, "writing", model="haiku")

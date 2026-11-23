@@ -101,7 +101,7 @@ class Graph:
         """Add an alternative name (e.g. from Wikidata). False if it would change the numbers or already belongs to
         another entity."""
         name = self.db.execute("SELECT name FROM entity WHERE id = ?", (entity_id,)).fetchone()["name"]
-        if not ent.alias_compatibile(name, alias):
+        if not ent.compatible_alias(name, alias):
             return False
         already = self.find(alias)
         if already is not None:

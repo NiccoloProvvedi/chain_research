@@ -73,7 +73,7 @@ def assess_article(article: dict) -> None:
         return
     try:
         article["final"] = judge.final_of(article, article["question"])
-        correct, article["decided_by"] = judge.assess(article["question"], article["wait"], article["final"])
+        correct, article["decided_by"] = judge.assess(article["question"], article["expected"], article["final"])
     except claude_json.ClaudeError as error:
         article.setdefault("final", "")
         correct, article["decided_by"] = None, f"judge error: {error}"[:200]
@@ -124,7 +124,7 @@ def main() -> None:
             profile = profiles.pop(0)
         try:
             outcome = one_question(d, profile, arg.parallel, record)
-            article = {"theme": d["theme"], "seed": d["seed"], "question": d["question"], "wait": d["answer"],
+            article = {"theme": d["theme"], "seed": d["seed"], "question": d["question"], "expected": d["answer"],
                     "reference_status": d.get("reference_status", "ok"),
                     "without_answer": bool(d.get("without_answer")), **outcome}
             assess_article(article)

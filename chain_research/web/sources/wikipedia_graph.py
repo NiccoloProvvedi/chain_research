@@ -27,7 +27,7 @@ from .http import SourceClient
 from .limits import limiter
 
 log = logging.getLogger("chain_research.sources")
-USER_AGENT = "ricerca-catena/0.1 (personal use)"
+USER_AGENT = "chain-research/0.1 (personal use)"
 
 
 VALID_CONTACT = re.compile(r"[^\s;()<>\"]{3,120}")
@@ -115,7 +115,7 @@ class Row:
     """A sentence or an infobox/table row, with the linked articles it contains."""
     text: str
     hyperlinks: list[str] = field(default_factory=list)  # titles of the linked articles
-    kind: str = "sentence"  # sentence | riquadro (infobox) | tabella (table) | elenco (list) | categories
+    kind: str = "sentence"  # sentence | infobox | table | list | categories
     section: str = ""
 
 
@@ -138,7 +138,7 @@ class Article:
         return " ".join(sentences)
 
     def infobox(self) -> list[Row]:
-        return [r for r in self.rows if r.kind == "riquadro"]
+        return [r for r in self.rows if r.kind == "infobox"]
 
 
 def _title_from_href(href: str, language: str) -> str | None:
@@ -251,7 +251,7 @@ def analyze(html: str, title: str, language: str) -> list[Row]:
                 text = " ".join(text.split())
                 if len(text) > 3:
                     rows.append(Row(text[:600], _hyperlinks(tr, language),
-                                      "riquadro" if infobox else "tabella", section))
+                                      "infobox" if infobox else "table", section))
             continue
         if el.tag == "p" and not any(p.tag == "table" for p in el.iterancestors()):
             for sentence, coll in _sentences_with_hyperlinks(el, language):
@@ -259,9 +259,9 @@ def analyze(html: str, title: str, language: str) -> list[Row]:
         elif el.tag in ("li", "dd") and not any(p.tag in ("table", "li") for p in el.iterancestors()):
             text = _text(el)
             if 3 < len(text):
-                rows.append(Row(text[:600], _hyperlinks(el, language), "elenco", section))
+                rows.append(Row(text[:600], _hyperlinks(el, language), "list", section))
     # The infobox first: it is the piece densest in facts.
-    return [r for r in rows if r.kind == "riquadro"] + [r for r in rows if r.kind != "riquadro"]
+    return [r for r in rows if r.kind == "infobox"] + [r for r in rows if r.kind != "infobox"]
 
 
 class WikipediaGraph:

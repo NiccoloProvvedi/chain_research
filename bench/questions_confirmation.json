@@ -1,422 +1,422 @@
 {
- "nota": "Insieme di conferma, scritto a mano il 13/11/2026 e mai usato per regolare la catena: 13 domande con la risposta controllata sulle voci di Wikipedia in italiano e in inglese (sono rimaste solo quelle in cui le due lingue danno lo stesso valore), 10 domande senza risposta. Va usato una volta sola, sul codice finale. Le domande con risposta hanno 2 o 3 passi e partono da cose molto note: sono più facili delle domande di controllo generate da Wikidata.",
- "domande": [
+ "note": "Confirmation set, written by hand on 2026-11-13 and never used to tune the chain: 13 questions with the answer checked on the Italian and English Wikipedia articles (only those where the two languages give the same value were kept), 10 questions without an answer. To be used only once, on the final code. The questions with an answer have 2 or 3 steps and start from very well-known things: they are easier than the control questions generated from Wikidata.",
+ "questions": [
   {
-   "tema": "informatica",
-   "seme": "Macchina di Turing",
-   "domanda": "Qual è la data di morte (giorno, mese e anno) del matematico statunitense che fu relatore di dottorato del logico statunitense a sua volta relatore di dottorato del matematico britannico che nel 1936 ideò la macchina astratta che porta il suo nome, modello teorico del calcolatore?",
-   "risposta": "10 agosto 1960",
-   "attributo": {
-    "relazione": "data di morte"
+   "theme": "computing",
+   "seed": "Turing machine",
+   "question": "What is the date of death (day, month and year) of the American mathematician who was the doctoral advisor of the American logician who was in turn the doctoral advisor of the British mathematician who in 1936 devised the abstract machine that bears his name, a theoretical model of the computer?",
+   "answer": "10 August 1960",
+   "attribute": {
+    "relation": "date of death"
    },
-   "percorso": [
+   "path": [
     {
-     "nome": "Macchina di Turing",
-     "relazione": null
+     "name": "Turing machine",
+     "relation": null
     },
     {
-     "nome": "Alan Turing",
-     "relazione": "ideatore"
+     "name": "Alan Turing",
+     "relation": "creator"
     },
     {
-     "nome": "Alonzo Church",
-     "relazione": "relatore di dottorato"
+     "name": "Alonzo Church",
+     "relation": "doctoral advisor"
     },
     {
-     "nome": "Oswald Veblen",
-     "relazione": "relatore di dottorato"
+     "name": "Oswald Veblen",
+     "relation": "doctoral advisor"
     }
    ],
-   "fonte_risposta": "it.wiki ed en.wiki, voce Oswald Veblen: 10 agosto 1960",
-   "stato_riferimento": "ok"
+   "answer_source": "it.wiki and en.wiki, article Oswald Veblen: 10 August 1960",
+   "reference_status": "ok"
   },
   {
-   "tema": "informatica",
-   "seme": "Macchina analitica",
-   "domanda": "Qual è la data di morte (giorno, mese e anno) del poeta britannico padre della matematica inglese considerata la prima programmatrice della storia per le sue note sulla macchina analitica di Charles Babbage?",
-   "risposta": "19 aprile 1824",
-   "attributo": {
-    "relazione": "data di morte"
+   "theme": "computing",
+   "seed": "Analytical Engine",
+   "question": "What is the date of death (day, month and year) of the British poet who was the father of the English mathematician considered the first programmer in history for her notes on Charles Babbage's Analytical Engine?",
+   "answer": "19 April 1824",
+   "attribute": {
+    "relation": "date of death"
    },
-   "percorso": [
+   "path": [
     {
-     "nome": "Macchina analitica",
-     "relazione": null
+     "name": "Analytical Engine",
+     "relation": null
     },
     {
-     "nome": "Ada Lovelace",
-     "relazione": "prima programmatrice"
+     "name": "Ada Lovelace",
+     "relation": "first programmer"
     },
     {
-     "nome": "George Gordon Byron",
-     "relazione": "padre"
+     "name": "Lord Byron",
+     "relation": "father"
     }
    ],
-   "fonte_risposta": "it.wiki ed en.wiki, voce Lord Byron: 19 aprile 1824",
-   "stato_riferimento": "ok"
+   "answer_source": "it.wiki and en.wiki, article Lord Byron: 19 April 1824",
+   "reference_status": "ok"
   },
   {
-   "tema": "scienze",
-   "seme": "Relatività ristretta",
-   "domanda": "Qual è la data di morte (giorno, mese e anno) della fisica serba che fu la prima moglie dello scienziato autore, nel 1905, della teoria della relatività ristretta?",
-   "risposta": "4 agosto 1948",
-   "attributo": {
-    "relazione": "data di morte"
+   "theme": "science",
+   "seed": "Special relativity",
+   "question": "What is the date of death (day, month and year) of the Serbian physicist who was the first wife of the scientist who in 1905 formulated the theory of special relativity?",
+   "answer": "4 August 1948",
+   "attribute": {
+    "relation": "date of death"
    },
-   "percorso": [
+   "path": [
     {
-     "nome": "Relatività ristretta",
-     "relazione": null
+     "name": "Special relativity",
+     "relation": null
     },
     {
-     "nome": "Albert Einstein",
-     "relazione": "autore"
+     "name": "Albert Einstein",
+     "relation": "author"
     },
     {
-     "nome": "Mileva Marić",
-     "relazione": "prima moglie"
+     "name": "Mileva Marić",
+     "relation": "first wife"
     }
    ],
-   "fonte_risposta": "it.wiki ed en.wiki, voce Mileva Marić: 4 agosto 1948",
-   "stato_riferimento": "ok"
+   "answer_source": "it.wiki and en.wiki, article Mileva Marić: 4 August 1948",
+   "reference_status": "ok"
   },
   {
-   "tema": "scienze",
-   "seme": "Dinamite",
-   "domanda": "Qual è l'altitudine sul livello del mare della città svedese in cui è nato l'ingegnere e inventore padre del chimico che brevettò la dinamite nel 1867?",
-   "risposta": "8 m",
-   "attributo": {
-    "relazione": "altitudine"
+   "theme": "science",
+   "seed": "Dynamite",
+   "question": "What is the elevation above sea level of the Swedish city where the engineer and inventor who was the father of the chemist who patented dynamite in 1867 was born?",
+   "answer": "8 m",
+   "attribute": {
+    "relation": "elevation"
    },
-   "percorso": [
+   "path": [
     {
-     "nome": "Dinamite",
-     "relazione": null
+     "name": "Dynamite",
+     "relation": null
     },
     {
-     "nome": "Alfred Nobel",
-     "relazione": "inventore"
+     "name": "Alfred Nobel",
+     "relation": "inventor"
     },
     {
-     "nome": "Immanuel Nobel",
-     "relazione": "padre"
+     "name": "Immanuel Nobel",
+     "relation": "father"
     },
     {
-     "nome": "Gävle",
-     "relazione": "luogo di nascita"
+     "name": "Gävle",
+     "relation": "place of birth"
     }
    ],
-   "fonte_risposta": "it.wiki ed en.wiki, riquadro di Gävle: 8 m",
-   "stato_riferimento": "ok"
+   "answer_source": "it.wiki and en.wiki, infobox of Gävle: 8 m",
+   "reference_status": "ok"
   },
   {
-   "tema": "scienze",
-   "seme": "Leggi di Keplero",
-   "domanda": "Qual è l'altitudine sul livello del mare della città tedesca in cui è nato l'astronomo che formulò le tre leggi sul moto dei pianeti intorno al Sole?",
-   "risposta": "406 m",
-   "attributo": {
-    "relazione": "altitudine"
+   "theme": "science",
+   "seed": "Kepler's laws of planetary motion",
+   "question": "What is the elevation above sea level of the German town where the astronomer who formulated the three laws of planetary motion around the Sun was born?",
+   "answer": "406 m",
+   "attribute": {
+    "relation": "elevation"
    },
-   "percorso": [
+   "path": [
     {
-     "nome": "Leggi di Keplero",
-     "relazione": null
+     "name": "Kepler's laws of planetary motion",
+     "relation": null
     },
     {
-     "nome": "Giovanni Keplero",
-     "relazione": "autore"
+     "name": "Johannes Kepler",
+     "relation": "author"
     },
     {
-     "nome": "Weil der Stadt",
-     "relazione": "luogo di nascita"
+     "name": "Weil der Stadt",
+     "relation": "place of birth"
     }
    ],
-   "fonte_risposta": "it.wiki ed en.wiki, riquadro di Weil der Stadt: 406 m",
-   "stato_riferimento": "ok"
+   "answer_source": "it.wiki and en.wiki, infobox of Weil der Stadt: 406 m",
+   "reference_status": "ok"
   },
   {
-   "tema": "scienze",
-   "seme": "Guglielmo Marconi",
-   "domanda": "Qual è l'altitudine sul livello del mare della città italiana in cui è nato il fisico premio Nobel nel 1909 per lo sviluppo della telegrafia senza fili?",
-   "risposta": "54 m",
-   "attributo": {
-    "relazione": "altitudine"
+   "theme": "science",
+   "seed": "Guglielmo Marconi",
+   "question": "What is the elevation above sea level of the Italian city where the physicist who won the 1909 Nobel Prize for the development of wireless telegraphy was born?",
+   "answer": "54 m",
+   "attribute": {
+    "relation": "elevation"
    },
-   "percorso": [
+   "path": [
     {
-     "nome": "Telegrafia senza fili",
-     "relazione": null
+     "name": "Wireless telegraphy",
+     "relation": null
     },
     {
-     "nome": "Guglielmo Marconi",
-     "relazione": "inventore"
+     "name": "Guglielmo Marconi",
+     "relation": "inventor"
     },
     {
-     "nome": "Bologna",
-     "relazione": "luogo di nascita"
+     "name": "Bologna",
+     "relation": "place of birth"
     }
    ],
-   "fonte_risposta": "it.wiki ed en.wiki, riquadro di Bologna: 54 m",
-   "stato_riferimento": "ok"
+   "answer_source": "it.wiki and en.wiki, infobox of Bologna: 54 m",
+   "reference_status": "ok"
   },
   {
-   "tema": "storia",
-   "seme": "Battaglia di Austerlitz",
-   "domanda": "Qual è la data di morte (giorno, mese e anno) del generale francese che fu il primo marito della prima moglie dell'imperatore vincitore della battaglia di Austerlitz del 1805?",
-   "risposta": "23 luglio 1794",
-   "attributo": {
-    "relazione": "data di morte"
+   "theme": "history",
+   "seed": "Battle of Austerlitz",
+   "question": "What is the date of death (day, month and year) of the French general who was the first husband of the first wife of the emperor who won the Battle of Austerlitz in 1805?",
+   "answer": "23 July 1794",
+   "attribute": {
+    "relation": "date of death"
    },
-   "percorso": [
+   "path": [
     {
-     "nome": "Battaglia di Austerlitz",
-     "relazione": null
+     "name": "Battle of Austerlitz",
+     "relation": null
     },
     {
-     "nome": "Napoleone Bonaparte",
-     "relazione": "vincitore"
+     "name": "Napoleon",
+     "relation": "winner"
     },
     {
-     "nome": "Giuseppina di Beauharnais",
-     "relazione": "prima moglie"
+     "name": "Joséphine de Beauharnais",
+     "relation": "first wife"
     },
     {
-     "nome": "Alessandro di Beauharnais",
-     "relazione": "primo marito"
+     "name": "Alexandre de Beauharnais",
+     "relation": "first husband"
     }
    ],
-   "fonte_risposta": "it.wiki ed en.wiki, voce Alessandro di Beauharnais: 23 luglio 1794",
-   "stato_riferimento": "ok"
+   "answer_source": "it.wiki and en.wiki, article Alexandre de Beauharnais: 23 July 1794",
+   "reference_status": "ok"
   },
   {
-   "tema": "storia",
-   "seme": "Rivoluzione d'ottobre",
-   "domanda": "Qual è la data di morte (giorno, mese e anno) della rivoluzionaria e pedagogista russa moglie del capo bolscevico che guidò la Rivoluzione d'ottobre del 1917?",
-   "risposta": "27 febbraio 1939",
-   "attributo": {
-    "relazione": "data di morte"
+   "theme": "history",
+   "seed": "October Revolution",
+   "question": "What is the date of death (day, month and year) of the Russian revolutionary and educator who was the wife of the Bolshevik leader who led the October Revolution of 1917?",
+   "answer": "27 February 1939",
+   "attribute": {
+    "relation": "date of death"
    },
-   "percorso": [
+   "path": [
     {
-     "nome": "Rivoluzione d'ottobre",
-     "relazione": null
+     "name": "October Revolution",
+     "relation": null
     },
     {
-     "nome": "Lenin",
-     "relazione": "capo"
+     "name": "Vladimir Lenin",
+     "relation": "leader"
     },
     {
-     "nome": "Nadežda Krupskaja",
-     "relazione": "moglie"
+     "name": "Nadezhda Krupskaya",
+     "relation": "wife"
     }
    ],
-   "fonte_risposta": "it.wiki ed en.wiki, voce Nadežda Krupskaja: 27 febbraio 1939",
-   "stato_riferimento": "ok"
+   "answer_source": "it.wiki and en.wiki, article Nadezhda Krupskaya: 27 February 1939",
+   "reference_status": "ok"
   },
   {
-   "tema": "storia",
-   "seme": "Guerra e pace",
-   "domanda": "Qual è la data di morte (giorno, mese e anno) della contessa russa moglie dello scrittore autore del romanzo «Guerra e pace»?",
-   "risposta": "4 novembre 1919",
-   "attributo": {
-    "relazione": "data di morte"
+   "theme": "history",
+   "seed": "War and Peace",
+   "question": "What is the date of death (day, month and year) of the Russian countess who was the wife of the writer who wrote the novel \"War and Peace\"?",
+   "answer": "4 November 1919",
+   "attribute": {
+    "relation": "date of death"
    },
-   "percorso": [
+   "path": [
     {
-     "nome": "Guerra e pace",
-     "relazione": null
+     "name": "War and Peace",
+     "relation": null
     },
     {
-     "nome": "Lev Tolstoj",
-     "relazione": "autore"
+     "name": "Leo Tolstoy",
+     "relation": "author"
     },
     {
-     "nome": "Sof'ja Tolstaja",
-     "relazione": "moglie"
+     "name": "Sophia Tolstaya",
+     "relation": "wife"
     }
    ],
-   "fonte_risposta": "it.wiki ed en.wiki, voce Sof'ja Tolstaja: 4 novembre 1919",
-   "stato_riferimento": "ok"
+   "answer_source": "it.wiki and en.wiki, article Sophia Tolstaya: 4 November 1919",
+   "reference_status": "ok"
   },
   {
-   "tema": "geografia_cultura",
-   "seme": "Notte stellata",
-   "domanda": "Qual è la data di morte (giorno, mese e anno) del mercante d'arte olandese fratello minore del pittore che nel 1889 dipinse la «Notte stellata»?",
-   "risposta": "25 gennaio 1891",
-   "attributo": {
-    "relazione": "data di morte"
+   "theme": "geography_culture",
+   "seed": "The Starry Night",
+   "question": "What is the date of death (day, month and year) of the Dutch art dealer who was the younger brother of the painter who in 1889 painted \"The Starry Night\"?",
+   "answer": "25 January 1891",
+   "attribute": {
+    "relation": "date of death"
    },
-   "percorso": [
+   "path": [
     {
-     "nome": "Notte stellata",
-     "relazione": null
+     "name": "The Starry Night",
+     "relation": null
     },
     {
-     "nome": "Vincent van Gogh",
-     "relazione": "autore"
+     "name": "Vincent van Gogh",
+     "relation": "author"
     },
     {
-     "nome": "Theo van Gogh",
-     "relazione": "fratello"
+     "name": "Theo van Gogh",
+     "relation": "brother"
     }
    ],
-   "fonte_risposta": "it.wiki ed en.wiki, voce Theo van Gogh: 25 gennaio 1891",
-   "stato_riferimento": "ok"
+   "answer_source": "it.wiki and en.wiki, article Theo van Gogh: 25 January 1891",
+   "reference_status": "ok"
   },
   {
-   "tema": "geografia_cultura",
-   "seme": "Il barbiere di Siviglia",
-   "domanda": "Qual è la data di morte (giorno, mese e anno) della cantante spagnola che fu la prima moglie del compositore dell'opera «Il barbiere di Siviglia» andata in scena a Roma nel 1816?",
-   "risposta": "7 ottobre 1845",
-   "attributo": {
-    "relazione": "data di morte"
+   "theme": "geography_culture",
+   "seed": "The Barber of Seville",
+   "question": "What is the date of death (day, month and year) of the Spanish singer who was the first wife of the composer of the opera \"The Barber of Seville\", first staged in Rome in 1816?",
+   "answer": "7 October 1845",
+   "attribute": {
+    "relation": "date of death"
    },
-   "percorso": [
+   "path": [
     {
-     "nome": "Il barbiere di Siviglia",
-     "relazione": null
+     "name": "The Barber of Seville",
+     "relation": null
     },
     {
-     "nome": "Gioachino Rossini",
-     "relazione": "compositore"
+     "name": "Gioachino Rossini",
+     "relation": "composer"
     },
     {
-     "nome": "Isabella Colbran",
-     "relazione": "prima moglie"
+     "name": "Isabella Colbran",
+     "relation": "first wife"
     }
    ],
-   "fonte_risposta": "it.wiki ed en.wiki, voce Isabella Colbran: 7 ottobre 1845",
-   "stato_riferimento": "ok"
+   "answer_source": "it.wiki and en.wiki, article Isabella Colbran: 7 October 1845",
+   "reference_status": "ok"
   },
   {
-   "tema": "geografia_cultura",
-   "seme": "Cavalleria rusticana",
-   "domanda": "Qual è l'altitudine sul livello del mare della città toscana in cui è nato il compositore dell'opera «Cavalleria rusticana» del 1890?",
-   "risposta": "3 m",
-   "attributo": {
-    "relazione": "altitudine"
+   "theme": "geography_culture",
+   "seed": "Cavalleria rusticana",
+   "question": "What is the elevation above sea level of the Tuscan city where the composer of the 1890 opera \"Cavalleria rusticana\" was born?",
+   "answer": "3 m",
+   "attribute": {
+    "relation": "elevation"
    },
-   "percorso": [
+   "path": [
     {
-     "nome": "Cavalleria rusticana",
-     "relazione": null
+     "name": "Cavalleria rusticana",
+     "relation": null
     },
     {
-     "nome": "Pietro Mascagni",
-     "relazione": "compositore"
+     "name": "Pietro Mascagni",
+     "relation": "composer"
     },
     {
-     "nome": "Livorno",
-     "relazione": "luogo di nascita"
+     "name": "Livorno",
+     "relation": "place of birth"
     }
    ],
-   "fonte_risposta": "it.wiki ed en.wiki, riquadro di Livorno: 3 m",
-   "stato_riferimento": "ok"
+   "answer_source": "it.wiki and en.wiki, infobox of Livorno: 3 m",
+   "reference_status": "ok"
   },
   {
-   "tema": "geografia_cultura",
-   "seme": "Faust",
-   "domanda": "Qual è l'altitudine sul livello del mare della città tedesca in cui è nato lo scrittore autore del poema drammatico «Faust»?",
-   "risposta": "112 m",
-   "attributo": {
-    "relazione": "altitudine"
+   "theme": "geography_culture",
+   "seed": "Goethe's Faust",
+   "question": "What is the elevation above sea level of the German city where the writer who wrote the dramatic poem \"Faust\" was born?",
+   "answer": "112 m",
+   "attribute": {
+    "relation": "elevation"
    },
-   "percorso": [
+   "path": [
     {
-     "nome": "Faust",
-     "relazione": null
+     "name": "Faust",
+     "relation": null
     },
     {
-     "nome": "Johann Wolfgang von Goethe",
-     "relazione": "autore"
+     "name": "Johann Wolfgang von Goethe",
+     "relation": "author"
     },
     {
-     "nome": "Francoforte sul Meno",
-     "relazione": "luogo di nascita"
+     "name": "Frankfurt am Main",
+     "relation": "place of birth"
     }
    ],
-   "fonte_risposta": "it.wiki ed en.wiki, riquadro di Francoforte: 112 m",
-   "stato_riferimento": "ok"
+   "answer_source": "it.wiki and en.wiki, infobox of Frankfurt: 112 m",
+   "reference_status": "ok"
   },
   {
-   "tema": "entita_inventata",
-   "seme": "Trattato di Castelvetro",
-   "domanda": "Qual è la data di nascita (giorno, mese e anno) del diplomatico che firmò per il Ducato di Modena il trattato di Castelvetro del 1687 con la Repubblica di Lucca?",
-   "risposta": "",
-   "senza_risposta": true,
-   "perche": "Nel 1687 non ci fu un trattato di Castelvetro tra Modena e Lucca."
+   "theme": "invented_entity",
+   "seed": "Treaty of Castelvetro",
+   "question": "What is the date of birth (day, month and year) of the diplomat who signed the 1687 Treaty of Castelvetro with the Republic of Lucca on behalf of the Duchy of Modena?",
+   "answer": "",
+   "without_answer": true,
+   "why": "There was no Treaty of Castelvetro between Modena and Lucca in 1687."
   },
   {
-   "tema": "entita_inventata",
-   "seme": "Nordlys OS",
-   "domanda": "In quale città è nato l'informatico norvegese che nel 1994 pubblicò a Tromsø il sistema operativo Nordlys OS?",
-   "risposta": "",
-   "senza_risposta": true,
-   "perche": "Il sistema operativo Nordlys OS non esiste."
+   "theme": "invented_entity",
+   "seed": "Nordlys OS",
+   "question": "In which city was the Norwegian computer scientist born who in 1994 released the Nordlys OS operating system in Tromsø?",
+   "answer": "",
+   "without_answer": true,
+   "why": "The Nordlys OS operating system does not exist."
   },
   {
-   "tema": "entita_inventata",
-   "seme": "Il custode di Valparaíso",
-   "domanda": "Qual è la data di morte (giorno, mese e anno) del traduttore in inglese del romanzo di Italo Calvino «Il custode di Valparaíso», pubblicato nel 1961?",
-   "risposta": "",
-   "senza_risposta": true,
-   "perche": "Calvino non ha scritto un romanzo con questo titolo."
+   "theme": "invented_entity",
+   "seed": "Il custode di Valparaíso",
+   "question": "What is the date of death (day, month and year) of the English translator of Italo Calvino's novel \"Il custode di Valparaíso\", published in 1961?",
+   "answer": "",
+   "without_answer": true,
+   "why": "Calvino did not write a novel with this title."
   },
   {
-   "tema": "entita_inventata",
-   "seme": "Cometa Halvorsen-Ricci",
-   "domanda": "Qual è l'altitudine sul livello del mare del comune italiano in cui è nato l'astronomo che nel 1978 scoprì, insieme a un collega norvegese, la cometa Halvorsen-Ricci?",
-   "risposta": "",
-   "senza_risposta": true,
-   "perche": "La cometa Halvorsen-Ricci non esiste."
+   "theme": "invented_entity",
+   "seed": "Comet Halvorsen-Ricci",
+   "question": "What is the elevation above sea level of the Italian municipality where the astronomer was born who in 1978 discovered the comet Halvorsen-Ricci together with a Norwegian colleague?",
+   "answer": "",
+   "without_answer": true,
+   "why": "The comet Halvorsen-Ricci does not exist."
   },
   {
-   "tema": "relazione_inesistente",
-   "seme": "Ludwig van Beethoven",
-   "domanda": "In quale giorno, mese e anno si sposò il compositore tedesco Ludwig van Beethoven, autore della Nona sinfonia?",
-   "risposta": "",
-   "senza_risposta": true,
-   "perche": "Beethoven non si è mai sposato."
+   "theme": "nonexistent_relation",
+   "seed": "Ludwig van Beethoven",
+   "question": "On what day, month and year did the German composer Ludwig van Beethoven, author of the Ninth Symphony, get married?",
+   "answer": "",
+   "without_answer": true,
+   "why": "Beethoven never married."
   },
   {
-   "tema": "relazione_inesistente",
-   "seme": "Kurt Gödel",
-   "domanda": "In che anno il logico Kurt Gödel, autore dei teoremi di incompletezza, ha ricevuto la medaglia Fields?",
-   "risposta": "",
-   "senza_risposta": true,
-   "perche": "Gödel non ha mai ricevuto la medaglia Fields."
+   "theme": "nonexistent_relation",
+   "seed": "Kurt Gödel",
+   "question": "In what year did the logician Kurt Gödel, author of the incompleteness theorems, receive the Fields Medal?",
+   "answer": "",
+   "without_answer": true,
+   "why": "Gödel never received the Fields Medal."
   },
   {
-   "tema": "relazione_inesistente",
-   "seme": "Wolfgang Amadeus Mozart",
-   "domanda": "Qual è il codice postale del comune italiano in cui è nato il compositore Wolfgang Amadeus Mozart, autore del Flauto magico?",
-   "risposta": "",
-   "senza_risposta": true,
-   "perche": "Mozart è nato a Salisburgo, non in Italia."
+   "theme": "nonexistent_relation",
+   "seed": "Wolfgang Amadeus Mozart",
+   "question": "What is the postal code of the Italian municipality where the composer Wolfgang Amadeus Mozart, author of The Magic Flute, was born?",
+   "answer": "",
+   "without_answer": true,
+   "why": "Mozart was born in Salzburg, not in Italy."
   },
   {
-   "tema": "relazione_inesistente",
-   "seme": "Galileo Galilei senza laurea",
-   "domanda": "Qual è la data di nascita (giorno, mese e anno) del professore che fu relatore della tesi di laurea in medicina discussa da Galileo Galilei all'Università di Pisa?",
-   "risposta": "",
-   "senza_risposta": true,
-   "perche": "Galileo lasciò l'Università di Pisa senza laurearsi."
+   "theme": "nonexistent_relation",
+   "seed": "Galileo Galilei without a degree",
+   "question": "What is the date of birth (day, month and year) of the professor who supervised the medical degree thesis defended by Galileo Galilei at the University of Pisa?",
+   "answer": "",
+   "without_answer": true,
+   "why": "Galileo left the University of Pisa without graduating."
   },
   {
-   "tema": "dato_mai_esistito",
-   "seme": "Euclide",
-   "domanda": "In quale giorno, mese e anno è nato il matematico greco Euclide, autore degli Elementi?",
-   "risposta": "",
-   "senza_risposta": true,
-   "perche": "La data di nascita di Euclide non è nota."
+   "theme": "fact_never_recorded",
+   "seed": "Euclid",
+   "question": "On what day, month and year was the Greek mathematician Euclid, author of the Elements, born?",
+   "answer": "",
+   "without_answer": true,
+   "why": "Euclid's date of birth is not known."
   },
   {
-   "tema": "dato_mai_esistito",
-   "seme": "Linee di Nazca",
-   "domanda": "In quale città è nato l'architetto che progettò le linee di Nazca, nel Perù meridionale?",
-   "risposta": "",
-   "senza_risposta": true,
-   "perche": "Le linee di Nazca non hanno un progettista noto."
+   "theme": "fact_never_recorded",
+   "seed": "Nazca Lines",
+   "question": "In which city was the architect born who designed the Nazca Lines, in southern Peru?",
+   "answer": "",
+   "without_answer": true,
+   "why": "The Nazca Lines have no known designer."
   }
  ]
 }
