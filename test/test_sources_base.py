@@ -222,7 +222,7 @@ def proof_contact(temporary_folder: Path, monkeypatch: pytest.MonkeyPatch) -> Pa
 def test_wikipedia_contact_from_settings_then_account(proof_contact: Path) -> None:
     from chain_research.web.sources import wikipedia_graph as wg
     assert wg.wikipedia_contact() == ("person@example.org", "account")
-    assert wg.user_agent() == ("ricerca-catena/0.1 (personal use; person@example.org) httpx", True)
+    assert wg.user_agent() == ("chain-research/0.1 (personal use; person@example.org) httpx", True)
     config.save_secrets({"wikipedia_contact": "dedicated@example.org", "stackexchange": {"key": "abc"}})
     assert proof_contact.stat().st_mode & 0o777 == 0o600
     assert wg.wikipedia_contact() == ("dedicated@example.org", "settings")  # written by hand: wins

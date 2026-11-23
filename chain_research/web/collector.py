@@ -458,7 +458,7 @@ class Collector:
         if wiki is not None and (host == "wikipedia.org" or host.endswith(".wikipedia.org")):
             return wiki.client
         if self._archive is None:
-            self._archive = SourceClient("Wiki archive", user_agent="ricerca-catena/0.1 (personal use)", domains=None,
+            self._archive = SourceClient("Wiki archive", user_agent="chain-research/0.1 (personal use)", domains=None,
                                          limiter=limiter("archivio-wiki", 1.0),
                                          local_allow=self.local_allow)
         return self._archive

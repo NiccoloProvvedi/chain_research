@@ -58,7 +58,7 @@ def user_agent() -> tuple[str, bool]:
     """The User-Agent for Wikipedia and whether it contains a contact (see wikipedia_contact)."""
     contact, _ = wikipedia_contact()
     if contact:
-        return f"ricerca-catena/0.1 (personal use; {contact}) httpx", True
+        return f"chain-research/0.1 (personal use; {contact}) httpx", True
     return USER_AGENT, False
 
 
