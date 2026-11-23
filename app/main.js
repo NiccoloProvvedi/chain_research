@@ -11,16 +11,16 @@ const readline = require("node:readline");
 
 const PROGETTO = path.resolve(__dirname, "..");
 const PYTHON = path.join(PROGETTO, "venv", "bin", "python");
-const MODO_PROVA = process.env.RICERCA_PROVA === "1"; // apre, fotografa la finestra in un file e chiude
+const MODO_PROVA = process.env.CHAIN_TEST === "1"; // apre, fotografa la finestra in un file e chiude
 
 let server = null;
 let finestra = null;
 
 function avviaServer(token) {
   return new Promise((resolve, reject) => {
-    server = spawn(PYTHON, ["-m", "ricerca_catena.server"], {
+    server = spawn(PYTHON, ["-m", "chain_research.server"], {
       cwd: PROGETTO,
-      env: { ...process.env, RICERCA_TOKEN: token },
+      env: { ...process.env, CHAIN_TOKEN: token },
       stdio: ["ignore", "pipe", "inherit"],
     });
     const scadenza = setTimeout(() => reject(new Error("Il server non si è avviato entro 30 secondi.")), 30000);
@@ -104,7 +104,7 @@ async function prova() {
     `fetch("/api/impostazioni").then(r => r.json()).then(s => JSON.stringify({ok: true, modelli: s.modelli}))`,
   );
   console.log("PROVA " + esito);
-  const uscita = process.env.RICERCA_PROVA_IMMAGINE;
+  const uscita = process.env.CHAIN_TEST_IMAGE;
   if (uscita) {
     const immagine = await finestra.webContents.capturePage();
     fs.writeFileSync(uscita, immagine.toPNG());

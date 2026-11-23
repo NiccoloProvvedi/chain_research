@@ -89,8 +89,8 @@ Wikipedia:
 | Frasi del documento interamente sostenute dalle risposte | 89% |
 
 Metodo, piano dei test e risultati di ogni corsa sono in
-[`docs/solidita-e-validazione.md`](docs/solidita-e-validazione.md); ogni corsa ha una riga in
-[`banco/REGISTRO.md`](banco/REGISTRO.md).
+[`docs/validation.md`](docs/validation.md); ogni corsa ha una riga in
+[`bench/LOG.md`](bench/LOG.md).
 
 ## Requisiti
 
@@ -117,7 +117,7 @@ cd app && npm install
 ## Utilizzo
 
 ```bash
-./avvia.sh
+./start.sh
 ```
 
 1. Nella colonna di sinistra si scrive l'argomento, si sceglie il modello e si fissano budget e tempo (oppure
@@ -165,18 +165,18 @@ Dal pulsante **Impostazioni** (salvate in `config/impostazioni.json`, escluso da
 
 | Percorso | Contenuto |
 |---|---|
-| `ricerca_catena/indagine.py` | ciclo dell'indagine: piano, domande in parallelo, valutazione, limiti |
-| `ricerca_catena/domanda.py` | una domanda in un processo separato, con la seconda ricerca per le risposte incerte |
-| `ricerca_catena/documento.py` | documento: sezioni con controllo delle frasi, cornice, fonti, HTML e PDF |
-| `ricerca_catena/web/catena.py` | ricerca a catena: piano, frontiera, candidati, verifica, valore, revisione |
-| `ricerca_catena/web/validazione.py` | controlli sui risultati e stato delle risposte |
-| `ricerca_catena/web/riprova.py` | seconda ricerca indipendente per le risposte incerte |
-| `ricerca_catena/web/raccolta.py` | ricerche sul web, lettura delle pagine, limiti di una domanda |
-| `ricerca_catena/web/fonti/` | Wikipedia come grafo di righe collegate; client HTTP sicuro |
-| `ricerca_catena/web/proxy.py`, `browser.py` | proxy di rete e browser isolato |
-| `ricerca_catena/modello/` | chiamate a Claude, budget, pulizia del testo, prompt, registrazione e rigioco |
-| `ricerca_catena/server.py`, `app/` | server locale e finestra Electron |
-| `banco/` | banco di prova: insiemi di domande, giudice, statistiche, rapporti, registro delle corse |
+| `chain_research/investigation.py` | ciclo dell'indagine: piano, domande in parallelo, valutazione, limiti |
+| `chain_research/question.py` | una domanda in un processo separato, con la seconda ricerca per le risposte incerte |
+| `chain_research/document.py` | documento: sezioni con controllo delle frasi, cornice, fonti, HTML e PDF |
+| `chain_research/web/chain.py` | ricerca a catena: piano, frontiera, candidati, verifica, valore, revisione |
+| `chain_research/web/validation.py` | controlli sui risultati e stato delle risposte |
+| `chain_research/web/retry.py` | seconda ricerca indipendente per le risposte incerte |
+| `chain_research/web/collector.py` | ricerche sul web, lettura delle pagine, limiti di una domanda |
+| `chain_research/web/fonti/` | Wikipedia come grafo di righe collegate; client HTTP sicuro |
+| `chain_research/web/proxy.py`, `browser.py` | proxy di rete e browser isolato |
+| `chain_research/modello/` | chiamate a Claude, budget, pulizia del testo, prompt, registrazione e rigioco |
+| `chain_research/server.py`, `app/` | server locale e finestra Electron |
+| `bench/` | banco di prova: insiemi di domande, giudice, statistiche, rapporti, registro delle corse |
 | `test/` | test automatici |
 | `docs/` | validazione dei risultati e paper sul metodo |
 
@@ -185,22 +185,22 @@ Dal pulsante **Impostazioni** (salvate in `config/impostazioni.json`, escluso da
 ```bash
 VIRTUAL_ENV=venv uv pip install -r requirements-dev.txt
 
-venv/bin/python -m pytest -q -m "not rete and not claude"   # suite completa, senza Internet e senza Claude
+venv/bin/python -m pytest -q -m "not network and not claude"   # suite completa, senza Internet e senza Claude
 venv/bin/python -m pytest -q -m browser                     # solo i test con il browser locale
 venv/bin/ruff check ricerca_catena banco test               # analisi statica
-venv/bin/python banco/sabotaggio.py                         # ogni controllo disattivato deve far fallire un test
+venv/bin/python bench/sabotage.py                         # ogni controllo disattivato deve far fallire un test
 ```
 
 La suite (oltre 500 test) gira a ogni push su GitHub Actions. Le catene registrate in `risultati/rigioco/` si
-ripercorrono senza rete né Claude con `pytest -m rigioco`.
+ripercorrono senza rete né Claude con `pytest -m replay`.
 
 **Banco di prova.** Quattro insiemi di domande con ruoli separati: `domande.json` (40, usate per regolare la catena),
 `domande_holdout.json` (36, di controllo), `domande_conferma.json` (23, conferma finale) e
 `domande_senza_risposta.json` (20, domande senza risposta). Le corse usano Claude e consumano l'abbonamento:
 
 ```bash
-venv/bin/python banco/banco.py --nome prova --domande banco/domande_holdout.json --parallelo 1
-venv/bin/python banco/rapporto.py <corsa di base> prova    # confronto, precisione per stato, regola di decisione
+venv/bin/python bench/bench.py --nome prova --domande bench/questions_holdout.json --parallelo 1
+venv/bin/python bench/report.py <corsa di base> prova    # confronto, precisione per stato, regola di decisione
 ```
 
 ## Limiti noti
@@ -215,8 +215,8 @@ venv/bin/python banco/rapporto.py <corsa di base> prova    # confronto, precisio
 
 ## Documentazione
 
-- [`docs/solidita-e-validazione.md`](docs/solidita-e-validazione.md): come si controllano i risultati, piano dei test,
+- [`docs/validation.md`](docs/validation.md): come si controllano i risultati, piano dei test,
   risultati di tutte le corse.
 - [`docs/paper/paper.pdf`](docs/paper/paper.pdf): il metodo di ricerca a catena com'era il 1° novembre 2026. I suoi
   numeri sono misurati sulle domande usate per regolarlo e sono quindi più alti di quelli su domande nuove.
-- [`banco/REGISTRO.md`](banco/REGISTRO.md): registro di tutte le corse del banco di prova.
+- [`bench/LOG.md`](bench/LOG.md): registro di tutte le corse del banco di prova.

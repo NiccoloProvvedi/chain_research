@@ -19,10 +19,10 @@ jobs:
           PLAYWRIGHT_BROWSERS_PATH=browser/motori venv/bin/playwright install --with-deps chromium
       - name: Controlli statici
         run: |
-          venv/bin/ruff check ricerca_catena banco test
+          venv/bin/ruff check chain_research bench test
           node --check app/main.js
-          node --check app/interfaccia/app.js
+          node --check app/ui/app.js
       - name: Test senza Internet e senza Claude
         run: |
-          venv/bin/coverage run -m pytest -q -m "not rete and not claude"
+          venv/bin/coverage run -m pytest -q -m "not network and not claude"
           venv/bin/coverage report

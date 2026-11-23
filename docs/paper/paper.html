@@ -317,6 +317,6 @@ venv/bin/python -u test/prova_banco.py --modalita fatto_veloce --nome prova --et
 # closed-book baseline (same judge): haiku, sonnet or opus
 venv/bin/python test/prova_a_memoria.py haiku
 # offline tests (fake model, no network)
-venv/bin/python -m pytest -q -m "not llm and not rete and not gpu and not claude" test</pre>
+venv/bin/python -m pytest -q -m "not llm and not network and not gpu and not claude" test</pre>
 <p class="nota">Main files: <span class="mono">navigatore/catena.py</span> (plans, frontier, candidates, verification, scoring, value, tie-break), <span class="mono">navigatore/fonti/wikipedia_grafo.py</span> (Wikipedia as a graph of rows), <span class="mono">navigatore/ricerca.py</span> (web search and reading), <span class="mono">orchestratore/prompt/</span> (the six task prompts), <span class="mono">banco_prova/</span> (questions and the log of every run).</p>
 </div>
