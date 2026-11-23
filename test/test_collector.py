@@ -1,4 +1,4 @@
-"""Raccolta senza browser né rete: siti esclusi, archivio delle wiki, messaggi dei limiti."""
+"""Collection without browser or network: excluded sites, wiki archive, limit messages."""
 import pytest
 
 from chain_research.web.collector import Collector
@@ -16,7 +16,7 @@ def test_excluded_sites(url: str) -> None:
 @pytest.mark.parametrize("url", [
     "https://www.linux.com/a", "https://www.unix.com/a", "https://www.netflix.com/a", "https://www.dropbox.com/a",
     "https://www.fedex.com/a", "https://arduino.cc/a", "https://www.notgoogle.org/a", "https://binging.com/a"])
-def test_sites_not_excluded_per_one_part_of_name(url: str) -> None:
+def test_partial_host_name_not_excluded(url: str) -> None:
     assert not Collector("question")._excluded(url)
 
 
@@ -26,7 +26,7 @@ class FakePage:
 
     @property
     def request(self):
-        raise AssertionError("l'archivio non deve passare da pagina.request: sfugge al filtro delle reti")
+        raise AssertionError("the archive must not go through page.request: it escapes the network filter")
 
     def goto(self, *_to, **_k) -> None:
         pass
@@ -47,27 +47,27 @@ class FakeClient:
         return {"parse": {"title": "A</title><script>x</script>", "text": "<p>" + "t" * 600 + "</p>"}}
 
 
-def test_archive_wiki_with_safe_client_and_encoded_title() -> None:
+def test_wiki_archive_uses_safe_client_and_escapes_title() -> None:
     r = Collector("question")
     client, page = FakeClient(), FakePage()
     r._client_archive = lambda _host: client
     r.browser = type("B", (), {"page": page})()
-    assert r._from_archive_wiki('https://wiki.esempio.org/wiki/AT&T_"x"')["text"]
+    assert r._from_archive_wiki('https://wiki.example.org/wiki/AT&T_"x"')["text"]
     url, params = client.calls[0]
-    assert url == "https://wiki.esempio.org/w/api.php" and params["page"] == 'AT&T_"x"' and params["action"] == "parse"
+    assert url == "https://wiki.example.org/w/api.php" and params["page"] == 'AT&T_"x"' and params["action"] == "parse"
     assert "<title>A</title><script>" not in page.contents[0] and '"x""' not in page.contents[0]
 
 
-def test_limit_of_minutes_rounded() -> None:
+def test_minute_limit_message_is_rounded() -> None:
     r = Collector("question", options={"chain_minutes": 5.003691091149818})
     r._initial_wait, r._start = 0.0, -1e9
-    assert r._reached_limit() == "raggiunto il limite di sicurezza di 5 minuti"
+    assert r._reached_limit() == "reached the safety limit of 5 minutes"
 
 
-# --- revisione dell'11/11/2026: l'esito della domanda porta lo stato deciso dai controlli --------------------------
+# --- review of 2026-11-11: the question's outcome carries the status decided by the checks ------------------------
 
 @pytest.mark.parametrize("options,expected", [({}, 1), ({"model_checks": False}, 0)])
-def test_run_does_exams_and_reports_status(tmp_path, monkeypatch, options: dict, expected: int) -> None:
+def test_run_does_final_review_and_reports_status(tmp_path, monkeypatch, options: dict, expected: int) -> None:
     from chain_research.web import chain as chain_module
     from chain_research.web import collector
 
@@ -75,7 +75,7 @@ def test_run_does_exams_and_reports_status(tmp_path, monkeypatch, options: dict,
         facts_exams = 0
 
         def __init__(self, r) -> None:
-            self.value, self.reason = {"value": "56 m"}, "catena completa"
+            self.value, self.reason = {"value": "56 m"}, "chain complete"
 
         def walk(self) -> None:
             pass
@@ -87,7 +87,7 @@ def test_run_does_exams_and_reports_status(tmp_path, monkeypatch, options: dict,
             return {"confirmed": False, "status": "contested"}
 
         def write(self, _task: str) -> str:
-            return "**Risposta:** 56 m."
+            return "**Answer:** 56 m."
 
         def summary(self) -> dict:
             return {}

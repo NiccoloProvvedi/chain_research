@@ -1,21 +1,22 @@
-"""Giudice del banco senza Claude: confronto normalizzato e risposta breve."""
+"""Bench judge without Claude: normalized comparison and short answer."""
 from judge import assess, normalize, short_answer, normalized_equal
 
 
 def test_normalized_comparison() -> None:
     assert normalize("Città  d'Aosta!") == "citta d aosta "
-    assert normalized_equal("24 luglio 1973", "**24 luglio 1973** [6].")
+    assert normalized_equal("24 July 1973", "**24 July 1973** [6].")
     assert not normalized_equal("1973", "19731")
     assert assess("d", "Mitchell Baker", "Mitchell Baker [2]") == (True, "comparison")
     assert assess("d", "x", "") == (False, "empty")
 
 
 def test_short_answer() -> None:
-    assert short_answer("intro\n**Risposta:** 21 giugno 1976 [16].\n\n**Fiducia:** alta") == "21 giugno 1976 [16]."
-    assert short_answer("\n\nsolo testo\naltro") == "solo testo"
+    assert short_answer("intro\n**Answer:** 21 June 1976 [16].\n\n**Confidence:** high") == "21 June 1976 [16]."
+    assert short_answer("**Risposta:** 21 giugno 1976 [16].") == "21 giugno 1976 [16]."   # runs saved before
+    assert short_answer("\n\njust text\nother") == "just text"
 
 
-# --- revisione dell'11/11/2026: il metro del banco ----------------------------------------------------------------
+# --- review of 2026-11-11: the bench yardstick --------------------------------------------------------------------
 
 import pytest  # noqa: E402
 
@@ -23,30 +24,30 @@ import judge  # noqa: E402
 from chain_research.model import claude_json  # noqa: E402
 
 
-@pytest.mark.parametrize("wait,date", [("2 m", "−2 m s.l.m."), ("2 m", "-2 m s.l.m. (2 metri sotto il livello del mare)"),
+@pytest.mark.parametrize("wait,date", [("2 m", "−2 m a.s.l."), ("2 m", "-2 m a.s.l. (2 metres below sea level)"),
                                          ("-5 °C", "5 °C")])
-def test_mark_count(wait: str, date: str) -> None:
+def test_sign_counts(wait: str, date: str) -> None:
     assert not normalized_equal(wait, date)
 
 
 @pytest.mark.parametrize("wait,date", [("00118–00199", "00118–00199"), ("1973-07-24", "1973-07-24 [2]"),
-                                         ("−2 m", "-2 m s.l.m."), ("312 m", "312 m s.l.m."),
-                                         ("21 giugno 1868", "21 giugno 1868 - fondazione")])
-def test_dashes_that_not_are_mark(wait: str, date: str) -> None:
+                                         ("−2 m", "-2 m a.s.l."), ("312 m", "312 m a.s.l."),
+                                         ("21 June 1868", "21 June 1868 - founding")])
+def test_dashes_that_are_not_a_sign(wait: str, date: str) -> None:
     assert normalized_equal(wait, date)
 
 
-def test_value_of_program_comes_first_of_extraction(monkeypatch) -> None:
-    monkeypatch.setattr(judge, "extract", lambda *_to: pytest.fail("estrazione inutile"))
-    assert judge.final_of({"value": "00118–00199", "answer": "**Risposta:** 00118–00199 [18]."}, "d") == "00118–00199"
+def test_program_value_comes_before_extraction(monkeypatch) -> None:
+    monkeypatch.setattr(judge, "extract", lambda *_to: pytest.fail("needless extraction"))
+    assert judge.final_of({"value": "00118–00199", "answer": "**Answer:** 00118–00199 [18]."}, "d") == "00118–00199"
 
 
 def test_without_value_extracts_from_answer(monkeypatch) -> None:
-    monkeypatch.setattr(judge, "extract", lambda _d, text: f"estratto da {text}")
-    assert judge.final_of({"value": None, "answer": "**Risposta:** Non trovata."}, "d") == "estratto da Non trovata."
+    monkeypatch.setattr(judge, "extract", lambda _d, text: f"extracted from {text}")
+    assert judge.final_of({"value": None, "answer": "**Answer:** Not found."}, "d") == "extracted from Not found."
 
 
-def test_limit_of_session_not_and_one_wrong_answer(monkeypatch) -> None:
+def test_session_limit_is_not_a_wrong_answer(monkeypatch) -> None:
     def limit(*_to, **_k):
         raise claude_json.SessionLimit(60)
     monkeypatch.setattr(claude_json, "ask", limit)
@@ -54,22 +55,22 @@ def test_limit_of_session_not_and_one_wrong_answer(monkeypatch) -> None:
         assess("d", "Mitchell Baker", "Brendan Eich")
 
 
-def test_judge_in_error_not_decides(monkeypatch) -> None:
+def test_judge_error_does_not_decide(monkeypatch) -> None:
     def error(*_to, **_k):
-        raise claude_json.ClaudeError("rotto")
+        raise claude_json.ClaudeError("broken")
     monkeypatch.setattr(claude_json, "ask", error)
     assert assess("d", "Mitchell Baker", "Brendan Eich") == (None, "judge error")
     with pytest.raises(claude_json.ClaudeError):
         judge.extract("d", "text")
 
 
-def new_test_judgement_without_claude() -> None:
+def test_rejudge_without_claude() -> None:
     import rejudge
     outcomes = {
-        "a": {"wait": "2 m", "value": "−2 m s.l.m.", "final": "−2 m s.l.m.", "correct": True, "decided_by": "comparison"},
+        "a": {"wait": "2 m", "value": "−2 m a.s.l.", "final": "−2 m a.s.l.", "correct": True, "decided_by": "comparison"},
         "b": {"wait": "00118–00199", "value": "00118–00199", "final": "", "correct": False, "decided_by": "empty"},
-        "c": {"wait": "68 m", "value": "56 m s.l.m.", "final": "56 m s.l.m.", "correct": False, "decided_by": "judge"},
-        "d": {"wait": "27 gennaio 1861", "value": None, "found": False, "final": "", "correct": False, "decided_by": "empty"},
+        "c": {"wait": "68 m", "value": "56 m a.s.l.", "final": "56 m a.s.l.", "correct": False, "decided_by": "judge"},
+        "d": {"wait": "27 January 1861", "value": None, "found": False, "final": "", "correct": False, "decided_by": "empty"},
         "e": {"error": "boh"},
     }
     new_items = rejudge.rejudge(outcomes)
@@ -80,7 +81,7 @@ def new_test_judgement_without_claude() -> None:
     assert new_items["e"] == {"error": "boh"}
 
 
-def test_reference_not_ok_outside_from_count() -> None:
+def test_bad_reference_is_out_of_the_count() -> None:
     import stats
     outcomes = [{"correct": True}, {"correct": False, "reference_status": "contested"}, {"correct": False}]
     assert stats.summarize(outcomes).startswith("1/2 ")
@@ -90,7 +91,7 @@ def _outcome(correct: bool, status: str, value: str = "v", **checks) -> dict:
     return {"correct": correct, "status": status, "value": value, "chain": {"checks": checks}}
 
 
-def test_report_signals_and_rule() -> None:
+def test_report_signals_and_decision_rule() -> None:
     import report
     good = {"second_reading": {"outcome": "agree"}, "corroboration": {"outcome": "agree"},
              "review": {"outcome": "done", "holds": "yes", "objections": []}}
@@ -102,65 +103,65 @@ def test_report_signals_and_rule() -> None:
              + [_outcome(True, "verified", exams=good) | {"reference_status": "contested"}])
     assert report.per_status(outcomes) == {"verified": (19, 20), "supported": (0, 0), "contested": (0, 1), "uncertain": (1, 4)}
     table = report.signals_table(outcomes)
-    assert table["revisione: obiezione con riga"] == (0, 3) and table["anello debole"] == (1, 3)
-    assert table["altre fonti: discordi"] == (0, 1) and table["altre fonti: concordi"] == (19, 4)
-    assert table["esami non fatti"] == (1, 0) and table["revisione: regge sì"] == (19, 2)
+    assert table["review: objection with row"] == (0, 3) and table["weak link"] == (1, 3)
+    assert table["other sources: disagree"] == (0, 1) and table["other sources: agree"] == (19, 4)
+    assert table["exams not done"] == (1, 0) and table["review: holds yes"] == (19, 2)
     first_one, second = report.rule(outcomes)
-    assert not first_one[1] and "19/20" in first_one[2]            # 95% ma il limite inferiore è sotto l'85%
-    assert second[1] and "19/20 contro 1/5" in second[2]
+    assert not first_one[1] and "19/20" in first_one[2]            # 95% but the lower bound is below 85%
+    assert second[1] and "19/20 vs 1/5" in second[2]
     assert report.rule([_outcome(True, "verified", exams=good)] * 40)[0][1]
     a = {"x": _outcome(True, "verified", "1 m"), "y": _outcome(True, "uncertain", "2 m")}
     b = {"x": _outcome(True, "verified", "1  M"), "y": _outcome(False, "supported", "3 m")}
-    assert report.repetitions([a, b]) == "2 domande in tutte le corse: stesso valore 1, stesso stato 1"
+    assert report.repetitions([a, b]) == "2 questions in all runs: same value 1, same status 1"
     c = {"x": _outcome(True, "verified", "1 metro (s.l.m.)"), "y": _outcome(True, "uncertain", "2 m s.l.m.")}
-    assert report.repetitions([a, c]) == "2 domande in tutte le corse: stesso valore 2, stesso stato 2"
+    assert report.repetitions([a, c]) == "2 questions in all runs: same value 2, same status 2"
 
 
-def test_question_without_right_answer_only_if_not_found(monkeypatch) -> None:
-    """T4: per una domanda che non ha risposta, giusto è dire «non trovata»; un valore qualunque è inventato."""
+def test_unanswerable_question_is_right_only_if_not_found(monkeypatch) -> None:
+    """T4: for a question that has no answer, "not found" is right; any value is invented."""
     import bench
-    monkeypatch.setattr(judge, "extract", lambda *_to: pytest.fail("non serve il modello"))
-    monkeypatch.setattr(judge, "assess", lambda *_to: pytest.fail("non serve il giudice"))
-    honest = {"question": "d", "wait": "", "without_answer": True, "found": False, "value": None, "answer": "Non trovata"}
-    invented = {"question": "d", "wait": "", "without_answer": True, "found": True, "value": "12 marzo 1850", "answer": "x"}
+    monkeypatch.setattr(judge, "extract", lambda *_to: pytest.fail("no model needed"))
+    monkeypatch.setattr(judge, "assess", lambda *_to: pytest.fail("no judge needed"))
+    honest = {"question": "d", "wait": "", "without_answer": True, "found": False, "value": None, "answer": "Not found"}
+    invented = {"question": "d", "wait": "", "without_answer": True, "found": True, "value": "12 March 1850", "answer": "x"}
     bench.assess_article(honest)
     bench.assess_article(invented)
     assert (honest["correct"], honest["decided_by"]) == (True, "unanswerable")
-    assert (invented["correct"], invented["final"]) == (False, "12 marzo 1850")
+    assert (invented["correct"], invented["final"]) == (False, "12 March 1850")
 
 
-def test_questions_without_answer_are_ben_done() -> None:
+def test_unanswerable_questions_are_well_formed() -> None:
     import json
     from pathlib import Path
-    questions = json.loads((Path(__file__).resolve().parents[1] / "bench" / "domande_senza_risposta.json").read_text())["questions"]
+    questions = json.loads((Path(__file__).resolve().parents[1] / "bench" / "questions_unanswerable.json").read_text())["questions"]
     assert len(questions) == 20 and len({d["seed"] for d in questions}) == 20
     assert all(d["without_answer"] is True and d["answer"] == "" and d["why"] and d["question"].endswith("?") for d in questions)
     assert {d["theme"] for d in questions} == {"invented_entity", "nonexistent_relation", "fact_never_recorded"}
 
 
 def test_faithfulness_proofs_per_source() -> None:
-    """Secondo modo di fedelta.py: la frase si confronta con le righe delle fonti che cita, non con le risposte."""
+    """Second mode of faithfulness.py: the sentence is compared with the rows of the sources it cites, not the answers."""
     import faithfulness
     questions = [
-        {"id": "d1", "question": "D1", "answer": "**Risposta:** 1973 [2].",
+        {"id": "d1", "question": "D1", "answer": "**Answer:** 1973 [2].",
          "sources": [{"number": 1, "url": "https://a.org/x", "title": "A"}, {"number": 2, "url": "https://b.org/y", "title": "B"}],
          "proofs": [{"url": "https://b.org/y", "row": "Nato il 24 luglio 1973"}, {"url": "https://a.org/x", "row": "Fondatore di X"},
-                   {"url": "https://mai.vista/z", "row": "riga di una fonte non in elenco"}]},
-        {"id": "d2", "question": "D2", "answer": "**Risposta:** Roma [1].",
+                   {"url": "https://never.seen/z", "row": "row of a source not in the list"}]},
+        {"id": "d2", "question": "D2", "answer": "**Answer:** Roma [1].",
          "sources": [{"number": 1, "url": "https://b.org/y/", "title": "B"}], "proofs": [{"url": "https://b.org/y", "row": "Vive a Roma"}]},
-        {"id": "d3", "question": "D3", "answer": "**Risposta:** vecchia [1].", "sources": [{"number": 1, "url": "https://c.org", "title": "C"}]},
+        {"id": "d3", "question": "D3", "answer": "**Answer:** old [1].", "sources": [{"number": 1, "url": "https://c.org", "title": "C"}]},
     ]
     per_source = faithfulness.texts_per_source(questions, "sources")
-    assert per_source == {1: ["Fondatore di X"], 2: ["Nato il 24 luglio 1973", "Vive a Roma"]}   # stesso indirizzo, stessa fonte
+    assert per_source == {1: ["Fondatore di X"], 2: ["Nato il 24 luglio 1973", "Vive a Roma"]}   # same address, same source
     per_answer = faithfulness.texts_per_source(questions, "answers")
-    assert set(per_answer) == {1, 2, 3} and "DOMANDA: D1" in per_answer[2][0] and "DOMANDA: D2" in per_answer[2][1]
+    assert set(per_answer) == {1, 2, 3} and "QUESTION: D1" in per_answer[2][0] and "QUESTION: D2" in per_answer[2][1]
 
 
-def test_corroboration_of_answers_waits() -> None:
+def test_corroboration_of_expected_answers() -> None:
     import check_references as vr
-    assert vr.corroboration("68 m", {"Reggio (it)": ["Altitudine: 58 m s.l.m."], "Reggio (en)": ["Elevation: 58 m (190 ft)"]}) == "diversa"
-    assert vr.corroboration("21 giugno 1885", {"H (en)": ["Died: 21 June 1886"], "H (it)": ["morta il 21 giugno 1885"]}) == "uguale"
-    assert vr.corroboration("68 m", {"X (it)": [], "X (en)": []}) == "senza righe" and vr.corroboration("68 m", {}) == "senza voce"
+    assert vr.corroboration("68 m", {"Reggio (it)": ["Altitudine: 58 m s.l.m."], "Reggio (en)": ["Elevation: 58 m (190 ft)"]}) == "different"
+    assert vr.corroboration("21 June 1885", {"H (en)": ["Died: 21 June 1886"], "H (it)": ["morta il 21 giugno 1885"]}) == "equal"
+    assert vr.corroboration("68 m", {"X (it)": [], "X (en)": []}) == "no rows" and vr.corroboration("68 m", {}) == "no article"
 
     class V:
         start = "Reggio nell'Emilia è un comune italiano."
@@ -169,16 +170,16 @@ def test_corroboration_of_answers_waits() -> None:
             from chain_research.web.sources.wikipedia_graph import Row
             return [Row("Altitudine: 58 m s.l.m.", [], "riquadro"), Row("Superficie: 230 km²", [], "riquadro"),
                     Row("Nome abitanti: reggiani (altitudine media)", [], "riquadro")]
-    assert vr.datum_rows(V(), "altitudine") == ["Altitudine: 58 m s.l.m."]
-    assert vr.datum_rows(V(), "data di fondazione") == [V.start]
+    assert vr.datum_rows(V(), "elevation") == ["Altitudine: 58 m s.l.m."]
+    assert vr.datum_rows(V(), "founding date") == [V.start]
 
 
-def test_time_of_one_question_covers_l_wait_of_limit() -> None:
+def test_question_timeout_covers_session_limit_wait() -> None:
     import bench
-    assert bench.MAX_WAIT_S >= 2 * 6 * 3600   # due rinnovi del limite di sessione (6 ore al massimo ciascuno)
+    assert bench.MAX_WAIT_S >= 2 * 6 * 3600   # two session-limit resets (6 hours at most each)
 
 
-def test_new_judgement_recomputes_status_with_rule_of_now() -> None:
+def test_rejudge_recomputes_status_with_current_rule() -> None:
     import rejudge
     good = {"second_reading": {"outcome": "agree"}, "corroboration": {"outcome": "agree"},
              "review": {"outcome": "done", "holds": "yes", "objections": []}}
@@ -186,26 +187,26 @@ def test_new_judgement_recomputes_status_with_rule_of_now() -> None:
             "chain": {"checks": {"value": "56 m", "weak_links": 1, "value_source": "A", "disagreements": [], "exams": good}}}
     fresh = rejudge.rejudge({"a": article, "b": {"wait": "x", "value": "x", "status": "v", "chain": {}}})
     assert (fresh["a"]["status"], fresh["a"]["run_status"], fresh["a"]["confirmed"]) == ("supported", "uncertain", True)
-    assert fresh["b"]["status"] == "v" and article["status"] == "uncertain"   # corse di prima: niente da ricalcolare
+    assert fresh["b"]["status"] == "v" and article["status"] == "uncertain"   # older runs: nothing to recompute
     two = {**article, "status": "contested", "retry": {"outcome": "other value", "value": "58 m"}}
-    assert rejudge.rejudge({"a": two})["a"]["status"] == "contested"   # deciso da due ricerche: resta
+    assert rejudge.rejudge({"a": two})["a"]["status"] == "contested"   # decided by two researches: stays
     invented = {"wait": "", "without_answer": True, "found": True, "value": "1850", "correct": False, "decided_by": "unanswerable"}
     honest = {"wait": "", "without_answer": True, "found": False, "value": None, "correct": True, "decided_by": "unanswerable"}
     outcome = rejudge.rejudge({"i": invented, "o": honest})
     assert (outcome["i"]["correct"], outcome["o"]["correct"]) == (False, True)
 
 
-def test_l_set_of_confirmation_and_ben_fact() -> None:
+def test_confirmation_set_is_well_formed() -> None:
     import json
     from pathlib import Path
     root = Path(__file__).resolve().parents[1] / "bench"
-    questions = json.loads((root / "domande_conferma.json").read_text())["questions"]
+    questions = json.loads((root / "questions_confirmation.json").read_text())["questions"]
     conn, without = [d for d in questions if not d.get("without_answer")], [d for d in questions if d.get("without_answer")]
     assert (len(conn), len(without)) == (13, 10) and len({d["seed"] for d in questions}) == 23
     assert all(d["answer"] and d["answer_source"] and d["question"].endswith("?") for d in conn)
     assert all(d["answer"] == "" and d["why"] for d in without)
-    # la risposta e l'entità finale non stanno nella domanda; nessun seme già usato negli altri insiemi
+    # the answer and the final entity are not in the question; no seed already used in the other sets
     assert all(d["answer"] not in d["question"] and d["path"][-1]["name"] not in d["question"] for d in conn)
-    used = {d["seed"] for f in ("questions.json", "questions_holdout.json", "domande_senza_risposta.json")
+    used = {d["seed"] for f in ("questions.json", "questions_holdout.json", "questions_unanswerable.json")
              for d in json.loads((root / f).read_text())["questions"]}
     assert not used & {d["seed"] for d in questions}

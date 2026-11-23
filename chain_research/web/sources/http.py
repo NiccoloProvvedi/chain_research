@@ -1,11 +1,12 @@
-"""Client HTTP delle fonti: blocco delle reti private anche al momento della connessione, domini consentiti,
-limiti di frequenza, ritentativi prudenti e dimensione massima delle risposte.
+"""HTTP client of the sources: private networks blocked at connection time too, allowed domains,
+rate limits, careful retries and maximum response size.
 
-Il blocco delle reti private avviene in due punti:
-1. prima della richiesta e a ogni redirect (seguiti a mano), con `rete.indirizzo_sicuro`;
-2. alla connessione: `BackendSicuro` risolve il nome, rifiuta il collegamento se UNO qualsiasi degli indirizzi è
-   privato e si collega proprio all'indirizzo controllato. Così un nome che cambia indirizzo tra il controllo e la
-   connessione (DNS rebinding) non porta al computer o alla rete di casa. Il certificato TLS resta verificato sul nome.
+Private networks are blocked in two places:
+1. before the request and at every redirect (followed by hand), with `network.safe_address`;
+2. at connection: `SafeBackend` resolves the name, refuses the connection if ANY of the addresses is
+   private and connects exactly to the checked address. So a name that changes address between the check and the
+   connection (DNS rebinding) does not lead to the computer or the home network. The TLS certificate is still
+   verified on the name.
 """
 import email.utils
 import json
@@ -31,18 +32,18 @@ MB = 1024 * 1024
 
 
 class ForbiddenAddress(httpx.ConnectError):
-    """Il nome porta al computer stesso o alla rete di casa."""
+    """The name leads to the computer itself or to the home network."""
 
 
 def resolve(host: str, port_number: int) -> list[str]:
     try:
         return list(dict.fromkeys(i[4][0] for i in socket.getaddrinfo(host, port_number, type=socket.SOCK_STREAM)))
     except OSError as error:
-        raise httpcore.ConnectError(f"nome non risolto: {host}") from error
+        raise httpcore.ConnectError(f"name not resolved: {host}") from error
 
 
 class SafeBackend(httpcore.SyncBackend):
-    """Backend di rete di httpcore che si collega solo a indirizzi pubblici controllati."""
+    """httpcore network backend that connects only to checked public addresses."""
 
     def __init__(self, local_allow: bool = False) -> None:
         self.local_allow = local_allow
@@ -51,20 +52,20 @@ class SafeBackend(httpcore.SyncBackend):
                     socket_options: Iterable[Any] | None = None) -> httpcore.NetworkStream:
         addresses = resolve(host, port)
         if not self.local_allow and (network.local_name(host) or any(network.forbidden_ip(ip) for ip in addresses)):
-            raise ForbiddenAddress(f"indirizzo non consentito: {host}")
+            raise ForbiddenAddress(f"address not allowed: {host}")
         last: Exception | None = None
         for ip in addresses:
             try:
                 return super().connect_tcp(ip, port, timeout, local_address, socket_options)
             except httpcore.ConnectError as error:
                 last = error
-        raise last or httpcore.ConnectError(f"connessione non riuscita: {host}")
+        raise last or httpcore.ConnectError(f"connection failed: {host}")
 
 
 class SafeTransport(httpx.HTTPTransport):
     def __init__(self, local_allow: bool = False, **options: Any) -> None:
         super().__init__(**options)
-        self._pool._network_backend = SafeBackend(local_allow)  # httpx non lo espone: versione fissata
+        self._pool._network_backend = SafeBackend(local_allow)  # httpx does not expose it: pinned version
 
 
 def _seconds_retry_after(value: str | None) -> float | None:
@@ -81,7 +82,7 @@ def _seconds_retry_after(value: str | None) -> float | None:
 
 
 class SourceClient:
-    """Client per una fonte. `domini` = domini consentiti (None = qualsiasi dominio pubblico, per l'audio)."""
+    """Client for a source. `domains` = allowed domains (None = any public domain, for audio)."""
 
     def __init__(self, name: str, *, user_agent: str, domains: Iterable[str] | None,
                  limiter: RateLimiter | None = None, local_allow: bool = False,
@@ -91,7 +92,7 @@ class SourceClient:
         self.domains = {d.lower() for d in domains} if domains is not None else None
         self.limiter = limiter
         self.local_allow = local_allow
-        self.max_redirect = max_redirect  # l'audio dei podcast passa spesso da 3-4 contatori di ascolti
+        self.max_redirect = max_redirect  # podcast audio often goes through 3-4 listen counters
         self._sleep = sleep
         self._client = httpx.Client(
             transport=transport or SafeTransport(local_allow=local_allow),
@@ -101,22 +102,22 @@ class SourceClient:
     def teardown(self) -> None:
         self._client.close()
 
-    # --- controlli -----------------------------------------------------------------------------------------------
+    # --- checks -------------------------------------------------------------------------------------------------
 
     def _check_url(self, url: str) -> None:
         parts = urlsplit(url)
         host = (parts.hostname or "").lower()
         if parts.scheme not in ("http", "https") or not host:
-            raise UnreadableContent(f"{self.name}: indirizzo non valido")
+            raise UnreadableContent(f"{self.name}: invalid address")
         if self.domains is not None and not any(host == d or host.endswith("." + d) for d in self.domains):
-            raise UnreadableContent(f"{self.name}: dominio non consentito ({host})")
+            raise UnreadableContent(f"{self.name}: domain not allowed ({host})")
         if not self.local_allow and not network.safe_address(url):
-            raise UnreadableContent(f"{self.name}: indirizzo del computer o della rete locale, bloccato")
+            raise UnreadableContent(f"{self.name}: address of the computer or the local network, blocked")
 
-    # --- richieste -----------------------------------------------------------------------------------------------
+    # --- requests -----------------------------------------------------------------------------------------------
 
     def _send(self, url: str, params: dict[str, Any] | None, headers: dict[str, str] | None) -> httpx.Response:
-        """Una richiesta GET con redirect seguiti a mano (controllo a ogni salto). La risposta è in streaming."""
+        """A GET request with redirects followed by hand (checked at every hop). The response is streamed."""
         for _ in range(self.max_redirect + 1):
             self._check_url(url)
             if self.limiter:
@@ -128,7 +129,7 @@ class SourceClient:
                 url, params = urljoin(str(answer.request.url), answer.headers["location"]), None
                 continue
             return answer
-        raise UnreadableContent(f"{self.name}: troppi reindirizzamenti")
+        raise UnreadableContent(f"{self.name}: too many redirects")
 
     def _with_retries(self, url: str, params: dict[str, Any] | None, headers: dict[str, str] | None,
                          use: Callable[[httpx.Response], Any]) -> Any:
@@ -140,7 +141,7 @@ class SourceClient:
                 raise UnreadableContent(f"{self.name}: {error}") from error
             except httpx.TransportError as error:
                 if attempt == ATTEMPTS:
-                    raise SourceUnavailable(f"{self.name}: rete non raggiungibile ({type(error).__name__})") \
+                    raise SourceUnavailable(f"{self.name}: network unreachable ({type(error).__name__})") \
                         from error
                 self._sleep(wait)
                 continue
@@ -152,31 +153,31 @@ class SourceClient:
                         if code == 429:
                             if self.limiter and after:
                                 self.limiter.pause(after)
-                            raise ReachedLimit(f"{self.name}: troppe richieste (HTTP 429)")
-                        raise SourceUnavailable(f"{self.name}: il server non risponde (HTTP {code})")
+                            raise ReachedLimit(f"{self.name}: too many requests (HTTP 429)")
+                        raise SourceUnavailable(f"{self.name}: the server is not responding (HTTP {code})")
                     self._sleep(after if after is not None else wait)
                     continue
                 if code in (401, 403):
-                    raise SourceUnavailable(f"{self.name}: accesso negato (HTTP {code})")
+                    raise SourceUnavailable(f"{self.name}: access denied (HTTP {code})")
                 if code == 404:
-                    raise UnreadableContent(f"{self.name}: contenuto non trovato (HTTP 404)")
+                    raise UnreadableContent(f"{self.name}: content not found (HTTP 404)")
                 if code >= 400:
-                    raise UnreadableContent(f"{self.name}: richiesta rifiutata (HTTP {code})")
+                    raise UnreadableContent(f"{self.name}: request refused (HTTP {code})")
                 return use(answer)
             finally:
                 answer.close()
-        raise SourceUnavailable(f"{self.name}: richiesta non riuscita")
+        raise SourceUnavailable(f"{self.name}: request failed")
 
     @staticmethod
     def _body(answer: httpx.Response, maximum: int) -> bytes:
         declared = answer.headers.get("content-length")
         if declared and declared.isdigit() and int(declared) > maximum:
-            raise UnreadableContent(f"risposta troppo grande ({int(declared) // MB} MB)")
+            raise UnreadableContent(f"response too large ({int(declared) // MB} MB)")
         parts, total = [], 0
         for piece in answer.iter_bytes():
             total += len(piece)
             if total > maximum:
-                raise UnreadableContent(f"risposta troppo grande (oltre {maximum // MB} MB)")
+                raise UnreadableContent(f"response too large (over {maximum // MB} MB)")
             parts.append(piece)
         return b"".join(parts)
 
@@ -187,7 +188,7 @@ class SourceClient:
             try:
                 return json.loads(body)
             except ValueError as error:
-                raise UnreadableContent(f"{self.name}: risposta non in formato JSON") from error
+                raise UnreadableContent(f"{self.name}: response not in JSON format") from error
         return self._with_retries(url, params, headers, use)
 
     def get_text(self, url: str, params: dict[str, Any] | None = None, headers: dict[str, str] | None = None,

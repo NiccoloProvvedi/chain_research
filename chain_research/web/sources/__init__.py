@@ -1,4 +1,4 @@
-"""Fonti della ricerca oltre alle pagine web: Wikipedia come grafo (wikipedia_grafo) e il client HTTP sicuro."""
+"""Research sources besides web pages: Wikipedia as a graph (wikipedia_graph) and the safe HTTP client."""
 import re
 from urllib.parse import parse_qs, urlsplit
 
@@ -8,8 +8,8 @@ ID_VIDEO = re.compile(r"[A-Za-z0-9_-]{11}")
 
 
 def canonical_key(url: str) -> str | None:
-    """Chiave delle piattaforme che il lettore di pagine non legge bene (domande di Stack Exchange, Wikidata, Hacker
-    News, video di YouTube): la ricerca salta questi risultati, come faceva sul banco di prova."""
+    """Key of the platforms the page reader does not read well (Stack Exchange questions, Wikidata, Hacker
+    News, YouTube videos): the research skips these results, as it did on the test bench."""
     try:
         parts = urlsplit(url)
     except ValueError:

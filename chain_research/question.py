@@ -1,10 +1,10 @@
-"""Una domanda risposta con la catena, in un processo a sé.
+"""One question answered by the chain, in its own process.
 
-Uso: `python -m chain_research.question` con una richiesta JSON sull'ingresso
-({"domanda": ..., "opzioni": {...}, "profilo": ..., "cartella_pezzi": ...}). Sull'uscita una riga JSON per evento
-({"evento": {...}}) e alla fine {"esito": {...}} oppure {"errore": "...", "costo_usd": ...}, con "limite_sessione"
-(secondi al rinnovo) se è finito il limite dell'abbonamento. L'indagine ne lancia alcuni in parallelo: ognuno ha il suo
-browser e si può fermare chiudendo il processo.
+Usage: `python -m chain_research.question` with a JSON request on stdin
+({"question": ..., "options": {...}, "profile": ..., "pieces_folder": ...}). On stdout one JSON line per event
+({"event": {...}}) and at the end {"outcome": {...}} or {"error": "...", "cost_usd": ...}, with "session_limit"
+(seconds to renewal) if the subscription limit ran out. The investigation launches several in parallel: each has its
+own browser and can be stopped by closing the process.
 """
 import json
 import os
@@ -28,8 +28,8 @@ def _write(obj: dict) -> None:
 
 
 def _terminate(*_: Any) -> None:
-    """Chiusura chiesta dall'indagine: le chiamate a Claude in corso non devono continuare a costare da sole. Il browser
-    si chiude da solo quando il suo programma di controllo perde il collegamento con questo processo."""
+    """Shutdown requested by the investigation: running Claude calls must not keep costing on their own. The browser
+    closes by itself when its control program loses the connection with this process."""
     claude_json.interrupt()
     os._exit(143)
 
@@ -44,7 +44,7 @@ def main() -> int:
         publish = lambda e: _write({"event": e})  # noqa: E731
 
         def create(options: dict) -> Collector:
-            # Una ricerca da capo: un'altra raccolta, con il suo budget; il costo della domanda è la somma.
+            # A research from scratch: another collection, with its own budget; the question's cost is the sum.
             nonlocal collector
             spent["first"] += collector.thinker.ledger.spent if collector is not None else 0.0
             collector = Collector(request["question"], options=options, publish=publish,
@@ -56,7 +56,7 @@ def main() -> int:
     except claude_json.SessionLimit as error:
         _write({"error": str(error)[:500], "session_limit": error.seconds, "cost_usd": cost()})
         return 3
-    except Exception as error:  # noqa: BLE001 - l'indagine registra l'errore e continua con le altre domande
+    except Exception as error:  # noqa: BLE001 - the investigation records the error and goes on with the other questions
         _write({"error": f"{type(error).__name__}: {error}"[:500], "cost_usd": cost()})
         return 1
     return 0

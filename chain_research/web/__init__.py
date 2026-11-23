@@ -1,1 +1,1 @@
-"""Web: la catena (catena.py), la raccolta di una domanda (raccolta.py), il browser e le fonti."""
+"""Web: the chain (chain.py), the collection for one question (collector.py), the browser and the sources."""

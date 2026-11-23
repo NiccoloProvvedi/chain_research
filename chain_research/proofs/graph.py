@@ -1,8 +1,8 @@
-"""Archivio del grafo delle prove di una ricerca (Fase D, Parte 8.4 del piano), in SQLite.
+"""Store of the proof graph of a research (Phase D, Part 8.4 of the plan), in SQLite.
 
-Tabelle: fonte, segmento, entita (+ alias), tripla, deriva (triple dedotte → triple da cui derivano). Il campo `valida`
-permette la correzione di ToG: una tripla segnata come sbagliata diventa 0 insieme alle dedotte che ne dipendono.
-Una vista networkx si costruisce in memoria quando serve.
+Tables: source, segment, entity (+ alias), triple, derived (inferred triples → triples they derive from). The `valid`
+field allows the ToG correction: a triple marked as wrong becomes 0 together with the inferred ones that depend on it.
+A networkx view is built in memory when needed.
 """
 import sqlite3
 from pathlib import Path
@@ -41,11 +41,11 @@ class Graph:
     def __init__(self, path: Path | str = ":memory:") -> None:
         if path != ":memory:":
             Path(path).parent.mkdir(parents=True, exist_ok=True)
-        # La ricerca prende appunti (e triple) in più thread: le scritture passano da un blocco del chiamante.
+        # The research takes notes (and triples) in several threads: writes go through a lock held by the caller.
         self.db = sqlite3.connect(str(path), check_same_thread=False)
         self.db.row_factory = sqlite3.Row
         self.db.executescript(SCHEMA)
-        # Grafi salvati prima delle traduzioni e dei "perché" dei legami (14/10): si aggiungono le colonne mancanti.
+        # Graphs saved before translations and the "why" of ties (14 Oct): the missing columns are added.
         for table, column in (("triple", "translation"), ("mention", "translation"), ("triple", "why")):
             columns = {r["name"] for r in self.db.execute(f"PRAGMA table_info({table})")}
             if column not in columns:
@@ -54,7 +54,7 @@ class Graph:
     def teardown(self) -> None:
         self.db.close()
 
-    # --- fonti e segmenti ------------------------------------------------------------------------------------
+    # --- sources and segments--------------------------------------------------------------------------------
 
     def source(self, url: str, **fields: Any) -> int:
         row = self.db.execute("SELECT id FROM source WHERE url = ?", (url,)).fetchone()
@@ -62,7 +62,7 @@ class Graph:
             return row["id"]
         foreign = set(fields) - SOURCE_COLUMNS
         if foreign:
-            raise ValueError(f"campi della fonte sconosciuti: {sorted(foreign)}")
+            raise ValueError(f"unknown source fields: {sorted(foreign)}")
         columns = ["url", *fields]
         cur = self.db.execute(f"INSERT INTO source ({', '.join(columns)}) VALUES ({', '.join('?' * len(columns))})",
                               (url, *fields.values()))
@@ -77,7 +77,7 @@ class Graph:
                               (source_id, number, text, citable_url))
         return int(cur.lastrowid)
 
-    # --- entità ----------------------------------------------------------------------------------------------
+    # --- entities --------------------------------------------------------------------------------------------
 
     def find(self, name: str) -> int | None:
         norm = ent.normalize(name)
@@ -86,7 +86,7 @@ class Graph:
         return row["id"] if row else None
 
     def entity(self, name: str, kind: str = "", id_wikidata: str | None = None) -> int:
-        """Id dell'entità con questo nome (o alias), creandola se manca."""
+        """Id of the entity with this name (or alias), creating it if missing."""
         existing = self.find(name)
         if existing is not None:
             if id_wikidata:
@@ -98,7 +98,8 @@ class Graph:
         return int(cur.lastrowid)
 
     def alias(self, entity_id: int, alias: str) -> bool:
-        """Aggiunge un nome alternativo (es. da Wikidata). False se cambierebbe i numeri o è già di un'altra entità."""
+        """Add an alternative name (e.g. from Wikidata). False if it would change the numbers or already belongs to
+        another entity."""
         name = self.db.execute("SELECT name FROM entity WHERE id = ?", (entity_id,)).fetchone()["name"]
         if not ent.alias_compatibile(name, alias):
             return False
@@ -108,7 +109,7 @@ class Graph:
         self.db.execute("INSERT INTO alias (name_norm, entity_id) VALUES (?, ?)", (ent.normalize(alias), entity_id))
         return True
 
-    # --- triple ----------------------------------------------------------------------------------------------
+    # --- triples ---------------------------------------------------------------------------------------------
 
     def triple(self, subject: str, relation: str, obj: str, object_kind: str, force: str,
                segment_id: int | None, quote: str = "", origin: str = "extracted",
@@ -126,7 +127,7 @@ class Graph:
         return triple_id
 
     def drop(self, triple_id: int) -> list[int]:
-        """Segna la tripla come sbagliata, con tutte le dedotte che ne dipendono (anche indirettamente)."""
+        """Mark the triple as wrong, with all the inferred ones that depend on it (also indirectly)."""
         invalidate, from_do = [], [triple_id]
         while from_do:
             current = from_do.pop()
@@ -155,7 +156,7 @@ class Graph:
         return [dict(r) for r in rows]
 
     def view(self) -> nx.MultiDiGraph:
-        """Le triple valide tra entità come grafo networkx (i valori restano attributi dell'entità soggetto)."""
+        """The valid triples between entities as a networkx graph (values stay attributes of the subject entity)."""
         graph = nx.MultiDiGraph()
         for r in self.db.execute("SELECT id, name FROM entity"):
             graph.add_node(r["id"], name=r["name"], values=[])

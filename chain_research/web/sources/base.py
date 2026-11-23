@@ -1,17 +1,17 @@
-"""Errori delle fonti (Wikipedia e client HTTP): le uniche eccezioni che una fonte solleva verso la ricerca."""
+"""Source errors (Wikipedia and HTTP client): the only exceptions a source raises towards the research."""
 
 
 class SourceError(Exception):
-    """Errore di una fonte, con un messaggio in italiano. Una fonte che fallisce non ferma mai la ricerca."""
+    """Error of a source, with an English message. A failing source never stops the research."""
 
 
 class SourceUnavailable(SourceError):
-    """La fonte non si può usare (accesso negato, rete assente...)."""
+    """The source cannot be used (access denied, no network...)."""
 
 
 class ReachedLimit(SourceError):
-    """Troppe richieste: la fonte va lasciata riposare."""
+    """Too many requests: the source must be left to rest."""
 
 
 class UnreadableContent(SourceError):
-    """Questo contenuto non si può leggere (privato, senza testo, troppo grande, dominio non consentito...)."""
+    """This content cannot be read (private, no text, too large, domain not allowed...)."""

@@ -1,13 +1,13 @@
-"""Scheda delle risposte attese: ogni risposta attesa (da Wikidata) accanto a quello che dicono le voci di Wikipedia
-dell'entità finale, in italiano e in inglese. Le domande in cui Wikipedia dà un altro valore non misurano la catena,
-che legge Wikipedia: vanno guardate da una persona (docs/validation.md, T9).
+"""Expected-answer sheet: each expected answer (from Wikidata) next to what the Wikipedia articles of the final entity
+say, in Italian and in English. Questions where Wikipedia gives another value do not measure the chain, which reads
+Wikipedia: a person must look at them (docs/validation.md, T9).
 
-La voce giusta si riconosce dal codice dell'entità (lo stesso del percorso della domanda), non dal nome. Legge solo
-Wikipedia, con il client e i tempi dell'applicazione; non chiama Claude.
+The right article is recognized by the entity's code (the same as in the question's path), not by its name. Reads only
+Wikipedia, with the application's client and timings; does not call Claude.
 
-Uso: venv/bin/python bench/check_references.py [bench/questions_holdout.json] [--scrivi]
-     Stampa la scheda; con --scrivi aggiunge alle domande il campo `riscontro_wikipedia` (non `stato_riferimento`:
-     quello lo decide una persona).
+Usage: venv/bin/python bench/check_references.py [bench/questions_holdout.json] [--write]
+       Prints the sheet; with --write adds the field `wikipedia_corroboration` to the questions (not
+       `reference_status`: that is decided by a person).
 """
 import argparse
 import json
@@ -21,20 +21,20 @@ sys.path.insert(0, str(ROOT))
 from chain_research.web import validation  # noqa: E402
 from chain_research.web.sources.wikipedia_graph import Article, WikipediaGraph, interval_per  # noqa: E402
 
-# Le etichette del riquadro per ogni dato chiesto (italiano e inglese); per nascita e morte anche l'inizio della voce.
+# The infobox labels for each requested datum (Italian and English); for birth and death also the start of the article.
 LABELS = {
-    "altitudine": r"altitudine|elevation|altitude",
-    "codice postale": r"cod\.? postale|codice postale|cap\b|postal code|post ?code|zip",
-    "data di fondazione": r"istituzione|istituit|fondazione|fondat|nascita|creazione|established|founded|formation|"
+    "elevation": r"altitudine|elevation|altitude",
+    "postal code": r"cod\.? postale|codice postale|cap\b|postal code|post ?code|zip",
+    "founding date": r"istituzione|istituit|fondazione|fondat|nascita|creazione|established|founded|formation|"
                           r"formed|incorporated|settled|created|inizio",
-    "data di nascita": r"nascita|nato|born",
-    "data di morte": r"morte|morto|died",
+    "date of birth": r"nascita|nato|born",
+    "date of death": r"morte|morto|died",
 }
-FROM_START = ("data di nascita", "data di morte", "data di fondazione")
+FROM_START = ("date of birth", "date of death", "founding date")
 
 
 def entity_article(wiki: WikipediaGraph, name: str, qid: str) -> Article | None:
-    """La voce in italiano o in inglese con questo codice: prima il nome, poi i risultati della ricerca."""
+    """The Italian or English article with this code: first the name, then the search results."""
     for language in ("it", "en"):
         proofs = [name] + [x["title"] for x in wiki.search(name, language, n=4)]
         for title in dict.fromkeys(proofs):
@@ -51,14 +51,14 @@ def datum_rows(article: Article, relation: str) -> list[str]:
 
 
 def corroboration(wait: str, rows: dict[str, list[str]]) -> str:
-    """«uguale» se una riga contiene la risposta attesa; «diversa» se le righe del dato ci sono ma nessuna la contiene;
-    «senza righe» se le voci non hanno quel dato; «senza voce» se la voce non si trova."""
+    """"equal" if a row contains the expected answer; "different" if there are rows for the datum but none contains it;
+    "no rows" if the articles lack that datum; "no article" if the article is not found."""
     if not rows:
-        return "senza voce"
+        return "no article"
     all_entries = [r for group in rows.values() for r in group]
     if any(validation.value_in_row(wait, r) for r in all_entries):
-        return "uguale"
-    return "diversa" if all_entries else "senza righe"
+        return "equal"
+    return "different" if all_entries else "no rows"
 
 
 def main() -> None:
@@ -83,7 +83,7 @@ def main() -> None:
         outcome = corroboration(d["answer"], rows)
         counts[outcome] = counts.get(outcome, 0) + 1
         d["wikipedia_corroboration"] = outcome
-        print(f"\n[{outcome}] {d['theme']}/{d['seed']} — {relation} di {last['name']}: attesa «{d['answer']}»", flush=True)
+        print(f"\n[{outcome}] {d['theme']}/{d['seed']} — {relation} of {last['name']}: expected \"{d['answer']}\"", flush=True)
         for article, group in rows.items():
             for r in group:
                 print(f"    {article}: {r[:230]}")

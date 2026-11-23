@@ -1,7 +1,7 @@
-"""Ricerca a catena: indagini sul web guidate da Claude.
+"""Chain research: web investigations guided by Claude.
 
-Da un argomento, Claude prepara le domande; la catena (programma + Claude Haiku come lettore) risponde a ognuna con
-prove citate; il ciclo si ripete finché Claude ritiene solida la conoscenza; alla fine un documento PDF completo.
+From a topic, Claude prepares the questions; the chain (program + Claude Haiku as reader) answers each one with cited
+proofs; the cycle repeats until Claude deems the knowledge solid; at the end, a complete PDF document.
 """
 from pathlib import Path
 

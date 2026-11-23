@@ -1,6 +1,6 @@
-"""Limitatore di frequenza per dominio: un intervallo minimo tra le chiamate e un tetto all'ora.
+"""Per-domain rate limiter: a minimum interval between calls and an hourly cap.
 
-Orologio e attesa si possono sostituire nei test (nessuna attesa reale).
+Clock and sleep can be replaced in tests (no real waiting).
 """
 import threading
 import time
@@ -24,26 +24,26 @@ class RateLimiter:
         self._lock = threading.Lock()
 
     def pause(self, seconds: float) -> None:
-        """Nessuna chiamata per `secondi` (backoff di Stack Exchange, blocco anti-robot di YouTube...)."""
+        """No calls for `seconds` (Stack Exchange backoff, YouTube anti-bot block...)."""
         with self._lock:
             self._until_pause = max(self._until_pause, self._clock() + seconds)
 
     def in_pause(self) -> float:
-        """Secondi di pausa rimasti (0 se nessuna)."""
+        """Seconds of pause left (0 if none)."""
         return max(0.0, self._until_pause - self._clock())
 
     def wait_for(self, max_wait_s: float = 60.0) -> None:
-        """Aspetta il proprio turno. LimiteRaggiunto se il turno arriverebbe dopo `attesa_massima_s`."""
+        """Wait for its turn. ReachedLimit if the turn would come after `max_wait_s`."""
         with self._lock:
             now = self._clock()
             while self._hour and now - self._hour[0] >= 3600:
                 self._hour.popleft()
             if self.max_hour is not None and len(self._hour) >= self.max_hour:
-                raise ReachedLimit(f"{self.name}: raggiunto il limite di {self.max_hour} richieste all'ora")
+                raise ReachedLimit(f"{self.name}: reached the limit of {self.max_hour} requests per hour")
             turn = max(self._until_pause, (self._last + self.interval_s) if self._last is not None else now)
             wait = turn - now
             if wait > max_wait_s:
-                raise ReachedLimit(f"{self.name}: in pausa ancora per {int(wait)} secondi")
+                raise ReachedLimit(f"{self.name}: paused for another {int(wait)} seconds")
             if wait > 0:
                 self._sleep(wait)
                 now = turn
@@ -56,7 +56,7 @@ _lock = threading.Lock()
 
 
 def limiter(key: str, interval_s: float, max_hour: int | None = None) -> RateLimiter:
-    """Limitatore condiviso per una chiave (dominio o programma): vale per tutte le ricerche dello stesso processo."""
+    """Shared limiter for a key (domain or program): applies to all researches of the same process."""
     with _lock:
         existing = _limiters.get(key)
         if existing is None:

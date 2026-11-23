@@ -1,4 +1,5 @@
-"""Dal nome alla voce di Wikipedia (fasi 2-3 del piano entità e righe): `corrisponde`, `non_entita`, `scegli_voce`."""
+"""From the name to the Wikipedia article (phases 2-3 of the entity and rows plan): `matches`, `not_entity`,
+`choose_article`."""
 import sys
 from pathlib import Path
 
@@ -12,23 +13,23 @@ from chain_research.web.sources.wikipedia_graph import Article, WikipediaGraph, 
 
 @pytest.mark.parametrize("name,title,context,expected", [
     ("Mario Bettinus", "Mario Bettini", "", "variant"),
-    ("Mario Bettinus", "Mario (nome)", "Giuseppe Biancani", ""),  # 23/10: il vecchio «simile» li univa
+    ("Mario Bettinus", "Mario (nome)", "Giuseppe Biancani", ""),  # 23 Oct: the old «simile» merged them
     ("Silvio Piccolomini", "Papa Pio II", "", ""),
-    ("Pio II", "Pio III", "", ""),  # numeri diversi: mai la stessa entità
+    ("Pio II", "Pio III", "", ""),  # different numbers: never the same entity
     ("Democratic Federal Yugoslavia", "Socialist Federal Republic of Yugoslavia", "", ""),
     ("Jugoslavia Democratica Federale", "Jugoslavia Federale Democratica", "", "variant"),
     ("Tux", "Tux (mascot)", "mascotte di Linux", "parentheses"),
-    ("Tux", "Tux (mascot)", "Linux", "base"),  # parentesi non giustificata: serve un collegamento
+    ("Tux", "Tux (mascot)", "Linux", "base"),  # unjustified parentheses: a link is needed
     ("Fermi", "Enrico Fermi", "", "base"),
-    ("Giuseppe Biancani", "Biancani", "", ""),  # titolo più corto del nome: un'altra voce
-    ("Freedo", "Freedom", "", ""),  # nomi corti: solo un refuso di una lettera
+    ("Giuseppe Biancani", "Biancani", "", ""),  # title shorter than the name: another article
+    ("Freedo", "Freedom", "", ""),  # short names: only a one-letter typo
     ("Niccolò Zucchi", "Niccolo Zucchi", "", "exact"),
     ("il Regno di Francia", "Regno di Francia", "", "exact"),
     ("La Thuile", "La Thuile (Italia)", "Courmayeur, Valle d'Aosta, Italia", "parentheses"),
-    ("Tex", "TeX", "", "variant"),  # maiuscole diverse oltre la prima: non è lo stesso titolo
+    ("Tex", "TeX", "", "variant"),  # different case beyond the first letter: not the same title
     ("Plutone", "Plutone (astrologia)", "l'astronomo che scoprì la luna", "base"),  # astronomo ≠ astrologia
     ("Plutone", "Plutone (astronomia)", "l'astronomo che scoprì la luna", "parentheses"),
-    ("Monte Bianco", "Traforo del Monte Bianco", "", ""),  # il cognome vale solo per nomi di una parola
+    ("Monte Bianco", "Traforo del Monte Bianco", "", ""),  # the surname rule applies only to one-word names
 ])
 def test_matches(name, title, context, expected) -> None:
     assert matches(name, title, context) == expected
@@ -43,7 +44,7 @@ def test_not_entity() -> None:
 
 
 class Fake:
-    """Wikipedia finta per `scegli_voce`: voci intere (parse), ricerca, proprietà/categorie/collegamenti, inizi."""
+    """Fake Wikipedia for `choose_article`: whole articles (parse), search, properties/categories/links, starts."""
 
     def __init__(self, articles: dict, research: dict, info: dict) -> None:
         self.articles, self.research, self.info = articles, research, info
@@ -73,8 +74,8 @@ def _article(title, text, hyperlinks=()):
     return {"title": title, "text": html}
 
 
-def namesake_discarded_test_and_linked_choice_article() -> None:
-    """«Mario Bettinus»: la ricerca dà «Mario (nome)» e «Mario Bettini»; vince la voce collegata a Biancani."""
+def test_namesake_discarded_and_linked_article_chosen() -> None:
+    """«Mario Bettinus»: the search gives «Mario (nome)» and «Mario Bettini»; the article linked to Biancani wins."""
     fake = Fake(
         articles={"Giuseppe Biancani": _article("Giuseppe Biancani", "Gesuita bolognese.", ["Mario Bettini"]),
               "Mario Bettini": _article("Mario Bettini", "Mario Bettini è stato un gesuita.")},
@@ -85,14 +86,14 @@ def namesake_discarded_test_and_linked_choice_article() -> None:
     assert v is not None and v.title == "Mario Bettini"
 
 
-def test_no_article_better_of_namesake() -> None:
+def test_no_article_is_better_than_a_namesake() -> None:
     fake = Fake(articles={}, research={"Silvio Piccolomini": ["Papa Pio II", "Piccolomini"]}, info={})
     wiki = WikipediaGraph(fetch=fake, interval_s=0.0)
     assert wiki.choose_article("Silvio Piccolomini", ["it", "en"], context="gesuita") is None
 
 
-def test_disambiguation_becomes_candidates_and_wins_tie() -> None:
-    """«Tux»: la pagina è una disambiguazione; tra le sue voci vince quella che collega Linux (vicino)."""
+def test_disambiguation_page_gives_candidates_and_linked_one_wins() -> None:
+    """«Tux»: the page is a disambiguation; among its articles the one linking Linux (neighbour) wins."""
     fake = Fake(
         articles={"Tux": {"title": "Tux", "text": '<ul><li><a href="/wiki/Tux_(mascotte)">Tux (mascotte)</a></li>'
                                               '<li><a href="/wiki/Tux_(abito)">Tux (abito)</a></li></ul>',
@@ -105,7 +106,7 @@ def test_disambiguation_becomes_candidates_and_wins_tie() -> None:
     assert v is not None and v.title == "Tux (mascotte)"
 
 
-def test_tie_asks_tiebreak_and_respects_no() -> None:
+def test_tie_asks_tiebreak_and_respects_none() -> None:
     fake = Fake(
         articles={"Linux": _article("Linux", "Linux.", ["Tux (mascotte)", "Tux (gioco)"])},
         research={"Tux": ["Tux (mascotte)", "Tux (gioco)"]},
@@ -121,7 +122,7 @@ def test_tie_asks_tiebreak_and_respects_no() -> None:
     assert requested == [["Tux (mascotte)", "Tux (gioco)"]]
 
 
-def test_exact_title_without_tie_passes_from_accept() -> None:
+def test_exact_title_without_links_goes_through_accept() -> None:
     fake = Fake(articles={"Niccolò Zucchi": _article("Niccolò Zucchi", "Niccolò Zucchi è stato un gesuita.")},
                   research={}, info={})
     wiki = WikipediaGraph(fetch=fake, interval_s=0.0)
@@ -130,7 +131,7 @@ def test_exact_title_without_tie_passes_from_accept() -> None:
 
 
 def test_parentheses_justified_beats_exact_title() -> None:
-    """«Haiku» in una domanda su un sistema operativo: «Haiku (sistema operativo)», non la poesia."""
+    """«Haiku» in a question about an operating system: «Haiku (sistema operativo)», not the poem."""
     fake = Fake(articles={"Haiku": _article("Haiku", "Lo haiku è un componimento poetico."),
                         "Haiku (sistema operativo)": _article("Haiku (sistema operativo)", "Haiku è un sistema operativo.")},
                   research={"Haiku": ["Haiku", "Haiku (sistema operativo)"]}, info={})
@@ -139,8 +140,8 @@ def test_parentheses_justified_beats_exact_title() -> None:
     assert v is not None and v.title == "Haiku (sistema operativo)"
 
 
-def test_generic_categories_not_counted() -> None:
-    """«Arduino»: «Pittori italiani» non dice niente su una domanda che nomina l'Italia."""
+def test_generic_categories_do_not_count() -> None:
+    """«Arduino»: «Pittori italiani» says nothing about a question that names Italy."""
     fake = Fake(articles={"Anna Maria Arduino": _article("Anna Maria Arduino", "Pittrice.")},
                   research={"Arduino": ["Anna Maria Arduino"]},
                   info={"Anna Maria Arduino": {"categories": ["Pittori italiani del XVII secolo"]}})
@@ -148,8 +149,8 @@ def test_generic_categories_not_counted() -> None:
     assert wiki.choose_article("Arduino", ["it"], context="una piattaforma hardware nata in Italia") is None
 
 
-def test_redirect_towards_other_entity_not_counts() -> None:
-    """23/10, Arduino: su en.wikipedia «Phillip Torrone» rinvia a «Limor Fried» (la moglie): non è la sua voce."""
+def test_redirect_to_another_entity_does_not_count() -> None:
+    """23 Oct, Arduino: on en.wikipedia «Phillip Torrone» redirects to «Limor Fried» (his wife): not his article."""
     fake = Fake(articles={"Phillip Torrone": {"title": "Limor Fried", "text": "<p>Limor Fried is an engineer.</p>",
                                             "redirects": [{"from": "Phillip Torrone", "to": "Limor Fried"}]},
                         "Adafruit Industries": _article("Adafruit Industries", "Adafruit.", ["Limor Fried"]),
@@ -161,8 +162,8 @@ def test_redirect_towards_other_entity_not_counts() -> None:
     assert wiki.choose_article("Mozilla Firefox", ["en"]).title == "Firefox"
 
 
-def test_split_sentences_without_cut_abbreviations() -> None:
-    """24/10, Wikivoyage: «Wikivoyage e. V., Roland Unger» e le date tedesche «(* 15. Dezember 1941» restano intere."""
+def test_split_sentences_does_not_cut_abbreviations() -> None:
+    """24 Oct, Wikivoyage: «Wikivoyage e. V., Roland Unger» and German dates «(* 15. Dezember 1941» stay whole."""
     from chain_research.web.sources.wikipedia_graph import split_sentences
     assert split_sentences("Der Vorsitzende des Wikivoyage e. V., Roland Unger, wurde angefragt. Danach kam X.") == [
         "Der Vorsitzende des Wikivoyage e. V., Roland Unger, wurde angefragt.", "Danach kam X."]
@@ -172,9 +173,9 @@ def test_split_sentences_without_cut_abbreviations() -> None:
     assert split_sentences("Nacque nel 1564. Morì nel 1642.") == ["Nacque nel 1564.", "Morì nel 1642."]
 
 
-def named_test_without_hyperlink_and_namesake() -> None:
-    """24/10, Wikipedia: la voce tedesca di Wikivoyage nomina «Roland Unger» (presidente dell'associazione) senza
-    collegarlo; la voce «Roland Unger» è di un pittore del 1941. Con menzione = "contro" non passa."""
+def test_name_mentioned_without_link_is_a_namesake() -> None:
+    """24 Oct, Wikipedia: the German Wikivoyage article names «Roland Unger» (chairman of the association) without
+    linking him; the article «Roland Unger» is about a painter born in 1941. With mention = "against" it does not pass."""
     fake = Fake(articles={"Wikivoyage": {"title": "Wikivoyage", "text": '<p>Der Vorsitzende des Wikivoyage e. V., Roland '
                                        'Unger, wurde von der <a href="/wiki/Wikimedia">Wikimedia</a> angefragt.</p>'},
                         "Roland Unger": _article("Roland Unger", "Roland Unger (* 15. Dezember 1941) war ein Maler.")},
@@ -182,12 +183,12 @@ def named_test_without_hyperlink_and_namesake() -> None:
     wiki = WikipediaGraph(fetch=fake, interval_s=0.0)
     wiki.mention = "against"
     assert wiki.choose_article("Roland Unger", ["de"], neighbours=[("de", "Wikivoyage")]) is None
-    wiki.mention = "favore"
+    wiki.mention = "for"
     assert wiki.choose_article("Roland Unger", ["de"], neighbours=[("de", "Wikivoyage")]).title == "Roland Unger"
 
 
-def test_corporate_suffixes_not_counted() -> None:
-    """29/10, Raspberry Pi: «Premier Farnell Ltd.» è «Premier Farnell»."""
+def test_corporate_suffixes_do_not_count() -> None:
+    """29 Oct, Raspberry Pi: «Premier Farnell Ltd.» is «Premier Farnell»."""
     from chain_research.web.sources.wikipedia_graph import without_corporate_suffix
     from chain_research.web.chain import _entity_key
     assert without_corporate_suffix("Premier Farnell Ltd.") == "Premier Farnell"

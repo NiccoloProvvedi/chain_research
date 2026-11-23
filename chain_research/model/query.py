@@ -1,7 +1,7 @@
-"""Filtro delle query doppie e indice di ridondanza (Fase C, Parte 7.1 del piano; DeepDive, sezione 2.2 e formula 7).
+"""Duplicate query filter and redundancy index (Phase C, Part 7.1 of the plan; DeepDive, section 2.2 and formula 7).
 
-Due query sono "doppie" quando la somiglianza di Jaccard tra le loro parole (normalizzate, senza parole vuote) è almeno
-la soglia (0,6). Versioni e identificativi tecnici restano interi (`b4000`, `gfx1200`, `3.8`, `llama.cpp`).
+Two queries are "duplicates" when the Jaccard similarity of their words (normalized, without stop words) is at least
+the threshold (0.6). Versions and technical identifiers stay whole (`b4000`, `gfx1200`, `3.8`, `llama.cpp`).
 """
 import re
 import unicodedata
@@ -18,7 +18,7 @@ _WORD = re.compile(r"[a-z0-9]+(?:[.\-_+][a-z0-9]+)*")
 
 
 def words(query: str) -> frozenset[str]:
-    """Parole significative di una query: minuscole, senza accenti né punteggiatura, senza parole vuote."""
+    """Meaningful words of a query: lowercase, without accents, punctuation or stop words."""
     text = unicodedata.normalize("NFKD", str(query).lower())
     text = "".join(c for c in text if not unicodedata.combining(c))
     return frozenset(p for p in _WORD.findall(text) if p not in STOP_WORDS)
@@ -37,13 +37,13 @@ january february march april may june july august september october november dec
 
 
 def essential(word: str) -> bool:
-    """Numeri, versioni, identificativi con cifre e mesi: se cambiano, la query cerca un'altra cosa."""
+    """Numbers, versions, identifiers with digits, and months: if they change, the query looks for something else."""
     return any(c.isdigit() for c in word) or word in MONTHS
 
 
 def similarity(a: str | frozenset[str], b: str | frozenset[str]) -> float:
-    """Jaccard, ma 0 se le due query differiscono per un numero, una versione o un mese («llama.cpp agosto 2024» e
-    «llama.cpp ottobre 2024» non sono doppie, anche se la Jaccard è 0,75)."""
+    """Jaccard, but 0 if the two queries differ by a number, a version or a month («llama.cpp agosto 2024» and
+    «llama.cpp ottobre 2024» are not duplicates, even though the Jaccard is 0.75)."""
     pa = a if isinstance(a, frozenset) else words(a)
     pb = b if isinstance(b, frozenset) else words(b)
     if any(essential(p) for p in pa ^ pb):
@@ -52,7 +52,7 @@ def similarity(a: str | frozenset[str], b: str | frozenset[str]) -> float:
 
 
 def most_similar(query: str, executed: list[str]) -> tuple[float, str | None]:
-    """La query già eseguita più simile e la sua somiglianza (0 e None se non ce ne sono)."""
+    """The most similar query already executed and its similarity (0 and None if there are none)."""
     pq = words(query)
     best: tuple[float, str | None] = (0.0, None)
     for another in executed:
@@ -67,7 +67,7 @@ def duplicate(query: str, executed: list[str], threshold: float) -> bool:
 
 
 def redundancy(query: list[str]) -> float:
-    """Indice di ridondanza S(T): media della Jaccard su tutte le coppie ordinate di query diverse (formula 7)."""
+    """Redundancy index S(T): mean Jaccard over all ordered pairs of different queries (formula 7)."""
     if len(query) < 2:
         return 0.0
     sets = [words(q) for q in query]

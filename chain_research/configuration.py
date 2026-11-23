@@ -1,6 +1,6 @@
-"""Impostazioni dell'utente: `config/impostazioni.json` (fuori da git; il percorso si cambia con
-CHAIN_SETTINGS, usato dai test). Il file contiene solo ciò che l'utente cambia: il resto sono i predefiniti.
-Un valore non valido (file scritto a mano) vale come il predefinito."""
+"""User settings: `config/settings.json` (outside git; the path can be changed with CHAIN_SETTINGS, used by the
+tests). The file holds only what the user changes: the rest are the defaults.
+An invalid value (hand-written file) counts as the default."""
 import json
 import logging
 import os
@@ -12,17 +12,17 @@ from . import ROOT
 log = logging.getLogger("chain_research.configuration")
 MODELS = ("haiku", "sonnet", "opus")
 DEFAULTS: dict[str, Any] = {
-    # Chi guida l'indagine (domande, valutazione, documento) e chi legge per la catena (banco: Haiku, 36/40).
+    # Who leads the investigation (questions, evaluation, document) and who reads for the chain (bench: Haiku, 36/40).
     "director_model": "sonnet",
     "chain_model": "haiku",
-    # Chi rilegge la catena finita cercando l'errore: un modello diverso da quello che l'ha percorsa.
+    # Who rereads the finished chain looking for the error: a model different from the one that followed it.
     "review_model": "sonnet",
-    # Limiti di un'indagine (1/11, Niccolò: 5 $ e 2 ore, oppure nessun limite).
+    # Limits of an investigation (1 Nov, Niccolò: $5 and 2 hours, or no limit).
     "budget_usd": 5.0,
     "max_minutes": 120,
     "without_limits": False,
     "parallel_questions": 3,
-    # Limiti di una singola domanda della catena (quelli del banco di prova).
+    # Limits of a single question of the chain (those of the test bench).
     "question_budget_usd": 0.50,
     "question_pages": 30,
     "question_minutes": 35,
@@ -30,7 +30,7 @@ DEFAULTS: dict[str, Any] = {
     "engines_folder": "browser/engines",
     "profiles_folder": "browser/profiles",
 }
-# Chiave → (minimo, massimo) per i numeri; gli stessi intervalli del server.
+# Key → (min, max) for the numbers; the same intervals as the server.
 INTERVALS: dict[str, tuple[float, float]] = {"budget_usd": (0.5, 500), "max_minutes": (10, 24 * 60),
                                               "parallel_questions": (1, 4), "question_budget_usd": (0.05, 5),
                                               "question_pages": (1, 200), "question_minutes": (5, 180)}
@@ -57,22 +57,22 @@ def _saved() -> dict[str, Any]:
     try:
         data = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
     except ValueError:
-        log.warning("%s ignorato: non è un JSON valido", path.name)
+        log.warning("%s ignored: not valid JSON", path.name)
         return {}
     return data if isinstance(data, dict) else {}
 
 
 def load() -> dict[str, Any]:
-    """Le impostazioni, lette ogni volta (le modifiche si vedono subito)."""
+    """The settings, read every time (changes show immediately)."""
     saved = _saved()
     not_valid = [k for k, v in saved.items() if k in DEFAULTS and not _is_valid_setting(k, v)]
     if not_valid:
-        log.warning("impostazioni non valide, uso i predefiniti: %s", ", ".join(not_valid))
+        log.warning("invalid settings, using the defaults: %s", ", ".join(not_valid))
     return {**DEFAULTS, **{k: v for k, v in saved.items() if k not in not_valid}}
 
 
 def save(changes: dict[str, Any]) -> None:
-    """Aggiorna alcune impostazioni, tenendo le altre (scrittura atomica: chi legge non vede mai il file a metà)."""
+    """Updates some settings, keeping the others (atomic write: a reader never sees a half-written file)."""
     path = settings_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(".tmp")
@@ -81,7 +81,7 @@ def save(changes: dict[str, Any]) -> None:
 
 
 def folder(key: str) -> Path:
-    """Una cartella delle impostazioni (relativa alla radice del progetto, o assoluta), creata se manca."""
+    """A folder from the settings (relative to the project root, or absolute), created if missing."""
     p = Path(str(load()[key])).expanduser()
     p = p if p.is_absolute() else ROOT / p
     p.mkdir(parents=True, exist_ok=True)

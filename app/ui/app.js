@@ -1,333 +1,334 @@
 "use strict";
-// Interfaccia della Ricerca a catena: nuova indagine, elenco, indagine scelta con eventi in diretta, impostazioni.
+// Chain Research interface: new investigation, list, selected investigation with live events, settings.
 
 const $ = (id) => document.getElementById(id);
-const STATI_RISPOSTA = ["verificata", "sostenuta", "contestata", "incerta"];
-const ETICHETTE = { in_attesa: "in attesa", in_corso: "in corso", finita: "finita", fermata: "fermata",
-  interrotta: "interrotta", errore: "errore", risposta: "trovata", non_trovata: "non trovata" };
-let scelta = null;      // id dell'indagine mostrata
-let flusso = null;      // EventSource degli eventi
-let ricarica = null;    // ricarica dello stato, al massimo una ogni secondo
-let impostazioni = null;
-let limitiMostrati = null; // limiti dell'indagine mostrata
+const ANSWER_STATUSES = ["verified", "supported", "contested", "uncertain"];
+const LABELS = { waiting: "waiting", in_progress: "in progress", finished: "finished", stopped: "stopped",
+  interrupted: "interrupted", error: "error", answer: "found", not_found: "not found" };
+let selected = null;     // id of the investigation shown
+let stream = null;       // EventSource of the events
+let reload = null;       // state reload, at most one per second
+let settings = null;
+let shownLimits = null;  // limits of the investigation shown
 
-function crea(tag, testo, classe) {
+function make(tag, text, cssClass) {
   const e = document.createElement(tag);
-  if (testo !== undefined && testo !== null) e.textContent = testo;
-  if (classe) e.className = classe;
+  if (text !== undefined && text !== null) e.textContent = text;
+  if (cssClass) e.className = cssClass;
   return e;
 }
 
-function avviso(testo, errore = false) {
-  const box = $("avviso");
-  box.textContent = testo;
-  box.className = "avviso" + (errore ? " errore" : "");
+function notice(text, isError = false) {
+  const box = $("notice");
+  box.textContent = text;
+  box.className = "notice" + (isError ? " error" : "");
   box.hidden = false;
-  clearTimeout(avviso.timer);
-  avviso.timer = setTimeout(() => { box.hidden = true; }, errore ? 8000 : 4000);
+  clearTimeout(notice.timer);
+  notice.timer = setTimeout(() => { box.hidden = true; }, isError ? 8000 : 4000);
 }
 
-async function api(percorso, dati) {
-  const opzioni = dati === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(dati) };
-  const risposta = await fetch(percorso, opzioni);
-  const json = await risposta.json().catch(() => ({}));
-  if (!risposta.ok) throw new Error(json.errore || `Errore ${risposta.status}`);
+async function api(path, data) {
+  const options = data === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data) };
+  const response = await fetch(path, options);
+  const json = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(json.error || `Error ${response.status}`);
   return json;
 }
 
-async function prova(azione, successo) {
+async function attempt(action, success) {
   try {
-    const esito = await azione();
-    if (successo) avviso(successo);
-    return esito;
+    const outcome = await action();
+    if (success) notice(success);
+    return outcome;
   } catch (e) {
-    avviso(e.message, true);
+    notice(e.message, true);
     return null;
   }
 }
 
-// Solo **grassetto** dal testo delle risposte: il resto resta testo (niente HTML dalle risposte).
-function conGrassetto(testo) {
-  const p = crea("div", null, "risposta");
-  String(testo || "").split(/(\*\*[^*]+\*\*)/).forEach((pezzo) => {
-    if (/^\*\*[^*]+\*\*$/.test(pezzo)) p.append(crea("strong", pezzo.slice(2, -2)));
-    else if (pezzo) p.append(document.createTextNode(pezzo));
+// Only **bold** from the answer text: everything else stays text (no HTML from the answers).
+function withBold(text) {
+  const p = make("div", null, "answer");
+  String(text || "").split(/(\*\*[^*]+\*\*)/).forEach((piece) => {
+    if (/^\*\*[^*]+\*\*$/.test(piece)) p.append(make("strong", piece.slice(2, -2)));
+    else if (piece) p.append(document.createTextNode(piece));
   });
   return p;
 }
 
-function riga(testo, etichetta) {
-  const m = new RegExp(`\\*\\*${etichetta}:?\\*\\*:?\\s*(.+)`).exec(testo || "");
+function line(text, label) {
+  const m = new RegExp(`\\*\\*${label}:?\\*\\*:?\\s*(.+)`).exec(text || "");
   return m ? m[1].trim() : "";
 }
 
-function dollari(n) { return `${(n || 0).toFixed(2)} $`; }
-function durata(secondi) {
-  const m = Math.round((secondi || 0) / 60);
+function dollars(n) { return `$${(n || 0).toFixed(2)}`; }
+function duration(seconds) {
+  const m = Math.round((seconds || 0) / 60);
   return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`;
 }
-function data(iso) {
-  try { return new Date(iso).toLocaleString("it-IT", { dateStyle: "medium", timeStyle: "short" }); }
+function date(iso) {
+  try { return new Date(iso).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" }); }
   catch { return iso; }
 }
 
-// ---------- nuova indagine ----------
-function aggiornaLimiti() {
-  const senza = $("senza-limiti").checked;
-  $("budget").disabled = senza;
-  $("minuti").disabled = senza;
+// ---------- new investigation ----------
+function updateLimits() {
+  const unlimited = $("unlimited").checked;
+  $("budget").disabled = unlimited;
+  $("minutes").disabled = unlimited;
 }
-$("senza-limiti").addEventListener("change", aggiornaLimiti);
+$("unlimited").addEventListener("change", updateLimits);
 
-const AVVISO_SENZA_LIMITI = "Senza limiti l'indagine può arrivare a circa 160 domande e durare molte ore. Continuare?";
+const UNLIMITED_WARNING = "Without limits the investigation can reach about 160 questions and last many hours. Continue?";
 
-$("nuova").addEventListener("submit", async (e) => {
+$("new").addEventListener("submit", async (e) => {
   e.preventDefault();
-  if ($("senza-limiti").checked && !window.confirm(AVVISO_SENZA_LIMITI)) return;
-  const esito = await prova(() => api("/api/indagini", {
-    argomento: $("argomento").value, modello_regia: $("modello").value, budget_usd: $("budget").value,
-    max_minuti: $("minuti").value, senza_limiti: $("senza-limiti").checked,
-  }), "Indagine avviata.");
-  if (esito) {
-    $("argomento").value = "";
-    await caricaElenco();
-    mostra(esito.id);
+  if ($("unlimited").checked && !window.confirm(UNLIMITED_WARNING)) return;
+  const outcome = await attempt(() => api("/api/investigations", {
+    topic: $("topic").value, director_model: $("model").value, budget_usd: $("budget").value,
+    max_minutes: $("minutes").value, without_limits: $("unlimited").checked,
+  }), "Investigation started.");
+  if (outcome) {
+    $("topic").value = "";
+    await loadList();
+    show(outcome.id);
   }
 });
 
-// ---------- elenco ----------
-async function caricaElenco() {
-  const voci = await prova(() => api("/api/indagini"));
-  if (!voci) return;
-  $("elenco-vuoto").hidden = voci.length > 0;
-  $("elenco").replaceChildren(...voci.map((v) => {
-    const li = crea("li");
+// ---------- list ----------
+async function loadList() {
+  const items = await attempt(() => api("/api/investigations"));
+  if (!items) return;
+  $("list-empty").hidden = items.length > 0;
+  $("list").replaceChildren(...items.map((v) => {
+    const li = make("li");
     li.tabIndex = 0;
-    li.setAttribute("aria-current", String(v.id === scelta));
-    li.append(crea("span", v.titolo || v.argomento, "titolo"));
-    const meta = crea("span", null, "meta");
-    meta.append(crea("span", ETICHETTE[v.stato] || v.stato, `chip ${v.stato}`), crea("span", data(v.creata)),
-      crea("span", `${v.trovate}/${v.domande} risposte`), crea("span", dollari(v.speso_usd)));
+    li.setAttribute("aria-current", String(v.id === selected));
+    li.append(make("span", v.title || v.topic, "title"));
+    const meta = make("span", null, "meta");
+    meta.append(make("span", LABELS[v.status] || v.status, `chip ${v.status}`), make("span", date(v.created)),
+      make("span", `${v.found_items}/${v.questions} answers`), make("span", dollars(v.spent_usd)));
     li.append(meta);
-    li.addEventListener("click", () => mostra(v.id));
-    li.addEventListener("keydown", (ev) => { if (ev.key === "Enter") mostra(v.id); });
+    li.addEventListener("click", () => show(v.id));
+    li.addEventListener("keydown", (ev) => { if (ev.key === "Enter") show(v.id); });
     return li;
   }));
 }
 
-// ---------- indagine scelta ----------
-function mostra(id) {
-  scelta = id;
-  limitiMostrati = null;              // quelli dell'indagine di prima non valgono
-  $("b-riprendi").hidden = true;      // si mostra quando lo stato di questa indagine è arrivato
-  document.querySelectorAll("#elenco li").forEach((li) => li.setAttribute("aria-current", "false"));
-  $("nessuna").hidden = true;
-  $("vista").hidden = false;
-  $("v-attivita").replaceChildren();
-  if (flusso) flusso.close();
-  carica();
-  flusso = new EventSource(`/api/indagini/${encodeURIComponent(id)}/eventi`);
-  flusso.onmessage = (m) => {
+// ---------- selected investigation ----------
+function show(id) {
+  selected = id;
+  shownLimits = null;                 // those of the previous investigation do not apply
+  $("b-resume").hidden = true;        // shown once the status of this investigation has arrived
+  document.querySelectorAll("#list li").forEach((li) => li.setAttribute("aria-current", "false"));
+  $("none").hidden = true;
+  $("view").hidden = false;
+  $("v-activity").replaceChildren();
+  if (stream) stream.close();
+  load();
+  stream = new EventSource(`/api/investigations/${encodeURIComponent(id)}/events`);
+  stream.onmessage = (m) => {
     let ev;
     try { ev = JSON.parse(m.data); } catch { return; }
-    attivita(ev);
-    if (["piano", "domanda", "valutazione", "fine", "inizio", "fase"].includes(ev.tipo)) caricaPresto();
-    if (ev.tipo === "fine") caricaElenco();
+    activity(ev);
+    if (["plan", "question", "evaluation", "end", "start", "phase"].includes(ev.kind)) loadSoon();
+    if (ev.kind === "end") loadList();
   };
-  // Si chiude solo su richiesta del server: nel flusso ci sono anche i «fine» delle corse passate.
-  flusso.addEventListener("chiuso", (m) => { m.target.close(); });
+  // Closed only when the server asks: the stream also contains the "end" events of past runs.
+  stream.addEventListener("closed", (m) => { m.target.close(); });
 }
 
-function caricaPresto() {
-  if (ricarica) return;
-  ricarica = setTimeout(() => { ricarica = null; carica(); }, 800);
+function loadSoon() {
+  if (reload) return;
+  reload = setTimeout(() => { reload = null; load(); }, 800);
 }
 
-function attivita(ev) {
-  const testi = {
-    inizio: () => `Indagine avviata (regia: ${ev.modello_regia})`,
-    fase: () => ev.testo,
-    piano: () => `Piano pronto: ${ev.piano.sezioni.length} sezioni, ${ev.domande.length} domande`,
-    domanda: () => ev.stato === "in_corso" ? `${ev.id} alla catena: ${ev.domanda}` :
-      `${ev.id} ${ETICHETTE[ev.stato] || ev.stato}${ev.risposta ? ": " + ev.risposta.replace(/\*\*/g, "") : ""}`,
-    domanda_fase: () => `${ev.id} · ${ev.testo}`,
-    domanda_pagina: () => `${ev.id} · letta: ${ev.titolo || ev.url}`,
-    valutazione: () => `Valutazione del giro ${ev.giro}: ${ev.conoscenza_solida ? "conoscenza solida" : `${ev.domande.length} domande nuove`} — ${ev.motivo}`,
-    documento: () => ev.testo,
-    fine: () => `Fine (${ETICHETTE[ev.stato] || ev.stato}): ${ev.motivo || ""}`,
+function activity(ev) {
+  const texts = {
+    start: () => `Investigation started (director: ${ev.director_model})`,
+    phase: () => ev.text,
+    plan: () => `Plan ready: ${ev.plan.sections.length} sections, ${ev.questions.length} questions`,
+    question: () => ev.status === "in_progress" ? `${ev.id} to the chain: ${ev.question}` :
+      `${ev.id} ${LABELS[ev.status] || ev.status}${ev.answer ? ": " + ev.answer.replace(/\*\*/g, "") : ""}`,
+    question_phase: () => `${ev.id} · ${ev.text}`,
+    question_page: () => `${ev.id} · read: ${ev.title || ev.url}`,
+    evaluation: () => `Evaluation of round ${ev.round}: ${ev.solid_knowledge ? "solid knowledge" : `${ev.questions.length} new questions`} — ${ev.reason}`,
+    document: () => ev.text,
+    end: () => `End (${LABELS[ev.status] || ev.status}): ${ev.reason || ""}`,
   };
-  const testo = testi[ev.tipo]?.();
-  if (!testo) return;
-  const li = crea("li", `${(ev.quando || "").slice(11, 16)}  ${testo}`);
-  const lista = $("v-attivita");
-  lista.prepend(li);
-  while (lista.children.length > 300) lista.lastChild.remove();
+  const text = texts[ev.kind]?.();
+  if (!text) return;
+  const li = make("li", `${(ev.when || "").slice(11, 16)}  ${text}`);
+  const list = $("v-activity");
+  list.prepend(li);
+  while (list.children.length > 300) list.lastChild.remove();
 }
 
-async function carica() {
-  if (!scelta) return;
-  const id = scelta;
-  const s = await prova(() => api(`/api/indagini/${encodeURIComponent(id)}`));
-  if (!s || id !== scelta) return;
-  const domande = s.domande || [];
-  const trovate = domande.filter((d) => d.stato === "risposta").length;
-  const speso = (s.speso_regia_usd || 0) + domande.reduce((t, d) => t + (d.costo_usd || 0), 0);
-  $("v-data").textContent = `${data(s.creata)} · regia ${s.modello_regia}`;
-  $("v-titolo").textContent = s.piano?.titolo || "Preparo il piano…";
-  $("v-argomento").textContent = s.argomento;
-  $("v-stato").textContent = ETICHETTE[s.stato] || s.stato;
-  $("v-stato").className = `chip ${s.stato}`;
-  const limite = s.limiti.senza_limiti ? "nessun limite" : `${dollari(s.limiti.budget_usd)} · ${s.limiti.max_minuti} min`;
-  $("v-numeri").replaceChildren(...[[s.giro || 0, "giro"], [`${trovate}/${domande.length}`, "risposte trovate"],
-    [dollari(speso), "spesa di Claude"], [durata(s.secondi), "durata"], [limite, "limiti"]].map(([v, t]) => {
-    const d = crea("div");
-    d.append(crea("b", String(v)), crea("span", t));
+async function load() {
+  if (!selected) return;
+  const id = selected;
+  const s = await attempt(() => api(`/api/investigations/${encodeURIComponent(id)}`));
+  if (!s || id !== selected) return;
+  const questions = s.questions || [];
+  const found = questions.filter((d) => d.status === "answer").length;
+  const spent = (s.director_spent_usd || 0) + questions.reduce((t, d) => t + (d.cost_usd || 0), 0);
+  $("v-date").textContent = `${date(s.created)} · director ${s.director_model}`;
+  $("v-title").textContent = s.plan?.title || "Preparing the plan…";
+  $("v-topic").textContent = s.topic;
+  $("v-status").textContent = LABELS[s.status] || s.status;
+  $("v-status").className = `chip ${s.status}`;
+  const limit = s.limits.without_limits ? "no limit" : `${dollars(s.limits.budget_usd)} · ${s.limits.max_minutes} min`;
+  $("v-figures").replaceChildren(...[[s.round || 0, "round"], [`${found}/${questions.length}`, "answers found"],
+    [dollars(spent), "Claude spend"], [duration(s.seconds), "duration"], [limit, "limits"]].map(([v, t]) => {
+    const d = make("div");
+    d.append(make("b", String(v)), make("span", t));
     return d;
   }));
-  $("v-fase").textContent = s.stato === "in_corso" ? s.fase : (s.motivo_fine ? `Conclusa: ${s.motivo_fine}` : "");
-  const attiva = s.stato === "in_corso";
-  $("b-apri").hidden = !s.documento?.pdf;
-  $("b-ferma").hidden = !attiva;
-  $("b-riprendi").hidden = attiva || s.stato === "finita";
-  $("b-documento").hidden = attiva || !domande.some((d) => d.stato === "risposta");
-  $("b-pulisci").hidden = attiva;
-  limitiMostrati = s.limiti;
-  sezioni(s);
-  elencoDomande(s);
+  $("v-phase").textContent = s.status === "in_progress" ? s.phase : (s.end_reason ? `Finished: ${s.end_reason}` : "");
+  const active = s.status === "in_progress";
+  $("b-open").hidden = !s.document?.pdf;
+  $("b-stop").hidden = !active;
+  $("b-resume").hidden = active || s.status === "finished";
+  $("b-document").hidden = active || !questions.some((d) => d.status === "answer");
+  $("b-clean").hidden = active;
+  shownLimits = s.limits;
+  sections(s);
+  questionList(s);
 }
 
-function sezioni(s) {
-  const valutazioni = s.valutazioni || [];
-  const ultima = valutazioni[valutazioni.length - 1];
-  const coperture = Object.fromEntries((ultima?.sezioni || []).map((x) => [x.id, x]));
-  $("v-sezioni-box").hidden = !s.piano;
-  if (!s.piano) return;
-  $("v-sezioni").replaceChildren(...s.piano.sezioni.map((x) => {
-    const li = crea("li");
-    const c = coperture[x.id];
-    const barra = crea("div", null, "copertura");
-    barra.setAttribute("aria-label", c ? `copertura ${c.copertura} su 3` : "non ancora valutata");
-    for (let i = 0; i < 3; i++) barra.append(crea("i", null, c && i < c.copertura ? "piena" : ""));
-    li.append(crea("span", x.titolo), barra);
-    if (c?.nota) li.append(crea("span", c.nota, "nota-sezione"));
+function sections(s) {
+  const evaluations = s.evaluations || [];
+  const last = evaluations[evaluations.length - 1];
+  const coverages = Object.fromEntries((last?.sections || []).map((x) => [x.id, x]));
+  $("v-sections-box").hidden = !s.plan;
+  if (!s.plan) return;
+  $("v-sections").replaceChildren(...s.plan.sections.map((x) => {
+    const li = make("li");
+    const c = coverages[x.id];
+    const bar = make("div", null, "coverage");
+    bar.setAttribute("aria-label", c ? `coverage ${c.coverage} of 3` : "not evaluated yet");
+    for (let i = 0; i < 3; i++) bar.append(make("i", null, c && i < c.coverage ? "full" : ""));
+    li.append(make("span", x.title), bar);
+    if (c?.note) li.append(make("span", c.note, "section-note"));
     return li;
   }));
-  $("v-valutazione").textContent = ultima ? `Giro ${ultima.giro}: ${ultima.motivo}` : "";
+  $("v-evaluation").textContent = last ? `Round ${last.round}: ${last.reason}` : "";
 }
 
-function elencoDomande(s) {
-  const perGiro = {};
-  for (const d of s.domande || []) (perGiro[d.giro] ||= []).push(d);
-  const titoli = Object.fromEntries((s.piano?.sezioni || []).map((x) => [x.id, x.titolo]));
-  $("v-domande").replaceChildren(...Object.keys(perGiro).sort((a, b) => b - a).map((giro) => {
-    const box = crea("div", null, "giro");
-    box.append(crea("h3", `Giro ${giro}`));
-    for (const d of perGiro[giro]) {
-      const r = crea("div", null, "domanda");
-      // Lo stato della risposta lo decidono i controlli del programma; senza (indagini di prima) resta l'esito.
-      const stato = d.stato === "risposta" && STATI_RISPOSTA.includes(d.stato_risposta) ? d.stato_risposta : "";
-      r.append(crea("span", d.domanda, "testo"),
-        crea("span", stato || ETICHETTE[d.stato] || d.stato, `chip ${stato || d.stato}`));
-      const risposta = riga(d.risposta, "Risposta");
-      if (risposta) r.append(conGrassetto(risposta));
-      const info = [titoli[d.sezione], d.costo_usd ? dollari(d.costo_usd) : "", d.secondi ? durata(d.secondi) : "",
-        stato ? (d.motivi_stato || []).join("; ")
-          : riga(d.risposta, "Fiducia") ? `fiducia ${riga(d.risposta, "Fiducia").split(/[,.—]/)[0].trim()}` : "",
-        d.errore || ""].filter(Boolean).join(" · ");
-      if (info) r.append(crea("div", info, "info"));
+function questionList(s) {
+  const byRound = {};
+  for (const d of s.questions || []) (byRound[d.round] ||= []).push(d);
+  const titles = Object.fromEntries((s.plan?.sections || []).map((x) => [x.id, x.title]));
+  $("v-questions").replaceChildren(...Object.keys(byRound).sort((a, b) => b - a).map((round) => {
+    const box = make("div", null, "round");
+    box.append(make("h3", `Round ${round}`));
+    for (const d of byRound[round]) {
+      const r = make("div", null, "question");
+      // The answer status is decided by the program's checks; without it (older investigations) the outcome stays.
+      const status = d.status === "answer" && ANSWER_STATUSES.includes(d.answer_status) ? d.answer_status : "";
+      r.append(make("span", d.question, "text"),
+        make("span", status || LABELS[d.status] || d.status, `chip ${status || d.status}`));
+      const answer = line(d.answer, "Answer");
+      if (answer) r.append(withBold(answer));
+      const info = [titles[d.section], d.cost_usd ? dollars(d.cost_usd) : "", d.seconds ? duration(d.seconds) : "",
+        status ? (d.status_reasons || []).join("; ")
+          : line(d.answer, "Confidence") ? `confidence ${line(d.answer, "Confidence").split(/[,.—]/)[0].trim()}` : "",
+        d.error || ""].filter(Boolean).join(" · ");
+      if (info) r.append(make("div", info, "info"));
       box.append(r);
     }
     return box;
   }));
 }
 
-for (const [bottone, azione, messaggio] of [["b-ferma", "ferma", "Fermo l'indagine…"],
-  ["b-documento", "documento", "Scrivo il documento…"], ["b-apri", "apri", null], ["b-cartella", "cartella", null],
-  ["b-pulisci", "pulisci", "Pezzi di pagina tolti."]]) {
-  $(bottone).addEventListener("click", async () => {
-    if (!scelta) return;
-    if (azione === "pulisci" && !window.confirm("Togliere i pezzi di pagina letti da questa indagine?")) return;
-    const esito = await prova(() => api(`/api/indagini/${encodeURIComponent(scelta)}/${azione}`, {}), messaggio);
-    if (esito && azione === "documento") mostra(scelta);  // riapre il flusso degli eventi
-    caricaPresto();
-    caricaElenco();
+for (const [button, action, message] of [["b-stop", "stop", "Stopping the investigation…"],
+  ["b-document", "document", "Writing the document…"], ["b-open", "open", null], ["b-folder", "folder", null],
+  ["b-clean", "clean", "Page pieces removed."]]) {
+  $(button).addEventListener("click", async () => {
+    if (!selected) return;
+    if (action === "clean" && !window.confirm("Remove the page pieces read by this investigation?")) return;
+    const outcome = await attempt(() => api(`/api/investigations/${encodeURIComponent(selected)}/${action}`, {}),
+      message);
+    if (outcome && action === "document") show(selected);  // reopens the event stream
+    loadSoon();
+    loadList();
   });
 }
 
-$("b-riprendi").addEventListener("click", () => {
-  if (!scelta || !limitiMostrati) return;
-  $("r-budget").value = limitiMostrati.budget_usd;
-  $("r-minuti").value = limitiMostrati.max_minuti;
-  $("r-senza-limiti").checked = limitiMostrati.senza_limiti;
-  $("riprendi").showModal();
+$("b-resume").addEventListener("click", () => {
+  if (!selected || !shownLimits) return;
+  $("r-budget").value = shownLimits.budget_usd;
+  $("r-minutes").value = shownLimits.max_minutes;
+  $("r-unlimited").checked = shownLimits.without_limits;
+  $("resume").showModal();
 });
 
-$("form-riprendi").addEventListener("submit", async (e) => {
-  if (e.submitter?.value !== "riprendi") return;
+$("form-resume").addEventListener("submit", async (e) => {
+  if (e.submitter?.value !== "resume") return;
   e.preventDefault();
-  if ($("r-senza-limiti").checked && !window.confirm(AVVISO_SENZA_LIMITI)) return;
-  const esito = await prova(() => api(`/api/indagini/${encodeURIComponent(scelta)}/riprendi`, {
-    budget_usd: $("r-budget").value, max_minuti: $("r-minuti").value, senza_limiti: $("r-senza-limiti").checked,
-  }), "Indagine ripresa.");
-  if (esito) {
-    $("riprendi").close();
-    mostra(scelta);  // riapre il flusso degli eventi
-    caricaElenco();
+  if ($("r-unlimited").checked && !window.confirm(UNLIMITED_WARNING)) return;
+  const outcome = await attempt(() => api(`/api/investigations/${encodeURIComponent(selected)}/resume`, {
+    budget_usd: $("r-budget").value, max_minutes: $("r-minutes").value, without_limits: $("r-unlimited").checked,
+  }), "Investigation resumed.");
+  if (outcome) {
+    $("resume").close();
+    show(selected);  // reopens the event stream
+    loadList();
   }
 });
 
-// ---------- impostazioni ----------
-async function caricaImpostazioni() {
-  impostazioni = await prova(() => api("/api/impostazioni"));
-  if (!impostazioni) return;
-  $("modello").value = impostazioni.modello_regia;
-  $("budget").value = impostazioni.budget_usd;
-  $("minuti").value = impostazioni.max_minuti;
-  $("senza-limiti").checked = impostazioni.senza_limiti;
-  aggiornaLimiti();
+// ---------- settings ----------
+async function loadSettings() {
+  settings = await attempt(() => api("/api/settings"));
+  if (!settings) return;
+  $("model").value = settings.director_model;
+  $("budget").value = settings.budget_usd;
+  $("minutes").value = settings.max_minutes;
+  $("unlimited").checked = settings.without_limits;
+  updateLimits();
 }
 
-$("apri-impostazioni").addEventListener("click", async () => {
-  await caricaImpostazioni();
-  if (!impostazioni) return;
-  const w = impostazioni.wikipedia;
-  $("i-modello").value = impostazioni.modello_regia;
-  $("i-budget").value = impostazioni.budget_usd;
-  $("i-minuti").value = impostazioni.max_minuti;
-  $("i-senza-limiti").checked = impostazioni.senza_limiti;
-  $("i-parallelo").value = impostazioni.domande_in_parallelo;
-  $("i-modello-catena").value = impostazioni.modello_catena;
-  $("i-modello-revisione").value = impostazioni.modello_revisione;
-  $("i-budget-domanda").value = impostazioni.budget_domanda_usd;
-  $("i-pagine-domanda").value = impostazioni.pagine_domanda;
-  $("i-minuti-domanda").value = impostazioni.minuti_domanda;
-  $("i-wiki-attivo").checked = w.attivo;
-  $("i-wiki-contatto").value = w.contatto;
-  $("i-wiki-contatto").placeholder = w.origine === "account" ? w.in_uso : "";
-  $("impostazioni").showModal();
+$("open-settings").addEventListener("click", async () => {
+  await loadSettings();
+  if (!settings) return;
+  const w = settings.wikipedia;
+  $("s-model").value = settings.director_model;
+  $("s-budget").value = settings.budget_usd;
+  $("s-minutes").value = settings.max_minutes;
+  $("s-unlimited").checked = settings.without_limits;
+  $("s-parallel").value = settings.parallel_questions;
+  $("s-chain-model").value = settings.chain_model;
+  $("s-review-model").value = settings.review_model;
+  $("s-question-budget").value = settings.question_budget_usd;
+  $("s-question-pages").value = settings.question_pages;
+  $("s-question-minutes").value = settings.question_minutes;
+  $("s-wiki-active").checked = w.active;
+  $("s-wiki-contact").value = w.contact;
+  $("s-wiki-contact").placeholder = w.origin === "account" ? w.in_use : "";
+  $("settings").showModal();
 });
 
-$("form-impostazioni").addEventListener("submit", async (e) => {
-  if (e.submitter?.value !== "salva") return;
+$("form-settings").addEventListener("submit", async (e) => {
+  if (e.submitter?.value !== "save") return;
   e.preventDefault();
-  const esito = await prova(() => api("/api/impostazioni", {
-    modello_regia: $("i-modello").value, budget_usd: $("i-budget").value, max_minuti: $("i-minuti").value,
-    senza_limiti: $("i-senza-limiti").checked, domande_in_parallelo: $("i-parallelo").value,
-    modello_catena: $("i-modello-catena").value, modello_revisione: $("i-modello-revisione").value,
-    budget_domanda_usd: $("i-budget-domanda").value,
-    pagine_domanda: $("i-pagine-domanda").value, minuti_domanda: $("i-minuti-domanda").value,
-    wikipedia: { attivo: $("i-wiki-attivo").checked, contatto: $("i-wiki-contatto").value },
-  }), "Impostazioni salvate.");
-  if (esito) {
-    $("impostazioni").close();
-    caricaImpostazioni();
+  const outcome = await attempt(() => api("/api/settings", {
+    director_model: $("s-model").value, budget_usd: $("s-budget").value, max_minutes: $("s-minutes").value,
+    without_limits: $("s-unlimited").checked, parallel_questions: $("s-parallel").value,
+    chain_model: $("s-chain-model").value, review_model: $("s-review-model").value,
+    question_budget_usd: $("s-question-budget").value,
+    question_pages: $("s-question-pages").value, question_minutes: $("s-question-minutes").value,
+    wikipedia: { active: $("s-wiki-active").checked, contact: $("s-wiki-contact").value },
+  }), "Settings saved.");
+  if (outcome) {
+    $("settings").close();
+    loadSettings();
   }
 });
 
-caricaImpostazioni();
-caricaElenco().then(() => {
-  const prima = document.querySelector("#elenco li");
-  if (prima) prima.click();
+loadSettings();
+loadList().then(() => {
+  const first = document.querySelector("#list li");
+  if (first) first.click();
 });
-setInterval(caricaElenco, 15000);
+setInterval(loadList, 15000);

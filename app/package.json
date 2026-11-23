@@ -1,8 +1,8 @@
 {
-  "name": "ricerca-catena",
-  "productName": "Ricerca a catena",
+  "name": "chain-research",
+  "productName": "Chain Research",
   "version": "0.1.0",
-  "description": "Indagini sul web guidate da Claude: domande, risposte verificate con la catena, documento PDF.",
+  "description": "Web investigations guided by Claude: questions, answers verified by the chain, PDF document.",
   "main": "main.js",
   "private": true,
   "license": "MIT",

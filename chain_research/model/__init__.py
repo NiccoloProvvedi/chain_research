@@ -1,1 +1,1 @@
-"""Chiamate a Claude: wrapper della riga di comando, pensatore con budget, pulizia del testo, prompt."""
+"""Claude calls: command-line wrapper, thinker with budget, text cleaning, prompts."""

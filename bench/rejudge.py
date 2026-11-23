@@ -1,11 +1,11 @@
-"""Nuovo giudizio delle corse salvate, con il metro corretto e senza rifare le domande.
+"""New judgement of saved runs, with the corrected yardstick and without redoing the questions.
 
-Il valore giudicato è quello trovato dal programma (`valore`), non quello estratto da un modello; il confronto tiene
-conto del segno. Un vecchio verdetto del giudice resta se riguardava lo stesso valore. Il resto è «da giudicare»:
-con `--giudice` lo decide Claude Haiku (centesimi), senza resta fuori dal conto.
+The value judged is the one found by the program (`value`), not the one extracted by a model; the comparison takes the
+sign into account. An old judge verdict stays if it concerned the same value. The rest is "pending judgement": with
+`--judge` Claude Haiku decides it (cents), without it stays out of the count.
 
-Uso: venv/bin/python bench/rejudge.py <corsa> [<corsa> ...] [--giudice] [--domande bench/questions_holdout.json]
-Scrive risultati/bench/<corsa>/esiti_rigiudicati.json (letto da statistiche.py al posto di esiti.json).
+Usage: venv/bin/python bench/rejudge.py <run> [<run> ...] [--judge] [--questions bench/questions_holdout.json]
+Writes results/bench/<run>/rejudged_outcomes.json (read by stats.py instead of outcomes.json).
 """
 import argparse
 import json
@@ -30,19 +30,19 @@ def rejudge(outcomes: dict[str, dict], with_judge: bool = False, statuses: dict[
             continue
         if statuses and key in statuses:
             article["reference_status"] = statuses[key]
-        # Lo stato si ricalcola dagli esiti dei controlli salvati, con la regola di adesso: una regola cambiata si può
-        # provare sulle corse già fatte senza rifarle. Lo stato scritto dalla corsa resta in `stato_della_corsa`.
+        # The status is recomputed from the saved check outcomes, with the current rule: a changed rule can be tried
+        # on runs already done without redoing them. The status written by the run stays in `run_status`.
         checks = (article.get("chain") or {}).get("checks")
-        # con una seconda ricerca lo stato viene dal confronto delle due (web/riprova.py): non si ricalcola da una sola
+        # with a second research the status comes from comparing the two (web/retry.py): not recomputed from one
         if checks and "exams" in checks and not article.get("retry"):
             article.setdefault("run_status", article.get("status"))
             article["status"], reasons = validation.status(checks)
             article["confirmed"] = article["status"] in ("verified", "supported")
-        if article.get("without_answer"):  # giusta solo se la catena non ha dato un valore
+        if article.get("without_answer"):  # right only if the chain gave no value
             article["correct"], article["decided_by"] = not article.get("found"), "unanswerable"
             continue
         value = " ".join(str(article.get("value") or "").split())
-        if not value:  # nessun valore dal programma: vale il vecchio giudizio sulla risposta scritta
+        if not value:  # no value from the program: the old judgement on the written answer stands
             continue
         final_old = judge.normalize(article.get("final") or "").strip()
         value_n = judge.normalize(value).strip()
@@ -51,7 +51,7 @@ def rejudge(outcomes: dict[str, dict], with_judge: bool = False, statuses: dict[
             article["correct"], article["decided_by"] = True, "comparison"
         elif article.get("decided_by") == "judge" and final_old and (
                 value_n in final_old or final_old in value_n):
-            pass  # il giudice aveva già visto questo valore
+            pass  # the judge had already seen this value
         elif with_judge:
             correct, article["decided_by"] = judge.assess(article.get("question", ""), article["wait"], value)
             if correct is None:
@@ -67,8 +67,8 @@ def rejudge(outcomes: dict[str, dict], with_judge: bool = False, statuses: dict[
 def main() -> None:
     a = argparse.ArgumentParser(description=__doc__)
     a.add_argument("runs", nargs="+")
-    a.add_argument("--judge", action="store_true", help="i casi dubbi li decide Claude Haiku")
-    a.add_argument("--questions", default="", help="file delle domande, per il campo stato_riferimento")
+    a.add_argument("--judge", action="store_true", help="Claude Haiku decides the doubtful cases")
+    a.add_argument("--questions", default="", help="questions file, for the reference_status field")
     arg = a.parse_args()
     statuses = {}
     if arg.questions:
@@ -82,10 +82,10 @@ def main() -> None:
         for key, article in new_items.items():
             first, after = outcomes[key].get("correct"), article.get("correct", "pending judgement")
             if first != after and "error" not in article:
-                print(f"{run} {key}: {first} → {after} (attesa «{article.get('wait')}», valore «{article.get('value')}»)")
+                print(f"{run} {key}: {first} → {after} (expected \"{article.get('wait')}\", value \"{article.get('value')}\")")
         judged = [v for v in new_items.values() if "correct" in v]
-        print(f"{run}: {sum(v['correct'] for v in judged)}/{len(judged)} giuste, "
-              f"{sum(1 for v in new_items.values() if v.get('decided_by') == 'pending judgement')} da giudicare")
+        print(f"{run}: {sum(v['correct'] for v in judged)}/{len(judged)} right, "
+              f"{sum(1 for v in new_items.values() if v.get('decided_by') == 'pending judgement')} pending judgement")
 
 
 if __name__ == "__main__":

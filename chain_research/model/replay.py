@@ -1,9 +1,9 @@
-"""Registra e rigioca tutto ciò che viene da fuori: risposte dei modelli, Wikipedia, motori di ricerca, pagine (T4).
+"""Records and replays everything that comes from outside: model answers, Wikipedia, search engines, pages (T4).
 
-Con CHAIN_RECORD=<cartella> ogni risposta si salva con chiave = impronta della richiesta. Con
-CHAIN_REPLAY=<cartella> le risposte si leggono da lì e niente esce dal programma: una richiesta mai vista è un errore
-(il rigioco deve essere esatto, altrimenti non dimostra niente). La stessa richiesta fatta più volte (le due letture
-della verifica) ha una risposta per ogni volta. CHAIN_TODAY fissa la data che entra nelle richieste.
+With CHAIN_RECORD=<folder> every answer is saved with key = fingerprint of the request. With CHAIN_REPLAY=<folder>
+the answers are read from there and nothing leaves the program: a request never seen is an error (the replay must be
+exact, otherwise it proves nothing). The same request made several times (the two readings of the verification) has
+one answer for each time. CHAIN_TODAY fixes the date that goes into the requests.
 """
 import gzip
 import hashlib
@@ -27,7 +27,7 @@ class UnrecordedRequest(RuntimeError):
 
 
 class FailedWhenRecorded(RuntimeError):
-    """Questa richiesta, quando è stata registrata, era fallita: fallisce allo stesso modo."""
+    """This request had failed when it was recorded: it fails the same way."""
 
 
 def fingerprint(*parts: Any) -> str:
@@ -58,14 +58,14 @@ def read(key: str) -> Any:
     folder = _folder("CHAIN_REPLAY")
     file = folder / _next(_readings, key) if folder else None
     if file is None or not file.is_file():
-        raise UnrecordedRequest(f"risposta non registrata ({key[:12]})")
+        raise UnrecordedRequest(f"answer not recorded ({key[:12]})")
     return json.loads(gzip.decompress(file.read_bytes()))["answer"]
 
 
 def unique_read(point: str) -> Any:
-    """La sola risposta registrata di Claude per questo punto, qualunque fosse la richiesta. Serve alla scrittura della
-    risposta finale: il suo testo d'ingresso riporta lo stato deciso dai controlli, e una regola dello stato cambiata
-    non deve rendere inutile la registrazione di tutta la catena (13/11). Con zero o più di una registrazione: errore."""
+    """The only recorded Claude answer for this point, whatever the request was. Used for writing the final answer: its
+    input text carries the status decided by the checks, and a changed status rule must not make the recording of the
+    whole chain useless (13 Nov). With zero or more than one recording: error."""
     folder = _folder("CHAIN_REPLAY")
     found_items = []
     for file in sorted(folder.glob("*.json.gz")) if folder else []:
@@ -73,7 +73,7 @@ def unique_read(point: str) -> Any:
         if isinstance(data.get("request"), dict) and data["request"].get("point") == point:
             found_items.append(data["answer"])
     if len(found_items) != 1:
-        raise UnrecordedRequest(f"{len(found_items)} risposte registrate per «{point}»: ne serve una sola")
+        raise UnrecordedRequest(f"{len(found_items)} answers recorded for \"{point}\": exactly one is needed")
     return found_items[0]
 
 
@@ -87,7 +87,7 @@ def save(key: str, request: Any, answer: Any) -> None:
 
 
 def through(kind: str, parts: Any, produce: Callable[[], Any]) -> Any:
-    """Il risultato di `produci`, registrato; nel rigioco quello registrato, senza chiamarla."""
+    """The result of `produce`, recorded; in replay the recorded one, without calling it."""
     key = fingerprint(kind, parts)
     if in_replay():
         answer = read(key)

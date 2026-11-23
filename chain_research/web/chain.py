@@ -1,21 +1,21 @@
-"""Catena guidata (15/10, decisione di Niccolò): il grafo e il programma guidano il ragionamento, il modello fa solo
-compiti piccoli e verificabili. Pensato per far fare ricerche a catena anche a modelli piccoli.
+"""Guided chain (15 Oct, Niccolò's decision): the graph and the program drive the reasoning, the model only does small,
+checkable tasks. Designed so that even small models can do chain research.
 
-1. Claude interpreta la domanda (riformulazioni, indizi con le letture possibili, sotto-domande) e la trasforma in una
-   catena: partenza certa, passi (relazione da seguire, tipo del risultato, controlli con le letture), risposta.
-2. Il programma percorre la catena un anello alla volta, con un fascio di al massimo `larghezza` entità:
-   - per ogni entità del fascio: ricerche per la relazione (punto "passo"), pagine lette con la lettura normale
-     (concetti, legami e fatti entrano nel grafo);
-   - il modello elenca i candidati che le prove numerate indicano nella relazione (punto "candidati");
-   - il modello dice per ogni candidato e controllo "sì / no / non so" con il numero della prova (punto "verifica");
-     un "no" con prova scarta il candidato; ai candidati migliori con dei "non so" si cerca la scheda e si rifà la
-     verifica, una volta;
-   - restano i candidati senza "no", ordinati per numero di "sì"; se non ne resta nessuno si ritenta il passo con
-     ricerche diverse, una volta, poi la catena si ferma lì.
-3. Il valore richiesto si prende dalle prove dell'entità finale (punto "valore"), cercando la scheda se manca.
-4. Chi scrive riceve la catena trovata con le prove di ogni anello.
-Le prove sono righe numerate costruite dal programma dal grafo e dai pezzi di pagina salvati: il modello indica un
-numero, non copia frasi, e ogni affermazione resta legata alla sua pagina.
+1. Claude interprets the question (rephrasings, clues with their possible readings, sub-questions) and turns it into a
+   chain: a certain starting point, steps (relation to follow, kind of result, checks with the readings), answer.
+2. The program walks the chain one link at a time, with a beam of at most `width` entities:
+   - for each entity of the beam: searches for the relation (point "step"), pages read with the normal reading
+     (concepts, ties and facts enter the graph);
+   - the model lists the candidates that the numbered proofs indicate for the relation (point "candidates");
+   - the model says for each candidate and check "yes / no / don't know" with the proof number (point
+     "verification"); a "no" with a proof discards the candidate; for the best candidates with some "don't know" the
+     infobox is looked up and the verification is redone, once;
+   - the candidates without a "no" remain, sorted by number of "yes"; if none remains the step is retried with
+     different searches, once, then the chain stops there.
+3. The requested value is taken from the proofs of the final entity (point "value"), looking up the infobox if missing.
+4. The writer receives the chain found, with the proofs of each link.
+Proofs are numbered rows built by the program from the graph and from the saved page segments: the model gives a
+number, it does not copy sentences, and every claim stays tied to its page.
 """
 import json
 import logging
@@ -38,22 +38,22 @@ STOP_WORDS = {"della", "delle", "dello", "degli", "dalla", "nella", "sulla", "co
                 "quello", "sono", "essere", "stato", "stata", "with", "from", "that", "which", "their", "about",
                 "entità", "relazione", "ricerca", "anni"}
 PROOF_CHARS = 45_000
-# Passi verso cose che di solito non hanno un nome proprio né una pagina: si possono saltare (`_piano_salto`).
+# Steps towards things that usually have neither a proper name nor a page: they can be skipped (`_jump_plan`).
 NAMELESS_OBJECTS = re.compile(r"\b(simulacr\w*|statu[ae]\w*|dipint\w*|scultur\w*|affresc\w*|oggett\w*|"
                                 r"immagin\w*|ritratt\w*|reliqui\w*|statue|painting|sculpture|artwork|object)\b")
-# Radici (5 lettere) di parole di tipo o di misura, che nei controlli non distinguono una riga dall'altra.
+# Roots (5 letters) of words of kind or size, which in the checks do not tell one row from another.
 GENERIC_ROOTS = {"paese", "comun", "citta", "picco", "grand", "celeb", "famos", "local", "terri", "luogo", "perso",
                     "azien", "organ", "socie", "compa", "town", "villa", "city", "small", "large", "frazi", "borgo",
                     "stato", "regio", "nazio", "itali", "franc", "ameri", "tedes", "ingle", "inter", "milan"}
-# Righe del riquadro senza relazioni utili (ToG `abandon_rels`: ID, codici, siti, immagini).
+# Infobox rows without useful relations (ToG `abandon_rels`: IDs, codes, sites, images).
 USELESS_INFOBOX = re.compile(r"^(immagine|image|logo|firma|signature|mappa|map|coordinate|coordinates|sito( web)?|"
                               r"website|url|codice|code|id|isbn|issn|iso|didascalia|caption|stemma|bandiera|flag|"
                               r"coat of arms|cap|prefisso|fuso orario|time zone|targa|zip code|postal code|"
                               r"area code|dialing code|codice istat|codice catastale|nome abitanti)\b[^:]{0,20}:", re.I)
 MAX_CANDIDATES = 8
-# Verifica a quattro valori con pesi (WisPaper, 2026): ogni esito vale tanto quanto il peso del controllo; il conto lo
-# fa il programma. I modelli generici dicono "sì" troppo facilmente e sbagliano proprio sui casi a metà, per questo
-# c'è "in parte" e per questo un "sì" vale solo se le due letture lo danno entrambe.
+# Four-valued weighted verification (WisPaper, 2026): each outcome counts as much as the weight of the check; the
+# program does the sum. Generic models say "yes" too easily and fail precisely on the in-between cases, hence "partly",
+# and hence a "yes" counts only if both readings give it.
 OUTCOME_VALUE = {"yes": 1.0, "partly": 0.5, "unknown": 0.0, "no": -1.0}
 MONTHS = ("gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre|"
         "january|february|march|april|may|june|july|august|september|october|november|december|"
@@ -62,7 +62,7 @@ MONTHS = ("gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|o
         "janvier|février|mars|avril|juin|juillet|août|septembre|octobre|novembre|décembre|"
         "enero|febrero|abril|mayo|junio|julio|septiembre|octubre|noviembre|diciembre|"
         "janeiro|fevereiro|março|maio|junho|julho|setembro|outubro|novembro|dezembro")
-# Anni con l'era scritta: «44 a.C.», «800 d.C.», «44 BC», «800 AD».
+# Years with the era written out: «44 a.C.», «800 d.C.», «44 BC», «800 AD».
 ERA = re.compile(r"\b(\d{1,4})\s*(a\.?\s?c\b\.?|b\.?\s?c\b\.?(?:e\b\.?)?|d\.?\s?c\b\.?|a\.?\s?d\b\.?|c\.?\s?e\b\.?)", re.I)
 _ORDINAL = r"(?:°|º|st|nd|rd|th|er|\.)?"
 
@@ -71,31 +71,31 @@ _ORDINAL = r"(?:°|º|st|nd|rd|th|er|\.)?"
 class Proof:
     text: str
     url: str
-    hyperlinks: list[str] = field(default_factory=list)  # voci di Wikipedia collegate nella riga
-    language: str = ""  # lingua della voce di Wikipedia da cui viene la riga
+    hyperlinks: list[str] = field(default_factory=list)  # Wikipedia articles linked in the row
+    language: str = ""  # language of the Wikipedia article the row comes from
 
 
 @dataclass
 class Link:
     name: str
-    points: int = 0  # numero di controlli con "sì" meno quelli con "no"
-    quality: float = 0.0  # somma pesata degli esiti diviso la somma dei pesi, da -1 a 1
-    outcomes: list[dict] = field(default_factory=list)  # {controllo, esito, prova: Prova | None}
+    points: int = 0  # number of checks with "yes" minus those with "no"
+    quality: float = 0.0  # weighted sum of the outcomes divided by the sum of the weights, from -1 to 1
+    outcomes: list[dict] = field(default_factory=list)  # {check, outcome, proof: Proof | None}
     parent: "Link | None" = None
-    tie_proof: Proof | None = None  # la frase che lo lega all'anello precedente
-    weak: bool = False  # tenuto solo perché nessun altro candidato passava i controlli
-    context: str = ""  # come la catena lo ha raggiunto, per le ricerche senza omonimi ("progettista di Freedo")
-    title: tuple[str, str] | None = None  # (lingua, titolo) della voce di Wikipedia, se raggiunto da un collegamento
-    articles: dict[str, Article] = field(default_factory=dict)  # lingua → voce di Wikipedia dell'entità
+    tie_proof: Proof | None = None  # the sentence that ties it to the previous link
+    weak: bool = False  # kept only because no other candidate passed the checks
+    context: str = ""  # how the chain reached it, for searches without namesakes ("progettista di Freedo")
+    title: tuple[str, str] | None = None  # (language, title) of the Wikipedia article, if reached through a link
+    articles: dict[str, Article] = field(default_factory=dict)  # language → Wikipedia article of the entity
     searched_articles: bool = False
-    articles_other: int = -1  # quante altre lingue sono già state cercate oltre alla prima voce
-    start: "Proof | None" = None  # prime frasi della voce di Wikipedia (verifica economica)
-    failures: float = 0.0  # frontiera: rami che da qui non hanno portato a niente
-    preferred: float = 0.0  # frontiera: premio dello spareggio finale tra candidati pari
-    empty_wiki: bool = False  # allargato su Wikipedia senza nessun candidato (il web è l'unica strada)
-    base_step: int = 0  # ancora: quanti passi del piano porta già fatti (0 per la partenza)
-    relation: str = ""  # la relazione seguita per arrivare qui (per l'ancora, quella che parte da lei)
-    plan: dict | None = None  # radici della frontiera: il piano di cui seguono i passi
+    articles_other: int = -1  # how many other languages were already searched besides the first article
+    start: "Proof | None" = None  # first sentences of the Wikipedia article (cheap verification)
+    failures: float = 0.0  # frontier: branches from here that led nowhere
+    preferred: float = 0.0  # frontier: bonus from the final tiebreak between tied candidates
+    empty_wiki: bool = False  # expanded on Wikipedia without any candidate (the web is the only route)
+    base_step: int = 0  # anchor: how many plan steps it already covers (0 for the starting point)
+    relation: str = ""  # the relation followed to get here (for the anchor, the one starting from it)
+    plan: dict | None = None  # frontier roots: the plan whose steps they follow
 
 
 def _norm(text: str) -> str:
@@ -103,15 +103,15 @@ def _norm(text: str) -> str:
 
 
 def _entity_key(name: str) -> str:
-    """Una chiave per le varianti dello stesso nome: minuscole, senza accenti, spazi né punteggiatura («Keyboard.io» =
-    «Keyboardio»; graphify: normalizzazione prima di tutto). «Keyboard.io Model01» resta un'altra entità."""
+    """A key for the variants of the same name: lowercase, without accents, spaces or punctuation («Keyboard.io» =
+    «Keyboardio»; graphify: normalisation first of all). «Keyboard.io Model01» stays another entity."""
     return re.sub(r"[\W_]+", "", _plan(without_corporate_suffix(name)))
 
 
 def _name_key(name: str) -> str:
-    """L'ultima parola lunga del nome (di solito il cognome), per ritrovarlo nei testi anche scritto in altro modo.
-    Senza le parentesi (24/10, Monte Bianco: «La Thuile (Italia)» dava «italia», e la voce presa era «La Salle
-    (Italia)», primo collegamento della riga con «italia»)."""
+    """The last long word of the name (usually the surname), to find it in texts even when written differently.
+    Without the parentheses (24 Oct, Monte Bianco: «La Thuile (Italia)» gave «italia», and the article taken was «La
+    Salle (Italia)», the first link of the row with «italia»)."""
     without = _norm(re.sub(r"\([^)]*\)", " ", name)) or _norm(name)
     words = [p for p in without.split() if len(p) >= 4]
     return words[-1] if words else without
@@ -122,14 +122,14 @@ def _weight(e: dict) -> float:
 
 
 def quality(outcomes: list[dict]) -> float:
-    """Somma pesata degli esiti diviso la somma dei pesi: 1 = tutti i controlli provati, -1 = tutti smentiti."""
+    """Weighted sum of the outcomes divided by the sum of the weights: 1 = all checks proven, -1 = all refuted."""
     total = sum(_weight(e) for e in outcomes)
     return sum(_weight(e) * OUTCOME_VALUE.get(e["outcome"], 0.0) for e in outcomes) / total if total else 0.0
 
 
 def _numbers(text: str) -> list[float]:
-    """I numeri di un valore in tutte le letture possibili (20,65 / 3.274 / 1,234.5): basta che una rispetti
-    l'intervallo."""
+    """The numbers of a value in all possible readings (20,65 / 3.274 / 1,234.5): it is enough for one to fall within
+    the interval."""
     hits = []
     for m in re.finditer(r"\d(?:[\d.,\u202f\u00a0 ]*\d)?", str(text)):
         t = re.sub(r"[\u202f\u00a0 ]", "", m.group(0))
@@ -142,7 +142,7 @@ def _numbers(text: str) -> list[float]:
 
 
 def _years(text: str) -> list[int]:
-    """Gli anni scritti nel testo; prima di Cristo sono negativi. Senza l'era servono almeno 3 cifre."""
+    """The years written in the text; BC years are negative. Without the era at least 3 digits are needed."""
     years = []
     for m in ERA.finditer(text):
         first = m.group(2).lower().replace(".", "").replace(" ", "") in ("ac", "bc", "bce")
@@ -152,22 +152,22 @@ def _years(text: str) -> list[int]:
 
 
 def allowed_value(value: str, answer: dict) -> str:
-    """Controllo meccanico del valore (DS4A: il tipo di dato decide quali righe valgono): tipo e intervallo dati dal
-    piano. Restituisce il motivo del rifiuto, vuoto se va bene. (17/10, Due Sicilie: «29 novembre 1943» per uno Stato
-    «nato e sciolto nel 1945»; Divina Commedia: 3.274 abitanti per «tra 300 e 350».)"""
+    """Mechanical check of the value (DS4A: the data kind decides which rows count): kind and interval given by the
+    plan. Returns the reason for the rejection, empty if fine. (17 Oct, Two Sicilies: «29 novembre 1943» for a State
+    «founded and dissolved in 1945»; Divina Commedia: 3,274 inhabitants for «between 300 and 350».)"""
     kind = str(answer.get("value_kind") or "")
     text = str(value or "").lower()
     years = _years(text)
     month_day = re.search(rf"\b\d{{1,2}}{_ORDINAL}\s+(?:(?:of|de|del)\s+)?(?:{MONTHS})\b", text) or re.search(
         rf"\b(?:{MONTHS})\.?\s+\d{{1,2}}(?:st|nd|rd|th)?\b", text) or re.search(r"\b\d{4}-\d{2}-\d{2}\b", text)
     if kind == "full date" and not (month_day and years):
-        return "non è una data completa"
+        return "not a full date"
     if kind == "year" and not years:
-        return "non contiene un anno"
+        return "contains no year"
     if kind == "day and month" and not month_day:
-        return "non contiene giorno e mese"
+        return "contains no day and month"
     if kind in ("number", "code") and not re.search(r"\d", text):
-        return "non contiene un numero"
+        return "contains no number"
     minimum, maximum = answer.get("min"), answer.get("max")
     if not isinstance(minimum, (int, float)) and not isinstance(maximum, (int, float)):
         return ""
@@ -178,7 +178,7 @@ def allowed_value(value: str, answer: dict) -> str:
     numbers = [float(x) for x in years] if kind in ("full date", "year") else _numbers(text)
     if kind in ("full date", "year", "number", "code") and numbers \
             and not any(minimum <= x <= maximum for x in numbers):
-        return f"fuori dall'intervallo {minimum:g}-{maximum:g}"
+        return f"outside the interval {minimum:g}-{maximum:g}"
     return ""
 
 
@@ -188,41 +188,41 @@ class Chain:
         self.o = research.o
         self.interpretation: dict = {}
         self.plan: dict = {}
-        self.links: list[list[Link]] = []  # fascio tenuto a ogni passo
-        self.value: dict | None = None  # {valore, prova: Prova, anello: Anello}
+        self.links: list[list[Link]] = []  # beam kept at each step
+        self.value: dict | None = None  # {value, proof: Proof, link: Link}
         self.reason = ""
         self.step_searches: list[str] = []
-        self.history: list[dict] = []  # per il resoconto e le diagnosi
-        # Wikipedia come grafo (16/10): voci = nodi, collegamenti = archi; prima di cercare sul web.
+        self.history: list[dict] = []  # for the report and the diagnoses
+        # Wikipedia as a graph (16 Oct): articles = nodes, links = edges; before searching the web.
         self.wiki = WikipediaGraph(local_allow=research.local_allow,
                                    max_articles=int(self.o.get("wikipedia_articles", 600)),
                                    interval_s=self.o.get("wikipedia_interval")) \
             if self.o.get("wikipedia_graph", True) else None
         self._segment_numbers: dict[str, int] = {}
-        self._alive: list[Link] = []  # candidati non smentiti dell'ultimo passo percorso
-        self.actions: list[str] = []  # frontiera: azioni fatte, in ordine (per le diagnosi)
-        self._recorded: set[tuple[str, str, str]] = set()  # legami scritti da _registra: mai prove
-        self._snippets: list[Proof] = []  # estratti dei risultati dell'ultima ricerca (pagine non lette)
-        self.conflicts: list[dict] = []  # candidati scartati che avevano una fonte forte (validazione.disaccordi)
-        self.exams: dict | None = None  # controlli con il modello sulla soluzione (revisione_finale)
-        self.discarded: dict | None = None  # il valore trovato e non dato: la revisione ha smentito la premessa
-        self._added_pages = 0  # pagine concesse oltre il tetto per cercare il valore
+        self._alive: list[Link] = []  # unrefuted candidates of the last step walked
+        self.actions: list[str] = []  # frontier: actions done, in order (for the diagnoses)
+        self._recorded: set[tuple[str, str, str]] = set()  # ties written by _record: never proofs
+        self._snippets: list[Proof] = []  # snippets of the results of the last search (pages not read)
+        self.conflicts: list[dict] = []  # discarded candidates that had a strong source (validation.disagreements)
+        self.exams: dict | None = None  # checks with the model on the solution (final_review)
+        self.discarded: dict | None = None  # the value found and not given: the review refuted the premise
+        self._added_pages = 0  # pages granted beyond the cap to look for the value
 
-    # --- chiamate al modello ------------------------------------------------------------------------------------
+    # --- model calls ----------------------------------------------------------------------------------------------
 
     def _decide(self, point: str, data: dict, default: dict) -> dict:
         outcome, parent = self.r.thinker.decide(point, data, lambda: default)
         self.r.cost = max(self.r.cost, self.r.thinker.ledger.spent)
         return outcome if parent == "claude" else default
 
-    # --- 1. interpretazione e catena ---------------------------------------------------------------------------
+    # --- 1. interpretation and chain -----------------------------------------------------------------------
 
     def prepare(self) -> bool:
-        self.r._phase("Claude interpreta la domanda…")
+        self.r._phase("Claude is interpreting the question…")
         self.interpretation = self._decide("interpret", {"question": self.r.topic[:1000], "today": self.r.today},
                                             {"rephrasings": [], "clues": [], "sub_questions": []})
-        self.r._phase("Claude prepara la catena da percorrere…")
-        for _ in range(2):  # 25/10, LibreOffice: «Claude non ha risposto in tempo» sul piano, catena mai partita
+        self.r._phase("Claude is preparing the chain to walk…")
+        for _ in range(2):  # 25 Oct, LibreOffice: «Claude did not answer in time» on the plan, chain never started
             self.plan = self._decide("chain", {"question": self.r.topic[:1000], "today": self.r.today,
                                                  "interpretation": self.interpretation},
                                       {"starting_point": {}, "steps": [], "answer": {}, "reason": ""})
@@ -232,7 +232,7 @@ class Chain:
         self.r.publish({"kind": "chain_search", "interpretation": self.interpretation, "plan": self.plan})
         return ok
 
-    # --- prove dal grafo ---------------------------------------------------------------------------------------
+    # --- proofs from the graph -----------------------------------------------------------------------------------
 
     def _after_segments(self, last: int) -> list[dict]:
         return [dict(r) for r in self.r.concepts.graph.db.execute(
@@ -244,7 +244,7 @@ class Chain:
         return int(row[0] or 0)
 
     def _find(self, name: str) -> int | None:
-        """Il nodo del grafo per un nome, anche scritto in modo un po' diverso (cognome contenuto nel nome)."""
+        """The graph node for a name, even written slightly differently (surname contained in the name)."""
         graph = self.r.concepts.graph
         match = graph.find(name)
         if match is not None:
@@ -269,7 +269,7 @@ class Chain:
         return windows
 
     def _entity_proofs(self, name: str, segments: list[dict] | None = None, maximum: int = 30) -> list[Proof]:
-        """Fatti, legami e menzioni del nodo nel grafo, più le zone dei pezzi di pagina in cui compare il nome."""
+        """Facts, ties and mentions of the node in the graph, plus the areas of the page segments where the name appears."""
         proofs: list[Proof] = []
         c = self.r.concepts
         node = self._find(name)
@@ -280,9 +280,9 @@ class Chain:
             url_of = {r["id"]: r["url"] for r in c.graph.db.execute(
                 "SELECT s.id, f.url FROM segment s JOIN source f ON f.id = s.source_id")}
             for t in c.ties():
-                # Mai i legami scritti dalla catena stessa: sono conclusioni, non prove (24/10, Monte Bianco: il primo
-                # piano registra «Saint-Gervais → gemellata con → Vado Ligure», anello debole citato con l'inizio della
-                # voce di Vado Ligure; il secondo piano lo legge come prova e Vado Ligure diventa «forte»).
+                # Never the ties written by the chain itself: they are conclusions, not proofs (24 Oct, Monte Bianco:
+                # the first plan records «Saint-Gervais → twinned with → Vado Ligure», a weak link cited with the start
+                # of the Vado Ligure article; the second plan reads it as a proof and Vado Ligure becomes «strong»).
                 if (_norm(t["subject"]), _norm(t["relation"]), _norm(t["object"])) in self._recorded:
                     continue
                 if node in (t["subject_id"], t["object_id"]) and t.get("quote"):
@@ -303,10 +303,10 @@ class Chain:
         return unique[:maximum]
 
     def _step_proofs(self, entity: str, segments: list[dict], already: list[dict]) -> list[Proof]:
-        """Per elencare i candidati: per intero i pezzi delle pagine trovate dalle ricerche di QUESTO passo (sono
-        state cercate per la relazione: elenchi di allievi, schede), quelli già salvati solo se la pagina è dedicata
-        all'entità (nome nell'indirizzo), gli altri intorno al nome; più fatti e legami del nodo.
-        (15/10: la pagina della Mathematics Genealogy di Galileo era letta ma l'elenco degli allievi restava fuori.)"""
+        """To list the candidates: in full the segments of the pages found by the searches of THIS step (they were
+        searched for the relation: lists of students, infoboxes), the already saved ones only if the page is about the
+        entity (name in the address), the others around the name; plus facts and ties of the node.
+        (15 Oct: Galileo's Mathematics Genealogy page was read but the list of students was left out.)"""
         key = _name_key(entity)
         proofs = self._entity_proofs(entity, segments=[], maximum=25)
         for s in segments:
@@ -335,11 +335,11 @@ class Chain:
     def _proof(proofs: list[Proof], number: int) -> Proof | None:
         return proofs[number - 1] if isinstance(number, int) and 1 <= number <= len(proofs) else None
 
-    # --- ricerca e lettura di un gruppo di pagine --------------------------------------------------------------
+    # --- search and reading of a group of pages ---------------------------------------------------------------
 
     def _search_and_read(self, searches: list[str], pages: int, purpose: str = "") -> list[dict]:
-        """Cerca, legge fino a `pagine` pagine trovate da QUESTE ricerche e restituisce i pezzi salvati nuovi. `scopo`:
-        il passo per cui si cerca, per scegliere le pagine (default: la domanda intera)."""
+        """Searches, reads up to `pages` pages found by THESE searches and returns the new saved segments. `purpose`:
+        the step being searched for, to choose the pages (default: the whole question)."""
         self._snippets = []
         searches = [q for q in self.r._filter_query(searches) if q]
         if not searches:
@@ -349,10 +349,10 @@ class Chain:
         self.step_searches += searches
         self.r.publish({"kind": "search_plan", "searches": searches, "parent": "chain"})
         results = self.r.collect(searches)
-        # Gli estratti dei risultati sono testo delle pagine e costano zero letture: prove in più per i candidati
-        # (25/10: si leggono 3 pagine su ~25 risultati; «Keyboardio was founded in 2012 by Jesse Vincent and Kaia
-        # Dekker» stava nell'estratto di una pagina mai letta).
-        self._snippets = [Proof(f"[risultato di ricerca: {x.get('title', '')}] {x['snippet']}", x["url"])
+        # The result snippets are page text and cost zero readings: extra proofs for the candidates (25 Oct: 3 pages
+        # out of ~25 results are read; «Keyboardio was founded in 2012 by Jesse Vincent and Kaia Dekker» was in the
+        # snippet of a page never read).
+        self._snippets = [Proof(f"{validation.SNIPPET} {x.get('title', '')}] {x['snippet']}", x["url"])
                           for x in results if len(x.get("snippet") or "") >= 40][:15]
         self.r._add_candidates(results, purpose=purpose)
         mine = [x for x in self.r.queue if self.r.research_of.get(x.get("url")) in searches]
@@ -364,18 +364,18 @@ class Chain:
         self.r._evaluate_completed(wait_for=True)
         return self._after_segments(last)
 
-    # --- Wikipedia come grafo -----------------------------------------------------------------------------------
+    # --- Wikipedia as a graph -----------------------------------------------------------------------------------
 
     def _research_language(self) -> str:
-        """La lingua della ricerca (22/10, Niccolò): inglese, salvo domande legate a un paese (la Cappella Sistina in
-        italiano, un villaggio greco in greco), come deciso nel piano."""
+        """The research language (22 Oct, Niccolò): English, except for questions tied to a country (the Sistine Chapel
+        in Italian, a Greek village in Greek), as decided in the plan."""
         language = str(self.plan.get("research_language") or "en").lower()
         return language if LANGUAGE.match(language) else "en"
 
     def _languages(self) -> list[str]:
-        """Lingua della ricerca, inglese, lingue del piano e sempre l'italiano, ultimo (24/10, LibreOffice: con la
-        ricerca in inglese la voce italiana di BeOS, quella con «Release corrente: R5.1d0 (15 novembre 2001)», non
-        veniva mai letta; le domande sono in italiano e i riquadri italiani spesso hanno il dato chiesto)."""
+        """Research language, English, the plan's languages and always Italian, last (24 Oct, LibreOffice: with the
+        research in English the Italian BeOS article, the one with «Release corrente: R5.1d0 (15 novembre 2001)», was
+        never read; the questions were in Italian and Italian infoboxes often have the requested data)."""
         other_ones = [str(x).lower() for x in self.plan.get("languages") or [] if LANGUAGE.match(str(x).lower())]
         return list(dict.fromkeys([self._research_language(), "en", *other_ones, "it"]))[:5]
 
@@ -384,17 +384,17 @@ class Chain:
         return [p for p in _norm(text).split() if len(p) >= 5 and p not in STOP_WORDS][:8]
 
     def _relevant(self, article: Article, a: Link) -> bool:
-        """Contro gli omonimi: la voce di un'entità raggiunta dalla catena deve collegare la voce dell'entità di prima
-        (in quella lingua) o nominarla per intero; se l'entità di prima non ha voci, basta il cognome o una parola
-        del contesto. (16/10: «René II de Lorraine-Guise» portava al duca di Lorena nato ad Angers, non a René
-        d'Elbeuf figlio di Claudio di Guisa; 15/10: «Freedo» al produttore svizzero, non alla mascotte.)"""
+        """Against namesakes: the article of an entity reached by the chain must link the article of the previous
+        entity (in that language) or name it in full; if the previous entity has no articles, the surname or a context
+        word is enough. (16 Oct: «René II de Lorraine-Guise» led to the Duke of Lorraine born in Angers, not to René
+        d'Elbeuf son of Claude de Guise; 15 Oct: «Freedo» to the Swiss producer, not to the mascot.)"""
         if a.title is not None:
             return True
-        if a.parent is None:  # partenza: la voce deve condividere almeno una parola dell'indizio (Freedo: mascotte)
+        if a.parent is None:  # starting point: the article must share at least one clue word (Freedo: mascot)
             roots = {p[:4] for p in _norm(a.context).split() if len(p) >= 5 and p not in STOP_WORDS}
             roots |= {p[:4].lower() for p in re.findall(r"\b[A-Z][\w-]{2,}", a.context)}
-            # Il nome stesso non conta: compare in ogni omonimo (22/10, Freedo: la voce inglese del produttore
-            # svedese passava perché conteneva «Freedo»).
+            # The name itself does not count: it appears in every namesake (22 Oct, Freedo: the English article of the
+            # Swedish producer passed because it contained «Freedo»).
             roots -= {p[:4] for p in _norm(a.name).split()}
             if not roots:
                 return True
@@ -413,13 +413,14 @@ class Chain:
         return any(k and k in text for k in keys)
 
     def _articles(self, a: Link, other_ones: int = 2) -> list[Article]:
-        """Le voci dell'entità: la prima trovata (italiano, inglese, lingue del piano) e fino ad `altre` in altre
-        lingue, prima quelle del piano (la voce nella lingua del luogo ha più dettagli locali). Poche richieste:
-        Wikipedia ne concede 10 al minuto."""
+        """The entity's articles: the first one found (Italian, English, the plan's languages) and up to `other_ones`
+        in other languages, the plan's first (the article in the local language has more local details). Few
+        requests: Wikipedia allows 10 per minute."""
         if self.wiki is None:
             return []
-        # Una voce letta per la verifica (una lingua) non basta per il valore: le altre lingue si aggiungono dopo
-        # (18/10, Debian: il W3C in italiano dà solo «ottobre 1994», in inglese la data completa non è mai arrivata).
+        # An article read for the verification (one language) is not enough for the value: the other languages are
+        # added later (18 Oct, Debian: the W3C in Italian gives only «ottobre 1994», the full date in English never
+        # arrived).
         if a.searched_articles and (other_ones <= a.articles_other or not a.articles):
             return list(a.articles.values())
         if a.searched_articles:
@@ -439,11 +440,11 @@ class Chain:
         if a.title:
             first = self.wiki.article(a.title[1], a.title[0])
         if first is None:
-            # 23/10 (piano entità e righe, fasi 2-3): voce decisa dal grafo, non dal titolo «simile». Per la partenza
-            # (nessuna entità di prima) le voci senza legame passano ancora da `_pertinente` (indizio).
-            # Un'entità senza voce presta ai figli le voci di chi l'ha trovata (24/10, Wikipedia: «Wikivoyage e.V.»
-            # non ha voce; senza vicini il pittore «Roland Unger» (1941) passava come voce del presidente dell'associazione,
-            # nominato senza collegamento nella voce tedesca di Wikivoyage).
+            # 23 Oct (entities and rows plan, phases 2-3): article decided by the graph, not by the «similar» title.
+            # For the starting point (no previous entity) the articles without a tie still go through `_relevant`
+            # (clue). An entity without an article lends its children the articles of whoever found it (24 Oct,
+            # Wikipedia: «Wikivoyage e.V.» has no article; without neighbours the painter «Roland Unger» (1941) passed
+            # as the article of the association's president, named without a link in the German Wikivoyage article).
             host = a.parent
             while host is not None and not host.articles and host.parent is not None and host is not a.parent.parent:
                 host = host.parent
@@ -467,8 +468,8 @@ class Chain:
         return list(a.articles.values())
 
     def _article_tiebreak(self, a: Link, options: list[tuple[str, str]]) -> int | None:
-        """Due voci con lo stesso legame e lo stesso grado: lista chiusa numerata (GENRE: solo titoli validi o
-        «nessuna»; DeepDive: risposta = numero). 0 = nessuna."""
+        """Two articles with the same tie and the same degree: closed numbered list (GENRE: only valid titles or
+        «none»; DeepDive: answer = number). 0 = none."""
         listing = "\n".join(f"{i}. {title} — {start}" for i, (title, start) in enumerate(options, 1))
         outcome = self._decide("article", {"name": a.name, "context": a.context[:300],
                                       "first_entity": a.parent.name if a.parent is not None else "",
@@ -482,16 +483,16 @@ class Chain:
 
     @staticmethod
     def _terms(text: str) -> list[str]:
-        """Radici (5 lettere: «succeduto»/«succeeded», «derivate»/«derivative») e coppie di radici vicine: i termini
-        del TF-IDF delle righe."""
+        """Roots (5 letters: «succeduto»/«succeeded», «derivate»/«derivative») and pairs of adjacent roots: the TF-IDF
+        terms of the rows."""
         roots = [p[:5] for p in _norm(text).split() if len(p) >= 3 and p not in STOP_WORDS]
         return roots + [f"{a}_{b}" for a, b in zip(roots, roots[1:])]
 
     @staticmethod
     def _merged_rows(v: Article, chars: int = 700) -> list[tuple[int, "Row"]]:
-        """Le righe della voce con le voci di un elenco della stessa sezione unite in una riga (fino a 700
-        caratteri): «Distribuzioni derivate: Ubuntu · Knoppix · Bharat Linux …» come «Notable students» del
-        riquadro; un elenco lungo non riempie da solo le righe date al modello (23/10, Debian → Bharat Linux)."""
+        """The article's rows, with the items of a list in the same section merged into one row (up to 700
+        characters): «Distribuzioni derivate: Ubuntu · Knoppix · Bharat Linux …» like «Notable students» of the
+        infobox; a long list does not fill by itself the rows given to the model (23 Oct, Debian → Bharat Linux)."""
         output: list[tuple[int, Row]] = []
         for i, r in enumerate(v.rows):
             if r.kind == "elenco" and output:
@@ -508,20 +509,20 @@ class Chain:
     def _wiki_rows(self, articles: list[Article], words: list[str], key: str = "", maximum: int = 20,
                     chars: int = 6000, bonus=None, infobox: bool = True, bare: bool = False,
                     exclude: str = "") -> list[Proof]:
-        """Le righe delle voci più utili per le `parole`. 23/10 (piano entità e righe, fase 4; prima: tutto il
-        riquadro e 40 frasi d'inizio sempre dentro, conteggio grezzo, 70 righe: Galileo, 69 righe per 4 utili):
-        - punteggio TF-IDF con l'IDF calcolato sulle righe di queste voci (FEVER, `OnlineTfidfDocRanker`), radici e
-          coppie di radici; il titolo della sezione conta come la riga;
-        - il riquadro compete con le altre righe (bonus piccolo), senza le righe inutili (ToG `abandon_rels`:
-          immagini, codici, siti, coordinate); le prime 2 frasi della voce (la definizione) entrano sempre;
-        - per la verifica (`riquadro=False`) entra sempre la riga delle categorie (gesuita, nato a…);
-        - righe uguali una volta sola. Con `chiave` solo le righe che la contengono (voci su altro).
-        Con `nudo` solo le parole contano (niente definizione, categorie, riquadro o collegamenti in più)."""
+        """The most useful rows of the articles for the `words`. 23 Oct (entities and rows plan, phase 4; before: the
+        whole infobox and 40 opening sentences always in, raw count, 70 rows: Galileo, 69 rows for 4 useful ones):
+        - TF-IDF score with the IDF computed on the rows of these articles (FEVER, `OnlineTfidfDocRanker`), roots and
+          pairs of roots; the section title counts as part of the row;
+        - the infobox competes with the other rows (small bonus), without the useless rows (ToG `abandon_rels`:
+          images, codes, sites, coordinates); the first 2 sentences of the article (the definition) always go in;
+        - for the verification (`infobox=False`) the categories row always goes in (Jesuit, born in…);
+        - identical rows only once. With `key` only the rows that contain it (articles about something else).
+        With `bare` only the words count (no definition, categories, infobox or extra links)."""
         question = {t for x in words for t in self._terms(x)}
-        if exclude:  # il nome dell'entità sta in tutta la sua voce: non distingue le righe
+        if exclude:  # the entity's name is all over its article: it does not tell rows apart
             name = set(self._terms(exclude))
             question = {t for t in question if t not in name and not any(p in name for p in t.split("_"))}
-        if bare:  # una riga «di un controllo» deve averne le parole proprie, non «paese» o «comune»
+        if bare:  # a row «of a check» must have its own words, not «paese» or «comune»
             question = {t for t in question if t.split("_")[0] not in GENERIC_ROOTS}
         rows = [(v, i, r) for v in articles for i, r in self._merged_rows(v)
                  if not (key and key not in _norm(r.text))
@@ -534,7 +535,7 @@ class Chain:
                 occurrences[t] = occurrences.get(t, 0) + 1
         max_idf = math.log(n + 1) + 1
 
-        def weight(t: str) -> float:  # 0..1: raro nelle righe = più informativo
+        def weight(t: str) -> float:  # 0..1: rare in the rows = more informative
             return (math.log((n + 1) / (occurrences.get(t, 0) + 1)) + 1) / max_idf * (1.5 if "_" in t else 1.0)
 
         scores, seen_items = [], set()
@@ -546,30 +547,30 @@ class Chain:
                 continue
             seen_items.add(text_key)
             points = 10 * sum(weight(t) for t in ts & question)
-            # il titolo della sezione conta come la riga (16/10, Galvani: l'elenco dei presidenti dell'Accademia
-            # dei XL, righe con solo nomi e date sotto la sezione «Presidenti»)
+            # the section title counts as part of the row (16 Oct, Galvani: the list of presidents of the Accademia
+            # dei XL, rows with only names and dates under the section «Presidenti»)
             points += 20 * sum(weight(t) for t in set(self._terms(r.section)) & question)
             if bare:
                 pass
             elif r.kind == "riquadro":
-                # Il riquadro è denso di relazioni, ma per la verifica passa davanti solo con le parole dei controlli
-                # (17/10, Ducato di Milano: «Gemellaggi: Linards» restava fuori dietro 25 righe del riquadro).
+                # The infobox is dense with relations, but for the verification it goes first only with the words of
+                # the checks (17 Oct, Duchy of Milan: «Gemellaggi: Linards» was left out behind 25 infobox rows).
                 points = points * 1.5 + ((3 if infobox else 1) if points > 0 else 0)
             elif r.kind == "categories":
                 points += 0 if infobox else 60
             elif not r.section and r.kind == "sentence":
-                # la definizione: le prime 2 frasi vere (non i pezzi di pronuncia «( gal-VAH-nee;», Galvani)
+                # the definition: the first 2 real sentences (not the pronunciation bits «( gal-VAH-nee;», Galvani)
                 if len(r.text) >= 60:
                     start_sentences[v.title] = start_sentences.get(v.title, 0) + 1
                 points += 60 if len(r.text) >= 60 and start_sentences[v.title] <= 2 else 2
             elif r.hyperlinks:
-                points += 1.0  # righe con voci collegate: riempiono i posti liberi (i candidati sono voci)
+                points += 1.0  # rows with linked articles: they fill the free slots (candidates are articles)
             if bonus is not None:
                 points += bonus(r.text)
             if points > 0.6:
                 scores.append((points, v, i, r))
-        # Le 6 righe migliori del riquadro di ogni voce entrano comunque (per i candidati): relazioni come la
-        # cittadinanza stanno in «Born: … Como, Duchy of Milan» senza parole in comune (23/10, oracolo righe).
+        # The 6 best infobox rows of each article go in anyway (for the candidates): relations like citizenship sit
+        # in «Born: … Como, Duchy of Milan» with no words in common (23 Oct, rows oracle).
         if infobox and not bare:
             scores.sort(key=lambda x: -x[0])
             for k, (points, v, i, r) in enumerate(scores):
@@ -588,19 +589,19 @@ class Chain:
         kept, total = [], 0
         for _, v, i, r in scores:
             text = f"[{v.title} ({v.language}){' § ' + r.section if r.section else ''}] {r.text}"
-            if r.hyperlinks:  # i titoli esatti delle voci collegate: il candidato si nomina come la sua voce
-                text += f" ⟶ voci: {'; '.join(r.hyperlinks[:25 if r.kind == 'elenco' else 10])}"
+            if r.hyperlinks:  # the exact titles of the linked articles: the candidate is named like its article
+                text += f" ⟶ articles: {'; '.join(r.hyperlinks[:25 if r.kind == 'elenco' else 10])}"
             if len(kept) >= maximum:
                 break
             if total + len(text) > chars:
-                continue  # una riga troppo lunga non ferma le altre
+                continue  # a row that is too long does not stop the others
             kept.append((v.language, v.title, i, Proof(text, v.url, list(r.hyperlinks), v.language)))
             total += len(text)
-        kept.sort(key=lambda x: (x[0], x[1], x[2]))  # in ordine di pagina: si legge come un testo
+        kept.sort(key=lambda x: (x[0], x[1], x[2]))  # in page order: it reads like a text
         return [x[3] for x in kept]
 
     def _pages_that_mention(self, a: Link, words: list[str]) -> list[Proof]:
-        """Se l'entità non ha una voce: le righe delle voci che la nominano (HierSearch, «adjacent passages»)."""
+        """If the entity has no article: the rows of the articles that name it (HierSearch, «adjacent passages»)."""
         if self.wiki is None:
             return []
         key = _name_key(a.name)
@@ -614,8 +615,8 @@ class Chain:
         return proofs
 
     def _incoming(self, a: Link) -> list[Proof]:
-        """Relazioni al contrario: le voci che collegano all'entità, con le loro prime frasi. Solo per entità poco
-        collegate (con centinaia di voci entranti l'elenco non dice niente)."""
+        """Reverse relations: the articles that link to the entity, with their first sentences. Only for poorly linked
+        entities (with hundreds of incoming articles the list says nothing)."""
         proofs: list[Proof] = []
         for article in self._articles(a)[:1]:
             titles = self.wiki.incoming(article.title, article.language, n=100)
@@ -623,30 +624,32 @@ class Chain:
                 continue
             starts = self.wiki.starts(titles[:40], article.language)
             for title, text in starts.items():
-                proofs.append(Proof(f"[{title} ({article.language}), voce che collega a {article.title}] {text[:500]}",
+                proofs.append(Proof(f"[{title} ({article.language}), article linking to {article.title}] {text[:500]}",
                                    self.wiki.url(title, article.language), [title], article.language))
         return proofs
 
     def _wiki_candidates(self, number: int, step: dict, origin: Link, attempt: int,
                         candidates: dict[str, Link]) -> None:
-        """Il passo sul grafo di Wikipedia: righe della voce dell'entità (o delle voci che la nominano) scelte dal
-        programma per le parole della relazione; il modello indica solo i candidati con il numero della riga."""
+        """The step on the Wikipedia graph: rows of the entity's article (or of the articles naming it) chosen by the
+        program for the words of the relation; the model only points to the candidates with the row number."""
         if self.wiki is None:
             return
         words = list(step.get("words") or []) + [step["relation"], step.get("kind", "")]
-        self.r._phase(f"Passo {number} su Wikipedia: {step['relation']} {origin.name}…")
+        self.r._phase(f"Step {number} on Wikipedia: {step['relation']} {origin.name}…")
         articles = self._articles(origin)
         if attempt == 1:
-            # 29/10, Cappella Sistina: «Assunta», «Assunzione» tra le parole del passo dalla voce dell'Assunzione di
-            # Maria: 20 righe sul dogma, fuori la galleria con i comuni («Celebrazione dell'Assunta a Novara di Sicilia»).
+            # 29 Oct, Sistine Chapel: «Assunta», «Assunzione» among the step's words from the article on the Assumption
+            # of Mary: 20 rows on the dogma, the gallery with the towns left out («Celebrazione dell'Assunta a Novara di
+            # Sicilia»).
             names = " ".join([origin.name] + [v.title for v in articles])
             proofs = self._wiki_rows(articles, words, exclude=names) if articles else []
             if not articles or len(proofs) < 8:
                 proofs += self._pages_that_mention(origin, words)
             if not articles:
-                # Senza voce: anche i pezzi già letti che la nominano, a costo zero di pagine (24/10, Arduino: «Keyboardio
-                # is an Oakland-based company founded in 2012 by the husband-and-wife team, Jesse Vincent and Kaia
-                # Dekker» era in una pagina letta; i fondatori si cercavano solo su Wikipedia e poi sul web, mai fatto).
+                # Without an article: also the already read segments that name it, at zero page cost (24 Oct, Arduino:
+                # «Keyboardio is an Oakland-based company founded in 2012 by the husband-and-wife team, Jesse Vincent
+                # and Kaia Dekker» was in a page read; the founders were searched only on Wikipedia and then on the
+                # web, which never happened).
                 proofs += self._step_proofs(origin.name, [], self._segments_on(origin.name))[:12]
         else:
             proofs = self._incoming(origin)
@@ -659,7 +662,7 @@ class Chain:
         self._add(listing, proofs, origin, candidates, people=self._of_people(step))
 
     def _candidates_wiki_description(self, step: dict, beam: list[Link], candidates: dict[str, Link]) -> None:
-        """Ricerca per descrizione dentro Wikipedia (i controlli come parole), prime frasi delle voci trovate."""
+        """Search by description within Wikipedia (the checks as words), first sentences of the articles found."""
         if self.wiki is None:
             return
         description = "; ".join(c.get("description", "") for c in step.get("checks", []))
@@ -668,7 +671,7 @@ class Chain:
             return
         proofs: list[Proof] = []
         seen_items: set[str] = set()
-        for language in self._languages()[:4]:  # ogni ricerca in ogni lingua: non sappiamo in che lingua è scritta
+        for language in self._languages()[:4]:  # every search in every language: we do not know which language it is written in
             titles = []
             for q in searches:
                 titles += [x["title"] for x in self.wiki.search(q[:200], language, 4) if x["title"] not in seen_items]
@@ -685,17 +688,17 @@ class Chain:
         self._add(listing, proofs, beam[0], candidates, people=self._of_people(step))
 
     def _proofs_wiki_candidate(self, a: Link, checks: list[dict], maximum: int = 14) -> list[Proof]:
-        """Per la verifica: riquadro, inizio della voce del candidato e righe con le parole dei controlli o il nome
-        dell'entità di prima."""
+        """For the verification: infobox, start of the candidate's article and rows with the words of the checks or the
+        name of the previous entity."""
         articles = self._articles(a, other_ones=0)
         if not articles:
             return []
         words = [c.get("description", "") for c in checks] + [x for c in checks for x in c.get("readings") or []]
         if a.parent is not None:
             words.append(a.parent.name)
-        # Ogni controllo ha le sue 2 righe migliori, prima i più pesanti; poi la scelta comune riempie i posti. Con
-        # tutte le parole insieme un controllo raro perdeva contro tante parole comuni (24/10, Ducato: «gemellato con
-        # un paese dell'Alta Vienna» contro «Lomellina», «Pavia», «paese»: «Gemellaggi: Linards» fuori dalle 14).
+        # Each check has its 2 best rows, the heaviest first; then the common choice fills the slots. With all the
+        # words together a rare check lost against many common words (24 Oct, Duchy: «gemellato con un paese dell'Alta
+        # Vienna» against «Lomellina», «Pavia», «paese»: «Gemellaggi: Linards» left out of the 14).
         owned: list[Proof] = []
         for c in sorted(checks, key=lambda c: -_weight(c)):
             mine = [c.get("description", "")] + list(c.get("readings") or [])
@@ -709,21 +712,21 @@ class Chain:
         return self._with_adjacent_articles(proofs, [c for c in checks if _weight(c) >= 3])
 
     def _with_adjacent_articles(self, proofs: list[Proof], decisive: list[dict], maximum: int = 12) -> list[Proof]:
-        """Passaggi adiacenti (HierSearch): alle righe che riguardano un controllo decisivo (peso 3) e collegano altre
-        voci si aggiunge la prima frase di quelle voci, con una richiesta per lingua (18/10, Ducato di Milano:
-        «Gemellaggi: Linards (Francia)» non dice che Linards è nell'Alta Vienna; lo dice la voce di Linards)."""
+        """Adjacent passages (HierSearch): the rows about a decisive check (weight 3) that link other articles get the
+        first sentence of those articles, with one request per language (18 Oct, Duchy of Milan: «Gemellaggi: Linards
+        (Francia)» does not say that Linards is in Haute-Vienne; the Linards article does)."""
         if not decisive or self.wiki is None:
             return proofs
         roots = self._roots([c.get("description", "") for c in decisive]
                               + [x for c in decisive for x in c.get("readings") or []])
-        # Solo le parole rare tra le righe del candidato: «provincia», «comune» stanno in metà delle righe e i 12 posti
-        # finivano negli inizi di «Provincia (Italia)» e «Comune (Italia)» (24/10, Ducato di Milano: «Gemellaggi:
-        # Linards» restava senza l'inizio di Linards, «comune dell'Alta Vienna», e Gravellona prendeva «non so»).
-        row_words = [{x[:6] for x in _norm(p.text.split(" ⟶ voci:")[0]).split()} for p in proofs]
+        # Only the rare words among the candidate's rows: «provincia», «comune» are in half the rows and the 12 slots
+        # ended up in the starts of «Provincia (Italia)» and «Comune (Italia)» (24 Oct, Duchy of Milan: «Gemellaggi:
+        # Linards» was left without the start of Linards, «comune dell'Alta Vienna», and Gravellona got «unknown»).
+        row_words = [{x[:6] for x in _norm(p.text.split(" ⟶ articles:")[0]).split()} for p in proofs]
         frequency = {r: sum(1 for x in row_words if r in x) for r in roots if len(r) >= 4}
         rare = {r: f for r, f in frequency.items() if 0 < f <= max(2, len(proofs) // 4)}
-        # Prima le righe con le parole più rare del controllo (24/10, Ducato: «paese», «comune» in 3 righe su 14
-        # passavano davanti a «Gemellaggi: Linards»).
+        # First the rows with the check's rarest words (24 Oct, Duchy: «paese», «comune» in 3 rows out of 14 went
+        # ahead of «Gemellaggi: Linards»).
         points = {i: sum(1 / rare[r] for r in row_words[i] if r in rare) for i in range(len(proofs))}
         choices: dict[str, list[tuple[int, str]]] = {}
         total = 0
@@ -746,7 +749,7 @@ class Chain:
         return proofs
 
     def _record(self, a: Link, relation: str) -> None:
-        """L'anello accettato entra nel grafo dei concetti (per la vista e per chi scrive): nodi, legame, frase."""
+        """The accepted link enters the concept graph (for the view and for the writer): nodes, tie, sentence."""
         if a.parent is None or a.tie_proof is None or self.r.concepts is None:
             return
         g = self.r.concepts.graph
@@ -759,22 +762,22 @@ class Chain:
                 for name in (a.parent.name, a.name):
                     g.db.execute("INSERT OR IGNORE INTO mention (entity_id, segment_id, sentence) VALUES (?, ?, ?)",
                                  (g.entity(name), segment, a.tie_proof.text[:300]))
-                g.triple(a.parent.name, relation[:80], a.name, "entity", "fatto", segment,
+                g.triple(a.parent.name, relation[:80], a.name, "entity", "fact", segment,
                          quote=a.tie_proof.text[:300])
                 self._recorded.add((_norm(a.parent.name), _norm(relation[:80]), _norm(a.name)))
                 g.db.commit()
-        except Exception:  # noqa: BLE001 - la vista non deve fermare la ricerca
+        except Exception:  # noqa: BLE001 - the view must not stop the research
             pass
 
-    # --- 2. percorso ---------------------------------------------------------------------------------------------
+    # --- 2. walk ---------------------------------------------------------------------------------------------
 
     def walk(self) -> None:
-        """Uno o più piani (ODS: se il primo ragionamento non arriva a una risposta, se ne prova un altro): il secondo
-        piano sa dove si è fermato il primo e cosa ha trovato."""
+        """One or more plans (ODS: if the first reasoning does not reach an answer, another is tried): the second plan
+        knows where the first stopped and what it found."""
         if not self.prepare():
-            self.reason = "catena non preparata"
+            self.reason = "chain not prepared"
             return
-        best = None  # (anelli deboli, stato) della catena completa più solida
+        best = None  # (weak links, status) of the most solid complete chain
         for round_no in range(int(self.o.get("chain_plans", 2))):
             if round_no and not self._replan():
                 break
@@ -791,39 +794,39 @@ class Chain:
                 self._walk_plan()
             if self.value:
                 weak_ones = self._weak_links()
-                # La catena più solida: meno anelli deboli, poi l'anello peggiore migliore (17/10, Congresso di
-                # Vienna: «Elena», qualità -0,1, tenuta contro catene più promettenti).
+                # The most solid chain: fewest weak links, then the best worst link (17 Oct, Congress of Vienna:
+                # «Elena», quality -0.1, kept against more promising chains).
                 route = self._path(self.value["link"])
                 solidity = (-weak_ones, min((a.quality for a in route), default=0.0))
                 if best is None or solidity > best[0]:
                     best = (solidity, (self.plan, self.links, self.value, self.reason))
                 if weak_ones == 0 or (self.o.get("frontier", True) and self._good_route()):
                     break
-                # Catena completa ma con anelli non confermati: si prova un'altra catena e si tiene la più solida
-                # (autoconsistenza alla Open Deep Search; 16/10, Blender: Hallstatt preso per descrizione).
-                self.reason = f"catena completa ma con {weak_ones} anelli non confermati (valore {self.value['value']})"
+                # Complete chain but with unconfirmed links: another chain is tried and the most solid is kept
+                # (self-consistency à la Open Deep Search; 16 Oct, Blender: Hallstatt taken by description).
+                self.reason = f"complete chain but with {weak_ones} unconfirmed links (value {self.value['value']})"
             if self.r._reached_limit() or self.r.thinker.exhausted:
                 break
         if best is not None:
             self.plan, self.links, self.value, self.reason = best[1]
 
     def _good_route(self) -> bool:
-        """Con la frontiera i rami alternativi sono già stati esplorati: un altro piano serve solo se la strada della
-        soluzione ha un anello sotto metà del peso dei controlli (17/10, Debian: secondo piano di 12 minuti per
-        ritrovare lo stesso valore)."""
+        """With the frontier the alternative branches have already been explored: another plan is needed only if the
+        solution's route has a link below half the weight of the checks (17 Oct, Debian: a 12-minute second plan to
+        find the same value again)."""
         route = self._path((self.value or {}).get("link"))
         return bool(route) and min(a.quality for a in route) >= 0.5
 
     def checks(self) -> dict:
-        """L'esito dei controlli sulla soluzione e lo stato della risposta (docs/validation.md §4).
-        «Confermata»: stato `verificata` o `sostenuta`, cioè un valore, nessun anello debole, il valore preso da una
-        pagina letta, nessuna fonte che indichi un'altra strada o un altro valore, nessuna obiezione della revisione."""
+        """The outcome of the checks on the solution and the answer status (docs/validation.md §4).
+        «Confirmed»: status `verified` or `supported`, i.e. a value, no weak link, the value taken from a page read, no
+        source pointing to another route or another value, no objection from the review."""
         exams = getattr(self, "exams", None)
         if not self.value:
             discarded = getattr(self, "discarded", None)
             premise = validation.refuted_premise(exams) if discarded else None
             return {"confirmed": False, "status": "not found", "weak_links": 0, "value_source": "",
-                    "reasons": [f"premessa smentita: «{premise['what']}» («{premise['quote']}»)"] if premise
+                    "reasons": [f"premise refuted: «{premise['what']}» («{premise['quote']}»)"] if premise
                     else [self.reason] if discarded else [],
                     "disagreements": [], "exams": exams, "premise": premise}
         outcome = {"value": self.value["value"], "weak_links": self._weak_links(),
@@ -833,22 +836,22 @@ class Chain:
         outcome["confirmed"] = outcome["status"] in ("verified", "supported")
         return outcome
 
-    # Sotto questa cifra residua i controlli con il modello non partono: la scrittura della risposta viene prima.
+    # Below this remaining amount the checks with the model do not start: writing the answer comes first.
     MIN_BUDGET_FOR_EXAMS = 0.06
 
     def final_review(self) -> None:
-        """I controlli con il modello sulla soluzione trovata, prima di scrivere la risposta: seconda lettura del valore
-        (G2), lo stesso dato in un'altra fonte (G5), revisione contraria della catena con un altro modello (G6). Non
-        cambiano la risposta: ne decidono lo stato. Gli esiti restano in `self.esami`."""
+        """The checks with the model on the solution found, before writing the answer: second reading of the value
+        (G2), the same data in another source (G5), adversarial review of the chain with another model (G6). They do
+        not change the answer: they decide its status. The outcomes stay in `self.exams`."""
         if not self.value or self.exams is not None:
             return
         self.exams = {k: {"outcome": "not done"} for k in ("second_reading", "corroboration", "review")}
         if self.r.thinker.ledger.available("review") < self.MIN_BUDGET_FOR_EXAMS:
-            self.exams["reason"] = "budget di Claude quasi finito"
+            self.exams["reason"] = "Claude budget almost used up"
             return
-        self.r._phase("Controllo la risposta: seconda lettura, altre fonti, revisione…")
+        self.r._phase("Checking the answer: second reading, other sources, review…")
         if (self.plan.get("answer") or {}).get("is_entity") or "proofs" not in self.value:
-            # il valore è l'entità dell'ultimo passo: non c'è un dato da rileggere o da ritrovare altrove
+            # the value is the entity of the last step: there is no data to reread or to find elsewhere
             self.exams["second_reading"] = self.exams["corroboration"] = {"outcome": "not needed"}
         else:
             self.exams["second_reading"] = self._second_reading()
@@ -856,24 +859,24 @@ class Chain:
         self.exams["review"] = self._adversarial_review()
         premise = validation.refuted_premise(self.exams)
         if premise:
-            # La domanda dà per vero qualcosa che una riga nega: la strada trovata è «abbastanza simile», non la
-            # risposta. Il valore resta da parte (riepilogo: valore_scartato) e la domanda è «non trovata».
+            # The question takes for granted something a row denies: the route found is «similar enough», not the
+            # answer. The value is set aside (summary: discarded_value) and the question is «not found».
             self.discarded, self.value = self.value, None
-            self.reason = (f"premessa smentita: la domanda dà per vero «{premise['what']}», le fonti dicono "
+            self.reason = (f"premise refuted: the question takes «{premise['what']}» for granted, the sources say "
                            f"«{premise['quote']}»")
-            self.history.append({"step": -3, "relation": "premessa smentita", "attempt": 0,
+            self.history.append({"step": -3, "relation": "premise refuted", "attempt": 0,
                                 "candidates": [str(self.discarded["value"])], "kept": [],
                                 "discarded": [(str(self.discarded["value"]), [premise["what"], premise["quote"]])]})
             return
         name = (self.exams["review"] or {}).get("starting_point_name", "")
         missing = validation.missing_name(name, self.r.topic, self._read_texts())
         if missing:
-            # La domanda chiama per nome la sua partenza e quel nome non sta in nessuna pagina letta: la strada è
-            # partita da un'altra cosa (15/11: entità inventate, la catena ne prendeva una vicina).
+            # The question names its starting point and that name is in no page read: the route started from
+            # something else (15 Nov: invented entities, the chain took a nearby one).
             self.discarded, self.value = self.value, None
-            self.reason = (f"premessa smentita: «{name}», nominato dalla domanda, non compare in nessuna delle pagine "
-                           f"lette (mancano: {', '.join(missing)})")
-            self.history.append({"step": -3, "relation": "nome della partenza assente", "attempt": 0,
+            self.reason = (f"premise refuted: «{name}», named by the question, appears in none of the pages read "
+                           f"(missing: {', '.join(missing)})")
+            self.history.append({"step": -3, "relation": "starting point name missing", "attempt": 0,
                                 "candidates": [str(self.discarded["value"])], "kept": [],
                                 "discarded": [(str(self.discarded["value"]), [name] + missing)]})
             return
@@ -881,10 +884,10 @@ class Chain:
         if objection:
             weak_ones = self._weak_links()
             self.discarded, self.value = self.value, None
-            self.reason = (f"catena respinta dalla revisione: non torna «{objection['clue']}» (le fonti dicono "
-                           f"«{objection['quote']}»), la premessa della domanda non è provata e {weak_ones} anelli "
-                           "non sono confermati")
-            self.history.append({"step": -3, "relation": "catena respinta", "attempt": 0,
+            self.reason = (f"chain rejected by the review: «{objection['clue']}» does not fit (the sources say "
+                           f"«{objection['quote']}»), the question's premise is not proven and {weak_ones} links "
+                           "are not confirmed")
+            self.history.append({"step": -3, "relation": "chain rejected", "attempt": 0,
                                 "candidates": [str(self.discarded["value"])], "kept": [],
                                 "discarded": [(str(self.discarded["value"]), [objection["clue"], objection["quote"]])]})
 
@@ -895,8 +898,8 @@ class Chain:
                 "proofs": self._numbered(proofs)}
 
     def _read_value(self, a: Link, proofs: list[Proof]) -> tuple[str, Proof | None]:
-        """Una lettura del valore sulle `prove`, con gli stessi controlli del programma della prima: tipo e intervallo,
-        valore scritto nella riga, riga che parla dell'entità."""
+        """A reading of the value on the `proofs`, with the same program checks as the first: kind and interval, value
+        written in the row, row that talks about the entity."""
         outcome = self._decide("value", self._value_request(a, proofs), {"value": "", "proof": 0})
         value, proof = str(outcome.get("value") or ""), self._proof(proofs, outcome.get("proof"))
         if not value or proof is None or allowed_value(value, self.plan.get("answer") or {}) \
@@ -906,7 +909,7 @@ class Chain:
         return value, proof
 
     def _second_reading(self) -> dict:
-        """G2. Le stesse righe in ordine inverso, lette un'altra volta: il valore deve tornare uguale."""
+        """G2. The same rows in reverse order, read once more: the value must come out the same."""
         value, proof = self._read_value(self.value["link"], self.value["proofs"][::-1])
         if not value:
             return {"outcome": "not found again"}
@@ -915,8 +918,8 @@ class Chain:
         return {"outcome": "disagree", "value": value, "url": proof.url, "row": " ".join(proof.text.split())[:300]}
 
     def _corroboration(self) -> dict:
-        """G5. Lo stesso dato cercato nelle altre fonti già disponibili sull'entità finale: le sue voci di Wikipedia in
-        altre lingue e le altre pagine lette (non gli estratti delle ricerche). Mai la pagina del valore."""
+        """G5. The same data looked for in the other sources already available on the final entity: its Wikipedia
+        articles in other languages and the other pages read (not the search snippets). Never the value's page."""
         a, first = self.value["link"], self.value["proof"]
         answer = self.plan.get("answer") or {}
         words = list(answer.get("words") or []) + [answer.get("what", "")] + list(answer.get("checks") or [])
@@ -937,7 +940,7 @@ class Chain:
                 "row": " ".join(proof.text.split())[:300]}
 
     def _route_rows(self) -> list[Proof]:
-        """Le righe su cui poggia la soluzione: legami, controlli provati e valore, dalla partenza all'entità finale."""
+        """The rows the solution rests on: ties, proven checks and value, from the starting point to the final entity."""
         if not self.value:
             return []
         rows: list[Proof] = []
@@ -948,11 +951,11 @@ class Chain:
     _INFOBOX_ROW_START = re.compile(r"[^.:]{1,40}:\s")
 
     def _rows_of_other_articles(self, route: list[Link]) -> list[Proof]:
-        """Per ogni anello, le righe che parlano della sua relazione nelle voci dell'anello di prima, comprese le altre
-        lingue e senza la pagina da cui il legame è stato preso: se un'altra voce dà un'altra entità (un altro luogo di
-        nascita, un altro relatore), chi rivede la catena deve poterlo vedere. Il riscontro del valore (G5) guarda solo
-        l'ultimo dato; qui si guardano i passaggi (12/11, domande di controllo, Python: luogo di nascita diverso tra
-        due voci, risposta «verificata»)."""
+        """For each link, the rows about its relation in the articles of the previous link, including the other
+        languages and without the page the tie was taken from: if another article gives another entity (another
+        birthplace, another advisor), the reviewer of the chain must be able to see it. The value corroboration (G5)
+        looks only at the last data; here the steps are looked at (12 Nov, control questions, Python: different
+        birthplace between two articles, answer «verified»)."""
         rows: list[Proof] = []
         for a in route:
             if a.parent is None:
@@ -968,7 +971,7 @@ class Chain:
         return rows
 
     def _adversarial_review(self) -> dict:
-        """G6. Un altro modello rilegge la domanda, la strada e le righe usate, cercando l'indizio che non torna."""
+        """G6. Another model rereads the question, the route and the rows used, looking for the clue that does not fit."""
         from .. import configuration
         route = self._path(self.value["link"])
         root = self._root(self.value["link"])
@@ -976,7 +979,7 @@ class Chain:
         rows = list({(p.url, p.text): p for p in rows}.values())[:90]
         data = {"question": self.r.topic[:1500],
                 "route": " → ".join([root.name] + [f"[{a.relation}] {a.name}" for a in route]),
-                "answer": f"{self.value['value']} ({(self.plan.get('answer') or {}).get('what', '')} di "
+                "answer": f"{self.value['value']} ({(self.plan.get('answer') or {}).get('what', '')} of "
                             f"{self.value['link'].name})",
                 "rows": "\n".join(f"[{i}] {p.text[:700]}" for i, p in enumerate(rows, start=1))}
         model = str(self.o.get("review_model") or configuration.load()["review_model"])
@@ -984,7 +987,7 @@ class Chain:
         def one(_n: int) -> dict:
             outcome, parent = self.r.thinker.decide("review", data, lambda: {}, model=model)
             return validation.examine_review(outcome, rows) if parent == "claude" else {"outcome": "not done"}
-        # Due revisioni indipendenti, vale la più severa: una sola oscilla tra «regge» e «non provato».
+        # Two independent reviews, the stricter one counts: a single one swings between «holds» and «not proven».
         readings = max(1, int(self.o.get("review_readings", 2)))
         with ThreadPoolExecutor(max_workers=readings) as pool:
             unit = validation.merge_reviews(list(pool.map(one, range(readings))))
@@ -992,8 +995,8 @@ class Chain:
         return {**unit, "model": model} if unit.get("outcome") == "done" else unit
 
     def _read_texts(self) -> list[str]:
-        """Tutto quello che la catena ha letto per questa domanda: pezzi di pagina salvati, voci di Wikipedia degli
-        anelli (titolo e righe), estratti dei risultati delle ricerche."""
+        """Everything the chain read for this question: saved page segments, Wikipedia articles of the links (title and
+        rows), search result snippets."""
         texts = [str(s.get("text", "")) for s in self._after_segments(0)] + [p.text for p in self._snippets]
         links = {id(a): a for beam in self.links for a in beam}
         a = (self.value or self.discarded or {}).get("link")
@@ -1020,11 +1023,11 @@ class Chain:
 
     @staticmethod
     def _jump_plan(plan: dict) -> dict | None:
-        """Un passo intermedio verso una cosa senza nome proprio né pagina sua (statua, simulacro, dipinto, oggetto):
-        piano con quel passo unito al successivo, che parte dall'entità di prima e ne eredita controlli, parole e
-        descrizioni (25/10, Cappella Sistina: «festa → simulacro che la raffigura → comune» si perde tra statue e
-        dipinti; «festa → comune in cui si trova un suo simulacro» trova Novara di Sicilia nella galleria della voce
-        dell'Assunzione. Nel prompt la stessa regola era seguita 1 volta su 3)."""
+        """An intermediate step towards a thing without a proper name or a page of its own (statue, effigy, painting,
+        object): a plan with that step merged into the next one, starting from the previous entity and inheriting its
+        checks, words and descriptions (25 Oct, Sistine Chapel: «feast → effigy depicting it → town» gets lost among
+        statues and paintings; «feast → town where an effigy of it is» finds Novara di Sicilia in the gallery of the
+        Assumption article. In the prompt the same rule was followed 1 time out of 3)."""
         steps = list(plan.get("steps") or [])
         for i, step in enumerate(steps[:-1]):
             text = _norm(f"{step.get('kind', '')} {step.get('relation', '')}")
@@ -1032,18 +1035,18 @@ class Chain:
                 continue
             after = steps[i + 1]
             merged = {**after,
-                     "relation": f"{after['relation']} (attraverso: {step['relation']})"[:150],
+                     "relation": f"{after['relation']} (via: {step['relation']})"[:150],
                      "words": list(dict.fromkeys(list(after.get("words") or []) + list(step.get("words") or [])))[:14],
                      "descriptions": list(after.get("descriptions") or []) + list(step.get("descriptions") or []),
                      "checks": list(after.get("checks") or []) + [
-                         {**c, "description": f"legato a {step.get('kind') or step['relation']}: "
+                         {**c, "description": f"tied to {step.get('kind') or step['relation']}: "
                                              f"{c.get('description', '')}"[:200]} for c in step.get("checks") or []]}
             return {**plan, "steps": steps[:i] + [merged] + steps[i + 2:],
-                    "reason": f"salto di «{step['relation']}» (cosa senza nome proprio)"}
+                    "reason": f"skipping «{step['relation']}» (thing without a proper name)"}
         return None
 
     def _alternative_plan(self) -> dict | None:
-        """Un secondo piano, diverso dal primo, da percorrere insieme a lui nella stessa frontiera."""
+        """A second plan, different from the first, to walk together with it in the same frontier."""
         plan = self._decide("chain", {"question": self.r.topic[:1000], "today": self.r.today,
                                         "interpretation": self.interpretation,
                                         "alternative_to": {"starting_point": (self.plan.get("starting_point") or {}).get("entity"),
@@ -1053,18 +1056,18 @@ class Chain:
                 or self._signature(plan) == self._signature(self.plan):
             return None
         self.r.publish({"kind": "chain_search", "interpretation": self.interpretation, "plan": plan})
-        self.history.append({"step": 0, "relation": "piano alternativo", "attempt": 0, "candidates": [],
+        self.history.append({"step": 0, "relation": "alternative plan", "attempt": 0, "candidates": [],
                             "kept": [], "discarded": [], "alternative_plan": plan})
         return plan
 
     def _replan(self) -> bool:
-        hits = [{"relation": step.get("relation"), "entity": [a.name + (" (debole)" if a.weak else "")
+        hits = [{"relation": step.get("relation"), "entity": [a.name + (" (weak)" if a.weak else "")
                                                                      for a in beam]}
                    for step, beam in zip(self.plan.get("steps", []), self.links, strict=False)]
         previous = {"starting_point": (self.plan.get("starting_point") or {}).get("entity"),
                       "steps": [p.get("relation") for p in self.plan.get("steps", [])],
                       "where_it_stopped": self.reason, "found_links": hits}
-        self.r._phase("La catena non è arrivata alla risposta: Claude prepara una catena diversa…")
+        self.r._phase("The chain did not reach the answer: Claude is preparing a different chain…")
         plan = self._decide("chain", {"question": self.r.topic[:1000], "interpretation": self.interpretation,
                                         "previous_chain": previous},
                              {"starting_point": {}, "steps": [], "answer": {}, "reason": ""})
@@ -1072,10 +1075,10 @@ class Chain:
             return False
         signature = lambda x: (_norm((x.get("starting_point") or {}).get("entity")),  # noqa: E731
                            tuple(_norm(p.get("relation")) for p in x.get("steps", [])))
-        if signature(plan) == signature(self.plan):  # 16/10, Linux kernel: la stessa catena ripercorsa, 9 minuti persi
-            self.r._phase("Il nuovo piano è uguale al primo: non lo ripercorro.")
+        if signature(plan) == signature(self.plan):  # 16 Oct, Linux kernel: the same chain walked again, 9 minutes lost
+            self.r._phase("The new plan is the same as the first: not walking it again.")
             return False
-        self.history.append({"step": 0, "relation": "nuovo piano", "attempt": 0, "candidates": [],
+        self.history.append({"step": 0, "relation": "new plan", "attempt": 0, "candidates": [],
                             "kept": [], "discarded": [], "previous_plan": previous})
         self.plan, self.links, self.reason, self.value = plan, [], "", None
         self.r.publish({"kind": "chain_search", "interpretation": self.interpretation, "plan": self.plan})
@@ -1089,7 +1092,7 @@ class Chain:
         for number, step in enumerate(self.plan["steps"], start=1):
             new_items = self._walk_step(number, step, beam)
             if not new_items:
-                self.reason = f"catena interrotta al passo {number} ({step.get('relation')})"
+                self.reason = f"chain broken at step {number} ({step.get('relation')})"
                 return
             beam = new_items[:width]
             self.links.append(beam)
@@ -1097,16 +1100,16 @@ class Chain:
                 self.reason = self.r._reached_limit()
                 if number < len(self.plan["steps"]):
                     return
-        # Dietro al fascio, gli altri candidati non smentiti dell'ultimo passo, solo su Wikipedia (16/10, Wikipedia:
-        # Roland Unger, giusto, era tra i candidati senza "sì" e fuori dal fascio).
+        # Behind the beam, the other unrefuted candidates of the last step, only on Wikipedia (16 Oct, Wikipedia:
+        # Roland Unger, correct, was among the candidates without "yes" and outside the beam).
         others = [a for a in self._alive if a not in beam][:4]
         self._value(beam, others)
 
-    # --- frontiera globale (DeepSearch, ICLR 2026) -----------------------------------------------------------------
+    # --- global frontier (DeepSearch, ICLR 2026) -------------------------------------------------------------------
 
     @staticmethod
     def _path(a: Link) -> list[Link]:
-        """Gli anelli dalla partenza (esclusa) ad `a`."""
+        """The links from the starting point (excluded) to `a`."""
         chain = []
         while a is not None and a.parent is not None:
             chain.append(a)
@@ -1114,33 +1117,34 @@ class Chain:
         return chain[::-1]
 
     def _depth(self, a: Link) -> int:
-        """Il passo del piano a cui è arrivato il nodo: quelli della sua radice (partenza 0, ancora passo_base) più
-        gli anelli percorsi da lì."""
+        """The plan step the node has reached: those of its root (starting point 0, anchor base_step) plus the links
+        walked from there."""
         return self._root(a).base_step + len(self._path(a))
 
     def _priority(self, a: Link, steps: int, action: str) -> float:
-        """Quanto conviene la prossima azione su un nodo: qualità della strada che lo raggiunge (metà la peggiore,
-        metà la media: una catena vale quanto il suo anello più debole), un piccolo premio per la profondità (radice
-        di profondità/passi, per finire le catene) e una penalità per le azioni care (il web dopo Wikipedia)."""
-        # Un anello senza il legame provato con quello di prima vale molto meno (18/10, Arduino: Damian Kulash,
-        # trovato solo per descrizione «nato a metà anni '70», preso come coniuge della fondatrice).
+        """How worthwhile the next action on a node is: quality of the route reaching it (half the worst, half the
+        mean: a chain is worth as much as its weakest link), a small bonus for depth (square root of depth/steps, to
+        finish the chains) and a penalty for expensive actions (the web after Wikipedia)."""
+        # A link without a proven tie to the previous one is worth much less (18 Oct, Arduino: Damian Kulash, found
+        # only by description «born in the mid-70s», taken as the founder's spouse).
         route_quality = [x.quality - (0.15 if x.weak else 0.0)
                           - (0.0 if self._linked(x) else 0.05 if self._co_occurs(x) else 0.25)
                           for x in self._path(a)]
-        # Una radice vale 0,7: finché non si allarga non si sa cosa darà (18/10, Wikipedia: con 1,0 le ricerche sul web
-        # dalla partenza passavano sempre davanti al valore di Roland Unger, giusto, fino al limite delle pagine).
+        # A root is worth 0.7: until it is expanded, nobody knows what it will give (18 Oct, Wikipedia: with 1.0 the
+        # web searches from the starting point always went ahead of the value of Roland Unger, correct, up to the
+        # page limit).
         base = 0.5 * min(route_quality) + 0.5 * sum(route_quality) / len(route_quality) if route_quality else 0.7
-        # Il valore su Wikipedia di un nodo finale costa una chiamata e fa anche da controllo (tipo e intervallo):
-        # passa davanti al web (17/10, Promessi sposi: Ponchielli, giusto, tra i candidati; la frontiera ha allargato
-        # sul web fino al limite delle 30 pagine senza cercarne il valore).
-        # I nodi finali sono a un'azione dalla risposta: il loro valore, anche sul web (2 pagine), costa meno di un
-        # passo sul web (6 pagine e la verifica).
+        # The Wikipedia value of a final node costs one call and also acts as a check (kind and interval): it goes
+        # ahead of the web (17 Oct, Promessi sposi: Ponchielli, correct, among the candidates; the frontier expanded
+        # on the web up to the 30-page limit without looking for its value).
+        # Final nodes are one action away from the answer: their value, even on the web (2 pages), costs less than a
+        # step on the web (6 pages and the verification).
         cost = {"wiki": 0.0, "web": 0.35, "value": -0.45, "web_value": -0.1}[action]
-        # Un nodo che su Wikipedia non ha dato nessun candidato (di solito: non ha una voce) ha nel web l'unica
-        # strada, non un ripiego: con una buona qualità la penalità scende (24/10, Arduino: Keyboardio mai allargato
-        # sul web in 3 corse su 4; nelle corse passate così anche «Simone da Orsenigo», Duomo, e «Assunzione di
-        # Maria Vergine», Cappella Sistina. Soglia 0,5 e penalità 0,1 scelte sulle 95 corse con la frontiera:
-        # 6 entità giuste su 10 anticipate contro 7 allargamenti inutili nelle corse giuste).
+        # A node that gave no candidate on Wikipedia (usually: it has no article) has the web as its only route, not
+        # a fallback: with a good quality the penalty goes down (24 Oct, Arduino: Keyboardio never expanded on the web
+        # in 3 runs out of 4; in past runs the same for «Simone da Orsenigo», Duomo, and «Assunzione di Maria
+        # Vergine», Sistine Chapel. Threshold 0.5 and penalty 0.1 chosen on the 95 runs with the frontier: 6 correct
+        # entities out of 10 brought forward against 7 useless expansions in the correct runs).
         if action == "web" and a.empty_wiki and (a.quality if a.parent is not None else 0.7) >= 0.5:
             cost = 0.1
         return base + 0.1 * math.sqrt(self._depth(a) / max(steps, 1)) - cost - 0.4 * a.failures + a.preferred
@@ -1154,10 +1158,10 @@ class Chain:
         return self._root(a).plan or self.plan
 
     def _plan_roots(self, plan: dict) -> list[Link]:
-        """Partenza e ancore di un piano. Ancore (Think-on-Graph, HierSearch): altre entità che la domanda nomina con
-        certezza e da cui, con una loro relazione, si arriva al risultato di un passo; più sono vicine alla risposta,
-        prima si esplorano (17/10, Raspberry Pi: la Borsa di Londra, nominata, era a due passi dalla risposta; la
-        catena partita dal Raspberry Pi ha finito le pagine sui distributori)."""
+        """Starting point and anchors of a plan. Anchors (Think-on-Graph, HierSearch): other entities that the question
+        names with certainty and from which, with a relation of theirs, the result of a step is reached; the closer to
+        the answer, the earlier they are explored (17 Oct, Raspberry Pi: the London Stock Exchange, named, was two
+        steps from the answer; the chain started from the Raspberry Pi used up its pages on the distributors)."""
         n = len(plan["steps"])
         starting_point = Link(plan["starting_point"]["entity"], context=str(plan["starting_point"].get("clue") or "")[:150],
                           quality=1.0, plan=plan)
@@ -1172,60 +1176,60 @@ class Chain:
         return roots
 
     def _walk_frontier(self, plans: list[dict] | None = None) -> None:
-        """Ricerca a frontiera globale: invece di andare passo per passo con un fascio fisso di 3 entità, il programma
-        tiene una lista unica di tutte le azioni aperte, di tutti i passi (allargare un nodo su Wikipedia, sul web,
-        cercarne il valore) e fa ogni volta la migliore. Se un ramo non porta a niente si torna da soli al candidato
-        di riserva del passo giusto, senza rifare il piano. Un nodo i cui figli falliscono tutti prende una penalità
-        (fallimenti); chi ha già portato a un valore non viene penalizzato (regola asimmetrica). Con più piani
-        (autoconsistenza alla Open Deep Search, ma in parallelo) le strade di tutti i piani stanno nella stessa
-        frontiera: va avanti quella che funziona meglio (17/10, Lepanto: un piano con «repubblica sorella di» al posto
-        di «sostituita da» non trovava la Repubblica Ligure)."""
+        """Global frontier search: instead of going step by step with a fixed beam of 3 entities, the program keeps a
+        single list of all the open actions, of all steps (expand a node on Wikipedia, on the web, look for its value)
+        and each time does the best one. If a branch leads nowhere, it falls back by itself to the reserve candidate of
+        the right step, without redoing the plan. A node whose children all fail gets a penalty (failures); one that
+        already led to a value is not penalised (asymmetric rule). With several plans (self-consistency à la Open Deep
+        Search, but in parallel) the routes of all plans sit in the same frontier: the one that works best goes ahead
+        (17 Oct, Lepanto: a plan with «sister republic of» instead of «replaced by» did not find the Ligurian
+        Republic)."""
         plans = plans or [self.plan]
         actions: list[tuple[Link, str]] = [(r, "wiki") for plan in plans for r in self._plan_roots(plan)]
-        levels: dict[tuple[int, int], list[Link]] = {}  # (piano, profondità) → anelli raggiunti
-        seen: dict[tuple[int, int], set[str]] = {}  # nomi già raggiunti (un'entità entra una volta sola)
+        levels: dict[tuple[int, int], list[Link]] = {}  # (plan, depth) → links reached
+        seen: dict[tuple[int, int], set[str]] = {}  # names already reached (an entity enters only once)
         solutions: list[tuple[float, dict, dict]] = []
-        already_expanded: dict[tuple, tuple[str, list[Link]]] = {}  # firma → (passo, figli trovati)
-        web_values: dict[int, int] = {}  # genitore → valori cercati sul web per i suoi figli
-        already_marks: dict[tuple, set[str]] = {}  # firma → passi (relazione + controlli) già allargati
+        already_expanded: dict[tuple, tuple[str, list[Link]]] = {}  # signature → (step, children found)
+        web_values: dict[int, int] = {}  # parent → values looked up on the web for its children
+        already_marks: dict[tuple, set[str]] = {}  # signature → steps (relation + checks) already expanded
         done, maximum = 0, int(self.o.get("frontier_actions", 30))
         priority_of = lambda x: self._priority(x[0], len(self._plan_of(x[0])["steps"]), x[1])  # noqa: E731
         while actions and done < maximum:
             if self.r._reached_limit() or self.r.thinker.exhausted:
-                self.reason = self.reason or self.r._reached_limit() or "budget di Claude esaurito"
+                self.reason = self.reason or self.r._reached_limit() or "Claude budget used up"
                 break
             actions.sort(key=lambda x: -priority_of(x))
             node, action = actions.pop(0)
             priority = priority_of((node, action))
-            # Trovato un valore, si continua solo con azioni promettenti quanto la soluzione (autoconsistenza): una
-            # seconda strada che porta allo stesso valore lo conferma, una migliore lo sostituisce. La soluzione vale
-            # quanto la sua strada, senza il premio della ricerca del valore (25/10, Arduino: «Chris Martin», coniuge
-            # trovato per descrizione, valeva 0,82 col premio di 0,45 e Keyboardio, 0,58, non veniva mai allargato).
+            # Once a value is found, only actions as promising as the solution go on (self-consistency): a second
+            # route leading to the same value confirms it, a better one replaces it. The solution is worth as much as
+            # its route, without the value-search bonus (25 Oct, Arduino: «Chris Martin», spouse found by
+            # description, was worth 0.82 with the 0.45 bonus and Keyboardio, 0.58, was never expanded).
             if solutions and (priority <= solutions[0][0] or done >= maximum - 2):
                 break
-            # Il tetto conta solo le espansioni (le ricerche costose): cercare il valore di un nodo finale costa una
-            # chiamata e non consuma il tetto (22/10, Linux kernel: le 30 azioni finite in ricerche di valore prima di
-            # arrivare ad Alexandre Oliva, candidato giusto ma debole). Il limite di tempo e di budget resta.
+            # The cap counts only the expansions (the expensive searches): looking for a final node's value costs one
+            # call and does not use up the cap (22 Oct, Linux kernel: the 30 actions were spent on value searches
+            # before reaching Alexandre Oliva, a correct but weak candidate). The time and budget limit still holds.
             if action in ("wiki", "web"):
                 done += 1
             plan = self._plan_of(node)
             steps, n = plan["steps"], len(plan["steps"])
             depth = self._depth(node)
             self.actions.append(f"{action} {node.name} ({priority:.2f})" + (
-                f" [piano {plans.index(plan) + 1}]" if len(plans) > 1 else ""))
+                f" [plan {plans.index(plan) + 1}]" if len(plans) > 1 else ""))
             if action in ("value", "web_value"):
                 self.value, self.plan = None, plan
                 if self._entity_value(node, (1,) if action == "value" else (2, 3)):
                     solutions.append((self._priority(node, n, "wiki"), self.value, plan))
                     solutions.sort(key=lambda x: -x[0])
                     self.history.append({"step": n + 1, "relation": "value", "attempt": 0, "candidates": [node.name],
-                                        "kept": [(self.value["value"], round(priority, 2), "soluzione")],
+                                        "kept": [(self.value["value"], round(priority, 2), "solution")],
                                         "discarded": []})
                     if all(not x.weak for x in self._path(node)):
-                        break  # strada tutta confermata: basta così
+                        break  # fully confirmed route: that is enough
                 elif action == "value" and web_values.get(id(node.parent), 0) < 3:
-                    # Al massimo 3 valori sul web per genitore (25/10, Wikipedia: «consiglio direttivo di» dava ~10
-                    # membri, ognuno con 2 pagine di valore sul web, fino al limite dei 35 minuti).
+                    # At most 3 web values per parent (25 Oct, Wikipedia: «board of directors of» gave ~10 members,
+                    # each with 2 value pages on the web, up to the 35-minute limit).
                     web_values[id(node.parent)] = web_values.get(id(node.parent), 0) + 1
                     actions.append((node, "web_value"))
                 else:
@@ -1233,22 +1237,22 @@ class Chain:
                 continue
             step = steps[depth]
             if node.parent is None and node.base_step:
-                # Da un'ancora si segue la sua relazione, con i controlli del passo più quello della relazione saltata
-                # (peso 3): l'ancora non deve far perdere l'identità della catena (18/10, Concilio di Trento: ancora
-                # «Alta Marna», Chaumont passava tutti i controlli senza essere il luogo di nascita del marchese
+                # From an anchor its relation is followed, with the step's checks plus the one of the skipped relation
+                # (weight 3): the anchor must not make the chain lose its identity (18 Oct, Council of Trent: anchor
+                # «Haute-Marne», Chaumont passed all the checks without being the birthplace of the Marquis
                 # d'Elbeuf).
                 first = steps[depth - 1].get("checks") or [] if depth >= 1 else []
                 who = "; ".join(str(c.get("description") or "") for c in first) or \
                     str((plan.get("starting_point") or {}).get("entity") or "")
-                skipped = {"description": f"è «{step['relation']}» di: {who}"[:200], "weight": 3,
-                           "readings": [f"{step['relation']} (della persona o cosa del passo precedente)"]}
+                skipped = {"description": f"is «{step['relation']}» of: {who}"[:200], "weight": 3,
+                           "readings": [f"{step['relation']} (of the person or thing of the previous step)"]}
                 step = {**step, "relation": node.relation,
                          "checks": list(step.get("checks") or []) + [skipped]}
-            # La stessa entità, allo stesso passo e con la stessa relazione, si allarga una volta sola anche se due
-            # piani (o due varianti del nome) ci arrivano: le pagine web non si spendono due volte (23/10, Arduino:
-            # «Keyboard.io» e «Keyboardio» allargati nei due piani, tetto di 30 pagine finito prima del coniuge).
+            # The same entity, at the same step and with the same relation, is expanded only once even if two plans
+            # (or two variants of the name) reach it: web pages are not spent twice (23 Oct, Arduino: «Keyboard.io»
+            # and «Keyboardio» expanded in both plans, 30-page cap used up before the spouse).
             if action == "wiki" and self.wiki is not None:
-                self._articles(node)  # la voce serve comunque all'allargamento; qui dà la chiave dell'entità
+                self._articles(node)  # the article is needed for the expansion anyway; here it gives the entity key
             signature = self._action_signature(action, node, depth, step["relation"])
             step_mark = json.dumps([step.get("relation"), step.get("checks")], sort_keys=True, default=str)
             key = (id(plan), depth + 1)
@@ -1256,16 +1260,16 @@ class Chain:
             children = []
             reuse = False
             case = self._already_done(signature, action, step_mark, already_expanded, already_marks)
-            if case in ("salta", "riusa"):
+            if case in ("skip", "reuse"):
                 done -= 1
                 already_mark, already_children = already_expanded[signature]
-                if case == "salta" or node in [x.parent for x in already_children]:
-                    self.actions[-1] += " (già fatta)"
+                if case == "skip" or node in [x.parent for x in already_children]:
+                    self.actions[-1] += " (already done)"
                     continue
-                # Stesso passo già allargato da un altro piano: i suoi figli (già verificati) valgono anche qui, sotto
-                # questo nodo, senza rifare ricerche (25/10: un piano con lo stesso primo passo restava fermo).
+                # Same step already expanded by another plan: its children (already verified) are valid here too,
+                # under this node, without redoing searches (25 Oct: a plan with the same first step stayed stuck).
                 children = [replace(a, parent=node, outcomes=list(a.outcomes)) for a in already_children]
-                self.actions[-1] += " (figli riusati)"
+                self.actions[-1] += " (children reused)"
                 reuse = True
             first_history = len(self.history)
             for attempt in (() if reuse else (1, 2) if action == "wiki" else (3, 4)):
@@ -1275,26 +1279,26 @@ class Chain:
                 if any(not a.weak and self._complete(a) for a in children) or self.r._reached_limit():
                     break
             if not reuse:
-                # Stessa relazione con controlli diversi (un altro piano): su Wikipedia si rifà, costa solo la verifica
-                # (29/10, Galileo: Biancani scartato con i controlli del piano 1, tenuto con quelli del piano 2, che
-                # però non partiva mai: «già fatta»).
+                # Same relation with different checks (another plan): on Wikipedia it is redone, it costs only the
+                # verification (29 Oct, Galileo: Biancani discarded with the checks of plan 1, kept with those of plan
+                # 2, which however never started: «already done»).
                 already_expanded.setdefault(signature, (step_mark, list(children)))
                 already_marks.setdefault(signature, set()).add(step_mark)
             if action == "wiki" and not reuse:
-                # Vuoto: niente candidati seguendo la relazione e niente tenuti dalla ricerca per descrizione, che dà
-                # nomi qualsiasi (24/10, Arduino: per «fondatori di Keyboardio» Art Lazere, Julius Chein, Steve Jobs,
-                # tutti scartati, e il web di Keyboardio non è mai partito. Sulle corse passate: +2 nodi giusti
-                # anticipati, +4 allargamenti inutili nelle corse giuste; «nessun tenuto» ovunque: +5 e +26).
+                # Empty: no candidates following the relation and none kept by the search by description, which gives
+                # arbitrary names (24 Oct, Arduino: for «founders of Keyboardio» Art Lazere, Julius Chein, Steve Jobs,
+                # all discarded, and the Keyboardio web never started. On past runs: +2 correct nodes brought forward,
+                # +4 useless expansions in the correct runs; «none kept» everywhere: +5 and +26).
                 node.empty_wiki = not any(x.get("candidates") if x.get("attempt") == 1 else x.get("kept")
                                           for x in self.history[first_history:])
-                actions.append((node, "web"))  # il web resta come riserva, con la sua penalità
+                actions.append((node, "web"))  # the web stays as a reserve, with its penalty
             already = {k for x in levels.get(key, []) for k in (self._canonical_key(x), _entity_key(x.name))}
             new_items = []
             returned = [a for a in children if validation.repeats_ancestor(a, node)]
-            if returned:  # una catena non torna su un'entità già attraversata (relazione letta al contrario)
-                self.history.append({"step": depth + 1, "relation": "già nella strada", "attempt": 0,
+            if returned:  # a chain does not go back to an entity already crossed (relation read backwards)
+                self.history.append({"step": depth + 1, "relation": "already on the route", "attempt": 0,
                                     "candidates": [a.name for a in returned], "kept": [],
-                                    "discarded": [(a.name, ["entità già attraversata dalla catena"]) for a in returned]})
+                                    "discarded": [(a.name, ["entity already crossed by the chain"]) for a in returned]})
             for a in children:
                 if a in returned:
                     continue
@@ -1314,51 +1318,51 @@ class Chain:
         self.links = [sorted(levels[(id(self.plan), d)], key=self._order) for d in mine]
         steps, n = self.plan["steps"], len(self.plan["steps"])
         if solutions:
-            # Due strade allo stesso valore: si tiene la migliore (le altre lo confermano).
+            # Two routes to the same value: the best is kept (the others confirm it).
             self.value = solutions[0][1]
             equal = [x for x in solutions if _norm(x[1]["value"]) == _norm(self.value["value"])]
-            self.reason = f"catena completa: {self.value['link'].name} → {self.value['value']}" + (
-                f" (confermato da {len(equal)} strade)" if len(equal) > 1 else "")
+            self.reason = f"complete chain: {self.value['link'].name} → {self.value['value']}" + (
+                f" (confirmed by {len(equal)} routes)" if len(equal) > 1 else "")
             for a in self._path(self.value["link"]):
                 self._record(a, a.relation or steps[self._depth(a) - 1]["relation"])
             last = self.links[-1] if self.links else []
-            if self.value["link"] in last:  # il fascio finale comincia dall'anello della soluzione
+            if self.value["link"] in last:  # the final beam starts from the solution's link
                 last.remove(self.value["link"])
                 last.insert(0, self.value["link"])
         elif not self.reason:
             reached = max(mine) if mine else 0
-            self.reason = (f"catena interrotta al passo {reached + 1} ({steps[reached].get('relation')})"
-                           if reached < n else "valore richiesto non trovato")
+            self.reason = (f"chain broken at step {reached + 1} ({steps[reached].get('relation')})"
+                           if reached < n else "requested value not found")
 
     @staticmethod
     def _already_done(signature: tuple, action: str, mark: str, already_expanded: dict, already_marks: dict) -> str:
-        """Un allargamento già fatto da un altro piano: «nuova» (mai fatto), «riusa» (stesso passo: i suoi figli),
-        «rifai» (Wikipedia, stessa relazione con controlli diversi: costa solo la verifica; 29/10, Galileo),
-        «salta» (web con controlli diversi: le pagine non si spendono due volte)."""
+        """An expansion already done by another plan: «new» (never done), «reuse» (same step: its children),
+        «redo» (Wikipedia, same relation with different checks: it costs only the verification; 29 Oct, Galileo),
+        «skip» (web with different checks: pages are not spent twice)."""
         if signature not in already_expanded:
             return "new"
         if already_expanded[signature][0] == mark:
-            return "riusa"
+            return "reuse"
         if action == "wiki" and mark not in already_marks.get(signature, set()):
-            return "rifai"
-        return "salta"
+            return "redo"
+        return "skip"
 
     def _final_tiebreak(self, candidates: list[Link], priority, margin: float = 0.05, maximum: int = 5) -> int:
-        """Candidati dell'ultimo passo alla pari (priorità entro `margine` dalla migliore): Haiku li confronta tra loro
-        con la domanda intera e alcune righe delle loro voci (inizio, righe dei controlli, righe con le parole della
-        domanda) e ne sceglie uno o nessuno; lo scelto passa davanti. I controlli dicono sì/no a uno alla volta, il
-        confronto vede gli indizi di sfumatura (24/10, Monte Bianco: Alassio e Laigueglia gemellate entrambe con
-        La Thuile, 0,71 tutte e due; solo Laigueglia è «un piccolo borgo di mare», la domanda dice «borgo»; nelle
-        corse passate 17 soluzioni su 84 venivano da un pareggio, in 4 sbagliate la giusta era tra i pari).
-        Restituisce l'indice scelto (da 0) o -1."""
+        """Tied candidates of the last step (priority within `margin` of the best): Haiku compares them with the whole
+        question and some rows of their articles (start, rows of the checks, rows with the question's words) and
+        chooses one or none; the chosen one goes first. The checks say yes/no one at a time, the comparison sees the
+        nuanced clues (24 Oct, Monte Bianco: Alassio and Laigueglia both twinned with La Thuile, 0.71 each; only
+        Laigueglia is «a small seaside village», the question says «village»; in past runs 17 solutions out of 84
+        came from a tie, in 4 wrong ones the right answer was among the tied).
+        Returns the chosen index (from 0) or -1."""
         points = {id(a): priority(a) for a in candidates}
         best = max(points.values())
-        # Tra candidati legati con una riga e senza nessun «no» lo scarto può essere più largo: la verifica sceglie
-        # una riga per controllo e può dare «in parte» al giusto (25/10, Monte Bianco: Laigueglia 0,7 con la riga
-        # «piccolo borgo di mare» senza Savona, Alassio 0,9; 2 corse su 5 davano Alassio).
+        # Among candidates tied by a row and without any «no» the gap can be wider: the verification picks one row per
+        # check and can give «partly» to the right one (25 Oct, Monte Bianco: Laigueglia 0.7 with the row «piccolo
+        # borgo di mare» without Savona, Alassio 0.9; 2 runs out of 5 gave Alassio).
         clean = [a for a in candidates if self._linked(a) and not self._no(a)]
         first_one = max(candidates, key=lambda a: points[id(a)])
-        threshold = first_one.quality - 0.4 if first_one in clean else 2.0  # qualità: i fratelli hanno la stessa strada
+        threshold = first_one.quality - 0.4 if first_one in clean else 2.0  # quality: siblings have the same route
         tied = sorted((a for a in candidates if points[id(a)] >= best - margin
                        or (a in clean and a.quality >= threshold)),
                       key=lambda a: -points[id(a)])[:maximum]
@@ -1374,55 +1378,55 @@ class Chain:
         outcome = self._decide("final", {"question": self.r.topic[:1000], "candidates": "\n".join(profiles)},
                              {"choice": 0, "reason": ""})
         choice = int(outcome.get("choice") or 0)
-        self.history.append({"step": -2, "relation": "spareggio finale", "attempt": 0,
+        self.history.append({"step": -2, "relation": "final tiebreak", "attempt": 0,
                             "candidates": [a.name for a in tied],
-                            "kept": [(tied[choice - 1].name, choice, "scelto")] if 0 < choice <= len(tied) else [],
+                            "kept": [(tied[choice - 1].name, choice, "chosen")] if 0 < choice <= len(tied) else [],
                             "discarded": [], "reason": str(outcome.get("reason") or "")[:300]})
         if not 0 < choice <= len(tied):
             return -1
-        chosen = tied[choice - 1]  # passa davanti al migliore, anche se partiva più indietro (spareggio largo)
+        chosen = tied[choice - 1]  # goes ahead of the best, even if it started further back (wide tiebreak)
         chosen.preferred = best - points[id(chosen)] + margin
         return choice - 1
 
     @staticmethod
     def _failed(a: Link) -> None:
-        """Penalità a un nodo senza esito e, a metà, alla sua origine (si propaga poco: altri figli possono
-        ancora funzionare)."""
+        """Penalty to a node without outcome and, by half, to its origin (it propagates little: other children may
+        still work)."""
         a.failures += 1.0
         if a.parent is not None:
             a.parent.failures += 0.25
 
     def _step_checks(self, step: dict, beam: list[Link]) -> list[dict]:
-        """I controlli di un passo con i loro pesi: quelli del piano, il tipo (peso 1) e il legame con l'entità di
-        prima (peso 2, controllo per tutti: 16/10, Monte Bianco: Alassio, ligure e savonese, preferito a Laigueglia
-        senza che nessuna riga lo dicesse gemellato con La Thuile)."""
+        """A step's checks with their weights: those of the plan, the kind (weight 1) and the tie with the previous
+        entity (weight 2, a check for all: 16 Oct, Monte Bianco: Alassio, Ligurian and in the province of Savona,
+        preferred to Laigueglia without any row saying it was twinned with La Thuile)."""
         checks = [{**c, "weight": c.get("weight") or 2} for c in step.get("checks", [])]
-        # Un controllo del piano che nomina l'entità di prima ripete il legame («indicato come allievo di Galileo»):
-        # contava due volte (23/10, paper §9.1: Guiducci e Viviani «forti» senza essere gesuiti bolognesi). Diventa
-        # una lettura del legame.
+        # A plan check naming the previous entity repeats the tie («indicated as a student of Galileo»): it counted
+        # twice (23 Oct, paper §9.1: Guiducci and Viviani «strong» without being Bolognese Jesuits). It becomes a
+        # reading of the tie.
         keys = {p for a in beam for p in _norm(a.name).split() if len(p) >= 5 and p not in STOP_WORDS}
         repeated = [c for c in checks if any(re.search(rf"\b{re.escape(k)}\b", _norm(c.get("description", "")))
                                                 for k in keys)]
         checks = [c for c in checks if c not in repeated]
-        if str(step.get("kind") or "").strip():  # il tipo è un controllo (16/10: BeBox, un computer, preso per BeOS)
-            checks.append({"description": f"è di questo tipo: {step['kind']}", "weight": 1,
-                              "readings": [f"{step['kind']} (anche come genere più ampio o più stretto)"]})
-        checks.append({"description": f"è in relazione «{step['relation']}» con {' o '.join(a.name for a in beam)}",
-                          "weight": 2, "readings": ["in senso largo: allievo, discepolo, studiò con, collaboratore, opera "
-                                                 "di, parte di, come richiede la relazione"]
+        if str(step.get("kind") or "").strip():  # the kind is a check (16 Oct: BeBox, a computer, taken for BeOS)
+            checks.append({"description": f"is of this kind: {step['kind']}", "weight": 1,
+                              "readings": [f"{step['kind']} (also as a broader or narrower category)"]})
+        checks.append({"description": f"is in relation «{step['relation']}» with {' or '.join(a.name for a in beam)}",
+                          "weight": 2, "readings": ["in a broad sense: student, disciple, studied with, collaborator, "
+                                                 "work of, part of, as the relation requires"]
                           + [str(c.get("description", "")) for c in repeated]})
         return checks
 
     def _collect(self, attempt: int, number: int, step: dict,
                   beam: list[Link]) -> tuple[dict[str, Link], dict[str, Link]]:
-        """I candidati di un tentativo: (trovati seguendo la relazione, trovati per descrizione)."""
+        """The candidates of an attempt: (found following the relation, found by description)."""
         candidates: dict[str, Link] = {}
         per_description: dict[str, Link] = {}
-        if attempt in (1, 2):  # Wikipedia: un thread per entità del fascio (le chiamate al modello sono lente)
+        if attempt in (1, 2):  # Wikipedia: one thread per beam entity (model calls are slow)
             partial = [{} for _ in beam]
             jobs = [(self._wiki_candidates, (number, step, o, attempt, partial[i]))
                       for i, o in enumerate(beam)]
-            if attempt == 2:  # ancora Wikipedia: voci che collegano all'entità, ricerca per descrizione
+            if attempt == 2:  # Wikipedia again: articles linking to the entity, search by description
                 jobs.append((self._candidates_wiki_description, (step, beam, per_description)))
             with ThreadPoolExecutor(max_workers=4) as group:
                 for future in [group.submit(f, *a) for f, a in jobs]:
@@ -1443,7 +1447,7 @@ class Chain:
 
     def _attempt(self, attempt: int, number: int, step: dict, beam: list[Link], seen: set[str],
                    all_items: bool = False) -> list[Link]:
-        """Un tentativo: candidati raccolti, verificati con i controlli del passo; restano i non smentiti."""
+        """An attempt: candidates collected, verified with the step's checks; the unrefuted ones remain."""
         checks = self._step_checks(step, beam)
         candidates, per_description = self._collect(attempt, number, step, beam)
         new_items = [a for k, a in candidates.items() if k not in seen]
@@ -1456,7 +1460,7 @@ class Chain:
         self.history.append({"step": number, "relation": step["relation"], "attempt": attempt,
                             "parent": [a.name for a in beam],
                             "candidates": [a.name for a in all_seen],
-                            "kept": [(a.name, round(a.quality, 2), "debole" if a.weak else "forte")
+                            "kept": [(a.name, round(a.quality, 2), "weak" if a.weak else "strong")
                                        for a in good],
                             "discarded": [(a.name, [e["check"] for e in a.outcomes if e["outcome"] == "no"])
                                          for a in all_seen if a not in good],
@@ -1465,18 +1469,18 @@ class Chain:
         return good
 
     def _action_signature(self, action: str, node: Link, depth: int, relation: str) -> tuple:
-        """Quando due allargamenti sono lo stesso: stessa entità, stesso passo e (su Wikipedia) stessa relazione. Sul
-        web la relazione non conta: due piani che scrivono la relazione in modo diverso leggono le stesse pagine
-        (24/10: sulle 95 corse con la frontiera 31 allargamenti web doppi, il secondo non ha mai dato un anello di
-        una soluzione giusta; 12 corse sbagliate su 32 finiscono per il tetto delle pagine)."""
+        """When two expansions are the same: same entity, same step and (on Wikipedia) same relation. On the web the
+        relation does not count: two plans that write the relation differently read the same pages (24 Oct: on the
+        95 runs with the frontier 31 duplicate web expansions, the second never gave a link of a correct solution; 12
+        wrong runs out of 32 end because of the page cap)."""
         words = frozenset() if action == "web" else frozenset(
             p[:5] for p in _norm(relation).split() if len(p) >= 4)
         return (action, self._canonical_key(node), depth, words)
 
     @staticmethod
     def _verification_in_short(a: Link) -> dict:
-        """Per la storia (23/10, Arduino: senza le righe citate non si capiva perché Keyboardio valeva 0,3): voce,
-        riga del legame e, per ogni controllo, esito detto dal modello, esito tenuto dal programma e riga citata."""
+        """For the history (23 Oct, Arduino: without the cited rows it was unclear why Keyboardio was worth 0.3):
+        article, tie row and, for each check, outcome said by the model, outcome kept by the program and cited row."""
         article = next(iter(a.articles.values()), None)
         cited = lambda p: p.text[:220] if p is not None else ""  # noqa: E731
         return {"name": a.name, "quality": round(a.quality, 2),
@@ -1488,23 +1492,24 @@ class Chain:
 
     @staticmethod
     def _canonical_key(a: Link) -> str:
-        """La stessa entità con nomi diversi: se la voce di Wikipedia è nota, la chiave è la voce (titolo inglese se
-        c'è: «Adafruit» e «Adafruit Industries» portano alla stessa voce, 23/10); altrimenti le varianti del nome."""
+        """The same entity with different names: if the Wikipedia article is known, the key is the article (English
+        title if there is one: «Adafruit» and «Adafruit Industries» lead to the same article, 23 Oct); otherwise the
+        name variants."""
         article = next(iter(a.articles.values()), None)
         if article is not None:
             english = article.title if article.language == "en" else article.languages.get("en")
-            return "voce:" + _entity_key(english or article.title)
+            return "article:" + _entity_key(english or article.title)
         return _entity_key(a.name)
 
     def _walk_step(self, number: int, step: dict, beam: list[Link]) -> list[Link]:
-        """Quattro tentativi, dal più economico; ci si ferma al primo che dà candidati forti.
-        1. Wikipedia come grafo: righe della voce dell'entità scelte per le parole della relazione (16/10).
-        2. Ancora Wikipedia: voci che collegano all'entità e ricerca per descrizione (i controlli come parole).
-        3. Web in avanti (ricerche per la relazione, pagine lette).
-        4. Web con ricerche diverse e PER DESCRIZIONE (i controlli come chiave di ricerca), più i vicini nel grafo;
-           per i candidati trovati per descrizione il legame con l'entità di prima diventa un controllo.
-           (15/10: Biancani non compare nelle pagine sugli allievi di Galileo, ma sì tra i gesuiti bolognesi.)
-        Un candidato debole resta di riserva."""
+        """Four attempts, from the cheapest; it stops at the first that gives strong candidates.
+        1. Wikipedia as a graph: rows of the entity's article chosen for the words of the relation (16 Oct).
+        2. Wikipedia again: articles linking to the entity and search by description (the checks as words).
+        3. Web forward (searches for the relation, pages read).
+        4. Web with different searches and BY DESCRIPTION (the checks as search key), plus the neighbours in the graph;
+           for the candidates found by description the tie with the previous entity becomes a check.
+           (15 Oct: Biancani does not appear in the pages about Galileo's students, but does among Bolognese Jesuits.)
+        A weak candidate stays in reserve."""
         reserve: list[Link] = []
         found_strong: list[Link] = []
         seen: set[str] = set()
@@ -1518,14 +1523,14 @@ class Chain:
             found_strong = sorted(found_strong + strong,
                                    key=lambda a: (bool(a.parent and a.parent.weak), -a.quality, self._doubts(a)))
             complete = any(self._complete(a) for a in found_strong)
-            # Con Wikipedia si fanno sempre i due tentativi economici prima di scegliere, salvo un candidato che passa
-            # tutti i controlli (16/10, Emacs: Bobrow "forte" al primo tentativo, Tomlinson arrivava solo dopo).
+            # With Wikipedia the two cheap attempts are always made before choosing, unless a candidate passes all
+            # the checks (16 Oct, Emacs: Bobrow "strong" at the first attempt, Tomlinson came only later).
             if found_strong and (complete or attempt >= 2 or self.wiki is None):
                 picked = found_strong + [a for a in self._alive if a.weak and a not in found_strong]
                 for a in picked:
                     self._record(a, step["relation"])
                 return picked
-            reserve += [a for a in good if a.weak]  # i deboli di tutti i tentativi, poi i migliori
+            reserve += [a for a in good if a.weak]  # the weak ones of all attempts, then the best
             if self.r._reached_limit() or self.r.thinker.exhausted:
                 break
         reserve = sorted(reserve, key=self._order)[
@@ -1536,7 +1541,7 @@ class Chain:
 
     def _candidates_in_forward(self, number: int, step: dict, origin: Link, attempt: int,
                              candidates: dict[str, Link]) -> None:
-        self.r._phase(f"Passo {number}: {step['relation']} {origin.name}…")
+        self.r._phase(f"Step {number}: {step['relation']} {origin.name}…")
         searches = self._decide("step", {"research_language": self._research_language(),
                                           "entity": origin.name, "context": origin.context,
                                           "relation": step["relation"],
@@ -1560,9 +1565,9 @@ class Chain:
 
     @staticmethod
     def _clues(step: dict) -> list[str]:
-        """Gli indizi della domanda sul risultato del passo (i controlli, prima i più pesanti) per le ricerche sul web:
-        «aziende ispirate da Arduino» porta a centinaia di risultati, «Arduino programmable keyboard company» al
-        risultato (25/10, Arduino: le prime ricerche web non nominavano mai le tastiere)."""
+        """The question's clues about the step's result (the checks, the heaviest first) for the web searches:
+        «companies inspired by Arduino» leads to hundreds of results, «Arduino programmable keyboard company» to the
+        result (25 Oct, Arduino: the first web searches never mentioned keyboards)."""
         checks = sorted(step.get("checks") or [], key=lambda c: -_weight(c))
         return [" / ".join([str(c.get("description") or "")] + [str(x) for x in (c.get("readings") or [])[:1]])[:160]
                 for c in checks[:3] if c.get("description")]
@@ -1572,7 +1577,7 @@ class Chain:
         description = "; ".join(c.get("description", "") for c in step.get("checks", []))
         if not description:
             return
-        self.r._phase(f"Passo {number}: cerco per descrizione ({description[:80]})…")
+        self.r._phase(f"Step {number}: searching by description ({description[:80]})…")
         searches = self._decide("step", {"research_language": self._research_language(),
                                           "description": description, "kind": step.get("kind", ""),
                                           "relation_with": f"{step['relation']} {beam[0].name}",
@@ -1590,9 +1595,9 @@ class Chain:
         self._add(listing, proofs, beam[0], candidates, people=self._of_people(step))
 
     def _candidates_from_graph(self, beam: list[Link], candidates: dict[str, Link]) -> None:
-        """Se la relazione cercata non ha dato candidati, le entità già collegate all'entità di prima nel grafo, con
-        qualunque legame, diventano candidati (il legame cercato diventa un controllo). 15/10, Arduino: Jesse Vincent
-        era nel grafo come co-fondatore di Keyboardio, nessuna pagina lo diceva "coniuge di Kaia Dekker"."""
+        """If the relation sought gave no candidates, the entities already tied to the previous entity in the graph,
+        with any tie, become candidates (the tie sought becomes a check). 15 Oct, Arduino: Jesse Vincent was in the
+        graph as co-founder of Keyboardio, no page called him "spouse of Kaia Dekker"."""
         c = self.r.concepts
         url_of = {r["id"]: r["url"] for r in c.graph.db.execute(
             "SELECT s.id, f.url FROM segment s JOIN source f ON f.id = s.source_id")}
@@ -1616,8 +1621,8 @@ class Chain:
 
     @staticmethod
     def _name_in_row(name: str, proof: Proof) -> bool:
-        """Il candidato sta davvero nella riga che cita: il nome (o il cognome) nel testo, o una voce collegata della
-        riga che è lui (GENRE: il modello sceglie tra nomi che ci sono, non li inventa)."""
+        """The candidate really is in the row it cites: the name (or the surname) in the text, or a linked article of
+        the row that is it (GENRE: the model chooses among names that are there, it does not invent them)."""
         text = _plan(proof.text)
         key = _plan(_name_key(name))
         if _plan(name) in text or (len(key) >= 4 and re.search(rf"\b{re.escape(key)}\b", text)):
@@ -1626,9 +1631,9 @@ class Chain:
 
     @staticmethod
     def _whole_name(name: str, proofs: list[Proof]) -> str:
-        """Un nome di una parola sola («Kaia», «jesse») diventa la forma intera che le prove scrivono più spesso
-        («Kaia Dekker»): con il solo nome di battesimo il passo dopo cerca omonimi (25/10, Arduino: «coniuge di Kaia»
-        → Andy Bell, Idha). Solo forme Nome Cognome con iniziali maiuscole, mai un'altra persona con quel cognome."""
+        """A one-word name («Kaia», «jesse») becomes the full form the proofs write most often («Kaia Dekker»): with
+        only the first name the next step looks for namesakes (25 Oct, Arduino: «spouse of Kaia» → Andy Bell, Idha).
+        Only First Last forms with capital initials, never another person with that surname."""
         words = name.split()
         if len(words) != 1 or len(name) < 3:
             return name
@@ -1645,7 +1650,7 @@ class Chain:
 
     @staticmethod
     def _of_people(step: dict) -> bool:
-        """Il passo cerca persone (dal tipo o dalla relazione del piano)."""
+        """The step looks for people (from the kind or the relation of the plan)."""
         text = _norm(f"{step.get('kind', '')} {step.get('relation', '')}")
         return bool(re.search(r"\b(person\w*|donna|uomo|coniuge|marito|moglie|fondat\w*|autor\w*|scrittor\w*|"
                               r"pittor\w*|architett\w*|scienziat\w*|presidente|sindaco|allievi|studente\w*|figli\w*|"
@@ -1660,7 +1665,7 @@ class Chain:
             if name and key and key != _entity_key(origin.name) and key not in candidates:
                 proof = self._proof(proofs, c.get("proof"))
                 if proof is None or not self._name_in_row(name, proof):
-                    log.info("catena: candidato «%s» scartato: non sta nella riga %s", name, c.get("proof"))
+                    log.info("chain: candidate «%s» discarded: not in row %s", name, c.get("proof"))
                     continue
                 candidates[key] = Link(name, parent=origin, tie_proof=proof,
                                                  context=f"{origin.name}: {origin.context}"[:150],
@@ -1668,38 +1673,38 @@ class Chain:
 
     @staticmethod
     def _title_from_proof(name: str, proof: Proof | None) -> tuple[str, str] | None:
-        """La voce di Wikipedia del candidato, se la riga che lo indica la collega (niente omonimi possibili)."""
+        """The candidate's Wikipedia article, if the row pointing to it links it (no namesakes possible)."""
         if proof is None or not proof.hyperlinks or not proof.language:
             return None
         key = _name_key(name)
-        # Prima il titolo che corrisponde meglio (esatto, variante, parentesi, base), poi il cognome: «La Thuile
-        # (Italia)» non deve prendere un altro collegamento della stessa riga.
-        # «base» (nome di una parola dentro un titolo lungo) non basta qui: 25/10, Cappella Sistina: «Napoli» →
-        # «Regno di Napoli»; il cognome passa sotto, con al massimo una parola in più (Enrico Fermi).
+        # First the best matching title (exact, variant, parentheses, base), then the surname: «La Thuile (Italia)»
+        # must not take another link of the same row.
+        # «base» (one-word name inside a long title) is not enough here: 25 Oct, Sistine Chapel: «Napoli» → «Regno di
+        # Napoli»; the surname is handled below, with at most one extra word (Enrico Fermi).
         degrees = [(DEGREES.get(matches(name, t), 0.0), -i, t) for i, t in enumerate(proof.hyperlinks)]
         best = max(degrees, default=(0.0, 0, ""))
         if best[0] > DEGREES["base"]:
             return (proof.language, best[2])
-        # Il cognome basta solo per un nome di una parola («Fermi»): con nome e cognome un altro collegamento con lo
-        # stesso cognome è un'altra persona (24/10: Paul McCartney → Linda McCartney, Michael Dell → Susan Dell,
-        # Guiniforte Solari → Giovanni Solari; 57 voci sbagliate su 523 verifiche registrate, in gran parte da qui).
+        # The surname is enough only for a one-word name («Fermi»): with first name and surname another link with the
+        # same surname is another person (24 Oct: Paul McCartney → Linda McCartney, Michael Dell → Susan Dell,
+        # Guiniforte Solari → Giovanni Solari; 57 wrong articles out of 523 recorded verifications, mostly from here).
         if len([p for p in _norm(re.sub(r"\([^)]*\)", " ", name)).split() if len(p) >= 4]) != 1:
             return None
         for title in proof.hyperlinks:
             words = _norm(re.sub(r"\([^)]*\)", " ", title)).split()
-            # al massimo una parola in più (Enrico Fermi, Adafruit Industries; non «Microsoft ergonomic keyboards»)
+            # at most one extra word (Enrico Fermi, Adafruit Industries; not «Microsoft ergonomic keyboards»)
             if len(key) >= 4 and key in words and len(words) <= 2:
                 return (proof.language, title)
         return None
 
     def _segments_on(self, name: str) -> list[dict]:
-        """Pezzi già salvati in cui compare il nome (letti in passi precedenti)."""
+        """Already saved segments where the name appears (read in previous steps)."""
         key = _name_key(name)
         return [s for s in self._after_segments(0) if key in s["text"].lower()][:12]
 
     def _verification(self, candidates: list[Link], checks: list[dict], all_items: bool = False) -> list[Link]:
-        """Controlli su tutti i candidati; un "no" con prova scarta. Ai migliori con dei "non so" si cerca la scheda e
-        si rifà la verifica una volta."""
+        """Checks on all the candidates; a "no" with a proof discards. For the best ones with some "unknown" the
+        infobox is looked up and the verification is redone once."""
         if not candidates:
             return []
         if not checks:
@@ -1709,54 +1714,56 @@ class Chain:
         alive = [a for a in candidates if not self._refuted(a)]
         doubts = [a for a in sorted(alive, key=lambda a: -a.quality)
                  if any(e["outcome"] in ("unknown", "partly") for e in a.outcomes)]
-        # Con Wikipedia la scheda costa una richiesta: si approfondiscono tutti i dubbi (16/10, Galileo: Zucchi
-        # "rettore del Collegio Romano" solo nel corpo della voce, fuori dai primi tre per punti).
+        # With Wikipedia the infobox costs one request: all doubts are looked into (16 Oct, Galileo: Zucchi "rector of
+        # the Collegio Romano" only in the body of the article, outside the top three by points).
         from_deepen = doubts[:int(self.o.get("profiles_per_step", 8 if self.wiki is not None else 3))]
         if from_deepen and not self.r._reached_limit():
             from_web = 0
             for a in from_deepen:
-                # La scheda è prima di tutto la voce intera di Wikipedia (riquadro e testo), poi il web (al massimo 3).
+                # The profile is first of all the whole Wikipedia article (infobox and text), then the web (at most 3).
                 if not a.searched_articles and self._articles(a, other_ones=0):
                     continue
                 if a.articles or from_web >= 3:
                     continue
                 from_web += 1
-                self.r._phase(f"Cerco la scheda di {a.name}…")
+                self.r._phase(f"Looking up the profile of {a.name}…")
                 words = " ".join(_norm(a.parent.name).split()[:3]) if a.parent else ""
                 self._search_and_read([f"{a.name} {words}".strip(), self._check_research(a)],
                                     int(self.o.get("profile_pages", 2)))
             self._outcomes(from_deepen, checks)
             alive = [a for a in candidates if not self._refuted(a)]
-        # Dopo la scheda un "non so" pesa contro: passa chi ha più di metà del peso dei controlli provato (15/10:
-        # Viviani, né gesuita né bolognese, passava perché nessuna pagina lo negava). Se nessuno passa, il migliore
-        # resta, segnato debole. A parità di qualità decide il nome, così due corse uguali scelgono uguale.
+        # After the profile an "unknown" counts against: those with more than half the weight of the checks proven
+        # pass (15 Oct: Viviani, neither Jesuit nor Bolognese, passed because no page denied it). If nobody passes,
+        # the best stays, marked weak. With equal quality the name decides, so two identical runs choose the same.
         ordered = sorted(alive, key=lambda a: (-a.quality, not self._co_occurs(a), -a.points, a.name))
-        # Forte solo con il legame provato (16/10, Blender: Traun, Wels e Gmunden "forti" perché città dell'Alta
-        # Austria sul Traun, senza nessuna riga che ci facesse nascere lo sviluppatore).
-        with_tie = any(str(c.get("description", "")).startswith("è in relazione «") for c in checks)
+        # Strong only with the tie proven (16 Oct, Blender: Traun, Wels and Gmunden "strong" because towns of Upper
+        # Austria on the Traun, without any row saying the developer was born there).
+        with_tie = any(str(c.get("description", "")).startswith("is in relation «") for c in checks)
         linked = lambda a: not with_tie or any(  # noqa: E731
-            e["outcome"] == "yes" and e["proof"] and str(e["check"]).startswith("è in relazione") for e in a.outcomes)
-        # Un legame provato solo dall'estratto di una ricerca (pagina mai letta) non fa un anello forte.
+            e["outcome"] == "yes" and e["proof"] and str(e["check"]).startswith("is in relation") for e in a.outcomes)
+        # A tie proven only by a search snippet (page never read) does not make a strong link.
         strong = [a for a in ordered if a.quality > 0.5 and linked(a) and not self._decisive_unknown(a)
                  and self._identified(a) and not validation.tie_only_from_snippets(a)]
         relation = next((str(c.get("description", "")) for c in checks
-                          if str(c.get("description", "")).startswith("è in relazione «")), "")
+                          if str(c.get("description", "")).startswith("is in relation «")), "")
         for article in validation.disagreements([a for a in candidates if a not in alive], relation):
             if article not in self.conflicts:
                 self.conflicts.append(article)
         if strong:
-            # Dietro ai forti restano i non smentiti, segnati deboli: se dal forte non si arriva al valore, la catena
-            # prova loro (16/10, Linux kernel: Islene Calciolari Garcia senza data di nascita, Alexandre Oliva dietro).
+            # Behind the strong ones the unrefuted ones remain, marked weak: if the strong one does not lead to the
+            # value, the chain tries them (16 Oct, Linux kernel: Islene Calciolari Garcia without a birth date,
+            # Alexandre Oliva behind).
             others = [a for a in ordered if a not in strong]
-            # Con la frontiera restano tutti i non smentiti (16/10, Monte Bianco: La Thuile, giusta, fuori dai tre
-            # tenuti a pari punti); senza, solo quanti ne servono per il fascio.
+            # With the frontier all the unrefuted ones remain (16 Oct, Monte Bianco: La Thuile, correct, outside the
+            # three kept with equal points); without it, only as many as the beam needs.
             others = others[:int(self.o.get("max_children", 6))] if all_items else \
                 others[:max(0, int(self.o.get("chain_width", 3)) - 1)]
             for a in others:
                 a.weak = True
             return strong + others
-        # Senza candidati forti restano fino a `larghezza` deboli non smentiti, anche senza "sì": il passo dopo li
-        # verifica comunque (15/10: Joinville, risposta giusta, scartato perché le pagine non dicevano "Alta Marna").
+        # Without strong candidates up to `width` unrefuted weak ones remain, even without "yes": the next step
+        # verifies them anyway (15 Oct: Joinville, correct answer, discarded because the pages did not say
+        # "Haute-Marne").
         weak_ones = ordered[:int(self.o.get("max_children", 6) if all_items else self.o.get("chain_width", 3))]
         for a in weak_ones:
             a.weak = True
@@ -1764,22 +1771,22 @@ class Chain:
 
     @staticmethod
     def _check_research(a: Link) -> str:
-        """Seconda ricerca della scheda web: il nome con il controllo più pesante non ancora provato (prima lettura o
-        descrizione, parole piene), non «biografia» (24/10, Arduino: «Seeed Studio biografia», «Cytron Technologies
-        biografia» per aziende candidate a «produce tastiere programmabili»)."""
+        """Second search of the web profile: the name with the heaviest check not yet proven (first reading or
+        description, content words), not «biography» (24 Oct, Arduino: «Seeed Studio biografia», «Cytron Technologies
+        biografia» for companies that were candidates for «makes programmable keyboards»)."""
         pending = sorted((e for e in a.outcomes if e["outcome"] in ("unknown", "partly")
-                         and not str(e["check"]).startswith(("è in relazione", "è di questo tipo"))),
+                         and not str(e["check"]).startswith(("is in relation", "is of this kind"))),
                         key=lambda e: -float(e.get("weight") or 1))
         if not pending:
-            return f"{a.name} biografia"
+            return f"{a.name} biography"
         text = next(iter(pending[0].get("readings") or []), "") or str(pending[0]["check"])
         words = [p for p in re.findall(r"[\w'’-]+", text) if len(p) >= 4 and _norm(p) not in STOP_WORDS]
         return f"{a.name} {Chain._short_context(a)} {' '.join(words[:5])}".replace("  ", " ").strip()
 
     @staticmethod
     def _short_context(a: Link) -> str:
-        """Una o due parole dell'entità da cui il candidato è stato trovato, per le ricerche sul web senza omonimi
-        («Roland Unger Wikivoyage»), senza parole già nel nome."""
+        """One or two words of the entity from which the candidate was found, for web searches without namesakes
+        («Roland Unger Wikivoyage»), without words already in the name."""
         if a.parent is None:
             return ""
         name = set(_norm(a.name).split())
@@ -1788,22 +1795,22 @@ class Chain:
         return " ".join(words[:2])
 
     def _order(self, a: Link) -> tuple:
-        """Prima chi viene da un anello forte, poi chi ha il legame provato, poi più sì (16/10, Duomo di Milano:
-        «Francesco (nome)» trovato da un architetto debole passava davanti a Simone da Orsenigo, forte)."""
+        """First those coming from a strong link, then those with the tie proven, then more yes (16 Oct, Milan
+        Cathedral: «Francesco (nome)» found from a weak architect went ahead of Simone da Orsenigo, strong)."""
         return (bool(a.parent and a.parent.weak), not self._linked(a), -a.quality, not self._co_occurs(a), a.name)
 
     @staticmethod
     def _linked(a: Link) -> bool:
-        """Il legame con l'entità di prima ha un sì con prova (16/10, Hubble: Ken Mattingly, mai su STS-103, davanti
-        a Grunsfeld nella riserva perché aveva più sì sugli altri controlli)."""
-        return any(e["outcome"] == "yes" and e["proof"] and str(e["check"]).startswith("è in relazione")
+        """The tie with the previous entity has a yes with a proof (16 Oct, Hubble: Ken Mattingly, never on STS-103,
+        ahead of Grunsfeld in the reserve because he had more yes on the other checks)."""
+        return any(e["outcome"] == "yes" and e["proof"] and str(e["check"]).startswith("is in relation")
                    for e in a.outcomes)
 
     def _co_occurs(self, a: Link) -> bool:
-        """Logica del grafo, senza modello: il candidato compare negli stessi pezzi salvati (o nelle stesse righe delle
-        voci) dell'entità di prima. Un legame non provato ma con co-occorrenza vale più di uno trovato solo per
-        descrizione (22/10, Blender con Sonnet: Bad Ischl, Gmunden, Traun e Wels a pari merito come città natale di
-        Robert Szeleney; vinceva la prima in ordine alfabetico)."""
+        """Graph logic, without the model: the candidate appears in the same saved segments (or in the same article
+        rows) as the previous entity. An unproven tie with co-occurrence is worth more than one found only by
+        description (22 Oct, Blender with Sonnet: Bad Ischl, Gmunden, Traun and Wels tied as Robert Szeleney's
+        hometown; the first in alphabetical order won)."""
         if a.parent is None:
             return True
         key = _name_key(a.name)
@@ -1820,17 +1827,17 @@ class Chain:
 
     @staticmethod
     def _decisive_unknown(a: Link) -> bool:
-        """Un controllo di peso 3 (lo identifica quasi da solo) senza prova: il candidato non è confermato, anche se
-        gli altri controlli passano (17/10, Ducato di Milano: sei comuni confinanti "forti" a pari merito, nessuno
-        gemellato con un paese dell'Alta Vienna)."""
+        """A weight-3 check (it almost identifies it alone) without proof: the candidate is not confirmed, even if the
+        other checks pass (17 Oct, Duchy of Milan: six neighbouring towns "strong" with equal points, none twinned
+        with a village in Haute-Vienne)."""
         return any(_weight(e) >= 3 and e["outcome"] in ("unknown", "no") for e in a.outcomes)
 
     @staticmethod
     def _identified(a: Link) -> bool:
-        """Almeno un tratto che lo identifica (non il tipo, non il legame, peso ≥ 2) ha un sì con prova, se il piano
-        ne ha (23/10, paper §9.1: Guiducci «forte» con il solo legame e il «gesuita bolognese» non provato)."""
+        """At least one identifying trait (not the kind, not the tie, weight ≥ 2) has a yes with a proof, if the plan
+        has any (23 Oct, paper §9.1: Guiducci «strong» with only the tie and «Bolognese Jesuit» not proven)."""
         own = [e for e in a.outcomes if _weight(e) >= 2
-                  and not str(e["check"]).startswith(("è di questo tipo", "è in relazione"))]
+                  and not str(e["check"]).startswith(("is of this kind", "is in relation"))]
         return not own or any(e["outcome"] == "yes" and e["proof"] for e in own)
 
     @staticmethod
@@ -1839,8 +1846,8 @@ class Chain:
 
     @staticmethod
     def _complete(a: Link) -> bool:
-        """Tutti i controlli che lo identificano (non il tipo) hanno un sì con prova."""
-        own = [e for e in a.outcomes if not str(e["check"]).startswith("è di questo tipo")]
+        """All the checks that identify it (not the kind) have a yes with a proof."""
+        own = [e for e in a.outcomes if not str(e["check"]).startswith("is of this kind")]
         return bool(own) and all(e["outcome"] == "yes" and e["proof"] for e in own)
 
     @staticmethod
@@ -1848,18 +1855,19 @@ class Chain:
         return sum(1 for e in a.outcomes if e["outcome"] == "no" and e["proof"])
 
     def _refuted(self, a: Link) -> bool:
-        """Scartato se i "no" con prova sono almeno quanti i "sì": un solo "no" contro più "sì" è spesso una lettura
-        troppo stretta (16/10, Git: GitHub scartato per «aperto al pubblico nella primavera 2008», che è il valore
-        cercato, non un tratto per riconoscerlo). `punti` = sì meno no."""
+        """Discarded if the "no" with a proof are at least as many as the "yes": a single "no" against several "yes" is
+        often too strict a reading (16 Oct, Git: GitHub discarded for «opened to the public in spring 2008», which is
+        the value sought, not a trait to recognise it). `points` = yes minus no."""
         no = sum(_weight(e) for e in a.outcomes if e["outcome"] == "no" and e["proof"])
         si = sum(_weight(e) * OUTCOME_VALUE[e["outcome"]] for e in a.outcomes if e["outcome"] in ("yes", "partly")
-                 and e["proof"] and not str(e["check"]).startswith(("è di questo tipo", "è in relazione")))
-        # tipo e legame non compensano un "no": dicono che il candidato è del genere giusto, non che è quello giusto
+                 and e["proof"] and not str(e["check"]).startswith(("is of this kind", "is in relation")))
+        # kind and tie do not offset a "no": they say the candidate is of the right sort, not that it is the right one
         return no > 0 and si <= no
 
     def _wiki_starts(self, candidates: list[Link]) -> None:
-        """Le prime frasi delle voci dei candidati raggiunti da un collegamento, con una richiesta per lingua (la
-        voce intera si legge solo per chi resta in dubbio: Wikipedia concede 10 richieste al minuto)."""
+        """The first sentences of the articles of the candidates reached through a link, with one request per
+        language (the whole article is read only for those still in doubt: Wikipedia allows 10 requests per
+        minute)."""
         if self.wiki is None:
             return
         per_language: dict[str, list[Link]] = {}
@@ -1872,12 +1880,12 @@ class Chain:
                 text = starts.get(a.title[1]) or next((t for k, t in starts.items()
                                                         if matches(a.title[1], k) in ("exact", "variant")), "")
                 if text:
-                    a.start = Proof(f"[{a.title[1]} ({language}), inizio della voce] {text}",
+                    a.start = Proof(f"[{a.title[1]} ({language}), start of the article] {text}",
                                      self.wiki.url(a.title[1], language), [], language)
 
     def _outcomes(self, candidates: list[Link], checks: list[dict]) -> None:
-        """Verifica a gruppi di 2 candidati, in parallelo: richieste più corte (meno confusione tra le righe dei
-        candidati) e più veloci. Le prove si preparano prima, nel thread principale (grafo e browser)."""
+        """Verification in groups of 2 candidates, in parallel: shorter requests (less confusion between the
+        candidates' rows) and faster. The proofs are prepared beforehand, in the main thread (graph and browser)."""
         groups = []
         for k in range(0, len(candidates), 2):
             group = candidates[k:k + 2]
@@ -1891,22 +1899,22 @@ class Chain:
                 start = len(proofs) + 1
                 proofs += mine
                 intervals[id(a)] = range(start, start + len(mine))
-                blocks.append(f"CANDIDATO: {a.name}\n" + "\n".join(
+                blocks.append(f"CANDIDATE: {a.name}\n" + "\n".join(
                     f"[{start + i}] {p.text[:1000]}" for i, p in enumerate(mine)))
             groups.append((group, proofs, blocks, intervals))
-        checks_text = [f"C{i}: {c.get('description', '')} (letture: {'; '.join(c.get('readings') or [])})"
+        checks_text = [f"C{i}: {c.get('description', '')} (readings: {'; '.join(c.get('readings') or [])})"
                            for i, c in enumerate(checks, start=1)]
         ask = lambda blocks: self._decide(  # noqa: E731
             "verification", {"checks": checks_text, "candidates": "\n\n".join(blocks)}, {"candidates": []})
-        # Due letture indipendenti per gruppo (autoconsistenza, come in Open Deep Search): un "sì" vale solo se
-        # entrambe lo danno, un "no" basta che sia in una (16/10: Bobrow "premiato nel 2009", la Marsigliese "dedicata
-        # a un Borbone": sì inventati che una seconda lettura raramente ripete).
+        # Two independent readings per group (self-consistency, as in Open Deep Search): a "yes" counts only if both
+        # give it, a "no" is enough in one (16 Oct: Bobrow "awarded in 2009", the Marseillaise "dedicated to a
+        # Bourbon": invented yes that a second reading rarely repeats).
         readings = int(self.o.get("verification_readings", 2))
         with ThreadPoolExecutor(max_workers=6) as pool:
             outcomes = list(pool.map(ask, [g[2] for g in groups for _ in range(readings)]))
         for n, (group, proofs, _, intervals) in enumerate(groups):
             first_items: dict[int, list[dict]] = {}
-            # Le letture finiscono in un ordine a caso e la prima dà la riga citata: ordine fisso, corse ripetibili.
+            # The readings finish in random order and the first gives the cited row: fixed order, repeatable runs.
             for outcome in sorted(outcomes[n * readings:(n + 1) * readings],
                                 key=lambda x: json.dumps(x, sort_keys=True, ensure_ascii=False)):
                 self._apply_outcomes(group, proofs, intervals, outcome, checks)
@@ -1930,14 +1938,14 @@ class Chain:
             elif e["outcome"] == "yes" and e["proof"] and f["outcome"] == "yes" and f["proof"]:
                 merged_items.append(e)
             elif e["outcome"] in positives and e["proof"] and f["outcome"] in positives and f["proof"]:
-                merged_items.append({**e, "outcome": "partly"})  # una lettura dice solo "in parte": vale a metà
+                merged_items.append({**e, "outcome": "partly"})  # one reading says only "partly": it counts half
             else:
                 merged_items.append({**e, "outcome": "unknown", "proof": None})
         return merged_items
 
     @staticmethod
     def _resolve_check(text: str, checks: list[dict]) -> dict | None:
-        """Il controllo a cui risponde Haiku: dal codice (C2) o, se ha riscritto il testo, dall'inizio del testo."""
+        """The check Haiku is answering: from the code (C2) or, if it rewrote the text, from the start of the text."""
         m = re.match(r"\s*C(\d+)\b", str(text or ""))
         if m and 1 <= int(m.group(1)) <= len(checks):
             return checks[int(m.group(1)) - 1]
@@ -2100,7 +2108,7 @@ class Chain:
         if a.quality < 0.5 and a.outcomes:  # più di metà del peso dei controlli (Napoli 0,4; Novara di Sicilia 0,6)
             return False
         if a.parent is not None and not any(e["outcome"] in ("yes", "partly") and e["proof"]
-                                        and str(e["check"]).startswith("è in relazione") for e in a.outcomes):
+                                        and str(e["check"]).startswith("is in relation") for e in a.outcomes):
             return False
         proof = a.tie_proof or a.start
         if proof is None:

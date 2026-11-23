@@ -1,11 +1,11 @@
-"""Fase C, Parte 7.1: filtro delle query doppie (Jaccard) e indice di ridondanza S(T)."""
+"""Phase C, Part 7.1: duplicate query filter (Jaccard) and redundancy index S(T)."""
 import pytest
 
 from chain_research.web import collector as research
 from chain_research.model import query
 
 
-def test_normalized_words_and_whole_identifiers() -> None:
+def test_words_are_normalized_and_identifiers_kept_whole() -> None:
     assert query.words("Compilare llama.cpp con Vulkan su gfx1200, build b4000 (Qwen 3.8)") == \
         {"compilare", "llama.cpp", "vulkan", "gfx1200", "build", "b4000", "qwen", "3.8"}
     assert query.words("La città di Forlì") == {"citta", "forli"}
@@ -20,14 +20,14 @@ def test_jaccard_and_duplicates() -> None:
     assert query.most_similar("x", []) == (0.0, None)
 
 
-def test_index_of_redundancy() -> None:
+def test_redundancy_index() -> None:
     assert query.redundancy(["a b", "a b"]) == 1.0
     assert query.redundancy(["alfa beta", "gamma delta"]) == 0.0
     assert query.redundancy(["alfa beta", "alfa gamma", "delta"]) == round((1 / 3 * 2) / 6, 4)
     assert query.redundancy(["sola"]) == 0.0
 
 
-def test_research_skip_duplicates_query(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_collector_skips_duplicate_queries(monkeypatch: pytest.MonkeyPatch) -> None:
     r = research.Collector("topic")
     events = []
     r.publish = events.append
@@ -35,7 +35,7 @@ def test_research_skip_duplicates_query(monkeypatch: pytest.MonkeyPatch) -> None
     monkeypatch.setattr(r, "_ask", lambda instructions, text: next(rephrased))
     kept = r._filter_query(["trattati Vestfalia 1648", "Vestfalia 1648 trattati", "Vestfalia trattati 1648",
                               "Guerra dei Trent'anni cause"])
-    # la seconda è doppia e Claude la riformula bene; la terza è doppia e la riformulazione è ancora doppia
+    # the second is a duplicate and Claude rephrases it well; the third is a duplicate and its rephrasing is still one
     assert kept == ["trattati Vestfalia 1648", "pace di Vestfalia conseguenze territoriali",
                       "Guerra dei Trent'anni cause"]
     assert r.executed_query == kept
@@ -43,7 +43,7 @@ def test_research_skip_duplicates_query(monkeypatch: pytest.MonkeyPatch) -> None
     assert [e["discarded"] for e in duplicates] == [False, True]
 
 
-def test_numbers_versions_and_months_different_make_query() -> None:
+def test_different_numbers_versions_or_months_make_different_queries() -> None:
     assert query.jaccard("llama.cpp ottobre 2024 nuove funzioni", "llama.cpp agosto 2024 nuove funzioni") > 0.6
     assert not query.duplicate("llama.cpp ottobre 2024 nuove funzioni", ["llama.cpp agosto 2024 nuove funzioni"], 0.6)
     assert not query.duplicate("Qwen 3.8 benchmark vulkan", ["Qwen 3.5 benchmark vulkan"], 0.6)

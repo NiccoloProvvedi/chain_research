@@ -1,25 +1,25 @@
-"""Giudice del banco di prova: estrae il valore dato come risposta e lo confronta con quello atteso.
+"""Bench judge: extracts the value given as the answer and compares it with the expected one.
 
-Prima il confronto normalizzato (la risposta attesa compare nella risposta), poi Claude Haiku come giudice con due
-esempi (come DeepDive). Claude è chiamato senza strumenti, come nel resto del progetto."""
+First the normalized comparison (the expected answer appears in the answer), then Claude Haiku as a judge with two
+examples (as in DeepDive). Claude is called without tools, as in the rest of the project."""
 import re
 import unicodedata
 
 from chain_research.model import claude_json
 
 MODEL = "haiku"
-EXTRACT = ("Estrai dal TESTO il valore che dà come risposta alla DOMANDA: una sola riga con un solo valore (nome, data o "
-          "numero), copiato dal testo. Non controllare se è giusto né se la persona o il luogo sono quelli della domanda: "
-          "estrai e basta. Scrivi solo NON TROVATA se il testo dice di non avere la risposta, oppure se dà come risposta "
-          "due o più valori diversi senza sceglierne uno.")
+EXTRACT = ("Extract from the TEXT the value it gives as the answer to the QUESTION: a single line with a single value "
+           "(name, date or number), copied from the text. Do not check whether it is right, nor whether the person or "
+           "place is the one in the question: just extract. Write only NOT FOUND if the text says it does not have the "
+           "answer, or if it gives two or more different values as the answer without choosing one.")
 JUDGE_SYSTEM_PROMPT = (
-    "Sei un giudice. Ti do una domanda, la risposta attesa e la risposta di un modello. Dimmi se la risposta del "
-    "modello indica la stessa cosa della risposta attesa (stessa persona, stesso luogo, stessa data al giorno, stesso "
-    "numero; lingua, formato e unità di misura possono cambiare). Una risposta più vaga di quella attesa (solo l'anno "
-    "invece del giorno, un intervallo) NON è corretta.\n\n"
-    "Esempio 1 — attesa: \"24 luglio 1973\"; modello: \"July 24, 1973\" → {\"corretta\": true}\n"
-    "Esempio 2 — attesa: \"Mitchell Baker\"; modello: \"Brendan Eich\" → {\"corretta\": false}\n\n"
-    'Rispondi solo con JSON: {"corretta": true} oppure {"corretta": false}.')
+    "You are a judge. I give you a question, the expected answer and a model's answer. Tell me whether the model's "
+    "answer indicates the same thing as the expected answer (same person, same place, same date to the day, same "
+    "number; language, format and unit of measurement may differ). An answer vaguer than the expected one (only the "
+    "year instead of the day, a range) is NOT correct.\n\n"
+    "Example 1 — expected: \"24 July 1973\"; model: \"July 24, 1973\" → {\"correct\": true}\n"
+    "Example 2 — expected: \"Mitchell Baker\"; model: \"Brendan Eich\" → {\"correct\": false}\n\n"
+    'Reply only with JSON: {"correct": true} or {"correct": false}.')
 
 
 def normalize(text: str) -> str:
@@ -27,7 +27,7 @@ def normalize(text: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[^\w ]", " ", "".join(c for c in text if not unicodedata.combining(c))))
 
 
-# Un meno davanti a un numero: non il trattino di un intervallo («00118–00199») né di una data («1973-07-24»).
+# A minus sign before a number: not the dash of a range ("00118–00199") nor of a date ("1973-07-24").
 _NEGATIVE = re.compile(r"(?<![\w.,])(?<!\d\s)[−–-]\s?(\d[\d.,]*)")
 _BELOW_SEA_LEVEL = re.compile(r"sotto il livello del mare|below sea level", re.I)
 
@@ -41,8 +41,8 @@ def _negatives(text: str) -> set[str]:
 
 
 def normalized_equal(wait: str, date: str) -> bool:
-    """La risposta attesa compare nella risposta data, con lo stesso segno dei numeri (11/11, domande di controllo:
-    «2 m» attesa, «−2 m s.l.m.» data, contata giusta)."""
+    """The expected answer appears in the given answer, with the same sign on the numbers (11 Nov, control questions:
+    "2 m" expected, "−2 m a.s.l." given, counted as right)."""
     wait_n, date_n = normalize(wait).strip(), normalize(date)
     if not wait_n or re.search(rf"\b{re.escape(wait_n)}\b", date_n) is None:
         return False
@@ -52,41 +52,41 @@ def normalized_equal(wait: str, date: str) -> bool:
 
 
 def _ask(instructions: str, text: str) -> str:
-    """Gli errori di Claude salgono: una chiamata fallita non è una risposta sbagliata (11/11)."""
+    """Claude errors propagate: a failed call is not a wrong answer (11 Nov)."""
     return str(claude_json.ask(instructions, text, None, "judge", model=MODEL)[0])
 
 
 def short_answer(text: str) -> str:
-    """La riga «Risposta» (o la prima riga non vuota)."""
-    found = re.search(r"\*\*Risposta:?\*\*:?\s*(.+)", text)
+    """The "Answer" line (or the first non-empty line); "Risposta" in runs saved before the translation."""
+    found = re.search(r"\*\*(?:Answer|Risposta):?\*\*:?\s*(.+)", text)
     if found:
         return found.group(1).strip()[:500]
     return next((r.strip() for r in text.splitlines() if r.strip()), "")[:500]
 
 
 def extract(question: str, text: str) -> str:
-    outcome = _ask(EXTRACT, f"DOMANDA: {question}\n\nDOCUMENTO:\n{text[:40000]}")
-    # La prima riga con un valore: niente premesse come «Dal testo fornito, il valore … è:».
+    outcome = _ask(EXTRACT, f"QUESTION: {question}\n\nDOCUMENT:\n{text[:40000]}")
+    # The first line with a value: no preambles such as "From the text provided, the value … is:".
     rows = [r.strip().strip("*").strip() for r in outcome.splitlines() if r.strip()]
     row = next((r for r in rows if not r.endswith(":")), rows[0] if rows else "")
     return "" if re.match(r"(NON|NOT)\s+(TROVATA|FOUND)", row.upper()) else row[:300]
 
 
 def final_of(outcome: dict, question: str) -> str:
-    """Il valore da giudicare: quello trovato dal programma; solo se manca, quello che Haiku estrae dalla riga
-    «Risposta» (11/11: «00118–00199» e «15 ottobre 1870», giusti, contati sbagliati perché l'estrazione era vuota)."""
+    """The value to judge: the one found by the program; only if missing, the one Haiku extracts from the "Answer"
+    line (11 Nov: "00118–00199" and "15 October 1870", right, counted wrong because the extraction was empty)."""
     value = " ".join(str(outcome.get("value") or "").split())
     return value or extract(question, short_answer(outcome.get("answer") or ""))
 
 
 def assess(question: str, wait: str, date: str) -> tuple[bool | None, str]:
-    """(corretta, chi ha deciso): "confronto", "giudice", "vuota", "giudice senza risposta valida"; (None, "giudice
-    in errore") se Claude non ha risposto: la domanda resta da giudicare. Il limite di sessione sale a chi chiama."""
+    """(correct, who decided): "comparison", "judge", "empty", "judge gave no valid answer"; (None, "judge error")
+    if Claude did not answer: the question stays pending judgement. The session limit propagates to the caller."""
     if not date:
         return False, "empty"
     if normalized_equal(wait, date):
         return True, "comparison"
-    text = f"DOMANDA: {question}\nRISPOSTA ATTESA: {wait}\nRISPOSTA DEL MODELLO: {date}"
+    text = f"QUESTION: {question}\nEXPECTED ANSWER: {wait}\nMODEL ANSWER: {date}"
     errors = 0
     for _ in range(2):
         try:
@@ -96,7 +96,7 @@ def assess(question: str, wait: str, date: str) -> tuple[bool | None, str]:
         except claude_json.ClaudeError:
             errors += 1
             continue
-        match = re.search(r'"corretta"\s*:\s*(true|false)', answer)
+        match = re.search(r'"correct"\s*:\s*(true|false)', answer)
         if match:
             return match.group(1) == "true", "judge"
     return (None, "judge error") if errors == 2 else (False, "judge gave no valid answer")

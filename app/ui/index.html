@@ -1,145 +1,145 @@
 <!doctype html>
-<html lang="it">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ricerca a catena</title>
-<link rel="stylesheet" href="/interfaccia/stile.css">
-<script src="/interfaccia/app.js" defer></script>
+<title>Chain Research</title>
+<link rel="stylesheet" href="/ui/style.css">
+<script src="/ui/app.js" defer></script>
 </head>
 <body>
-<header class="barra">
-  <div class="marchio">Ricerca a catena</div>
-  <div class="sottotitolo">Claude prepara le domande, la catena trova le risposte sul web, il documento le raccoglie</div>
-  <button type="button" id="apri-impostazioni" class="secondario">Impostazioni</button>
+<header class="bar">
+  <div class="brand">Chain Research</div>
+  <div class="subtitle">Claude prepares the questions, the chain finds the answers on the web, the document collects them</div>
+  <button type="button" id="open-settings" class="secondary">Settings</button>
 </header>
 
-<div class="pagina">
-  <aside class="colonna">
-    <form id="nuova" class="riquadro">
-      <h2>Nuova indagine</h2>
-      <label for="argomento">Su cosa vuoi indagare?</label>
-      <textarea id="argomento" rows="5" required placeholder="Es.: La storia di Arduino: chi lo ha creato, la disputa sul marchio tra Arduino LLC e Arduino Srl e la situazione di oggi"></textarea>
-      <label for="modello">Modello di Claude per domande e documento</label>
-      <select id="modello">
-        <option value="haiku">Haiku — il più economico</option>
-        <option value="sonnet">Sonnet — equilibrato (consigliato)</option>
-        <option value="opus">Opus — il più capace, costa di più</option>
+<div class="page">
+  <aside class="column">
+    <form id="new" class="panel">
+      <h2>New investigation</h2>
+      <label for="topic">What do you want to investigate?</label>
+      <textarea id="topic" rows="5" required placeholder="E.g.: The history of Arduino: who created it, the trademark dispute between Arduino LLC and Arduino Srl, and the situation today"></textarea>
+      <label for="model">Claude model for questions and document</label>
+      <select id="model">
+        <option value="haiku">Haiku — cheapest</option>
+        <option value="sonnet">Sonnet — balanced (recommended)</option>
+        <option value="opus">Opus — most capable, costs more</option>
       </select>
-      <div class="riga">
+      <div class="row">
         <label>Budget ($)<input id="budget" type="number" min="0.5" max="500" step="0.5"></label>
-        <label>Tempo massimo (min)<input id="minuti" type="number" min="10" max="1440" step="10"></label>
+        <label>Time limit (min)<input id="minutes" type="number" min="10" max="1440" step="10"></label>
       </div>
-      <label class="spunta"><input type="checkbox" id="senza-limiti"> Nessun limite di spesa e di tempo</label>
-      <p class="nota" id="nota-limiti">Le risposte alle domande le dà sempre la catena con Claude Haiku (circa 0,10 $ e 7 minuti a domanda, tre alla volta).</p>
-      <button type="submit" id="avvia">Avvia l'indagine</button>
+      <label class="check"><input type="checkbox" id="unlimited"> No spending or time limit</label>
+      <p class="note" id="limits-note">Answers are always found by the chain with Claude Haiku (about $0.10 and 7 minutes per question, three at a time).</p>
+      <button type="submit" id="start">Start the investigation</button>
     </form>
 
-    <section class="riquadro">
-      <h2>Indagini</h2>
-      <ul id="elenco" class="elenco"></ul>
-      <p class="nota" id="elenco-vuoto">Nessuna indagine ancora.</p>
+    <section class="panel">
+      <h2>Investigations</h2>
+      <ul id="list" class="list"></ul>
+      <p class="note" id="list-empty">No investigations yet.</p>
     </section>
   </aside>
 
-  <main class="colonna larga" id="dettaglio">
-    <div class="vuoto" id="nessuna">
-      <h1>Scegli o avvia un'indagine</h1>
-      <p>Scrivi un argomento a sinistra. Claude lo divide in sezioni e in domande precise; ogni domanda viene risolta
-        cercando su Wikipedia e sul web con prove controllate; dopo ogni giro Claude valuta cosa manca e chiede ancora.
-        Alla fine trovi un documento PDF completo, con tutte le fonti.</p>
+  <main class="column wide" id="detail">
+    <div class="empty" id="none">
+      <h1>Choose or start an investigation</h1>
+      <p>Type a topic on the left. Claude splits it into sections and precise questions; each question is solved by
+        searching Wikipedia and the web with checked evidence; after each round Claude evaluates what is missing and
+        asks again. At the end you get a complete PDF document with all its sources.</p>
     </div>
-    <div id="vista" hidden>
-      <div class="testata">
+    <div id="view" hidden>
+      <div class="heading">
         <div>
-          <div class="sopra" id="v-data"></div>
-          <h1 id="v-titolo"></h1>
-          <p class="argomento" id="v-argomento"></p>
+          <div class="overline" id="v-date"></div>
+          <h1 id="v-title"></h1>
+          <p class="topic" id="v-topic"></p>
         </div>
-        <span class="chip" id="v-stato"></span>
+        <span class="chip" id="v-status"></span>
       </div>
-      <div class="numeri" id="v-numeri"></div>
-      <p class="fase" id="v-fase"></p>
-      <div class="pulsanti">
-        <button type="button" id="b-apri">Apri il PDF</button>
-        <button type="button" id="b-ferma" class="pericolo">Ferma</button>
-        <button type="button" id="b-riprendi" class="secondario">Riprendi</button>
-        <button type="button" id="b-documento" class="secondario">Scrivi il documento con quello che c'è</button>
-        <button type="button" id="b-cartella" class="secondario">Apri la cartella</button>
-        <button type="button" id="b-pulisci" class="secondario">Libera spazio</button>
+      <div class="figures" id="v-figures"></div>
+      <p class="phase" id="v-phase"></p>
+      <div class="buttons">
+        <button type="button" id="b-open">Open the PDF</button>
+        <button type="button" id="b-stop" class="danger">Stop</button>
+        <button type="button" id="b-resume" class="secondary">Resume</button>
+        <button type="button" id="b-document" class="secondary">Write the document with what is there</button>
+        <button type="button" id="b-folder" class="secondary">Open the folder</button>
+        <button type="button" id="b-clean" class="secondary">Free up space</button>
       </div>
-      <section class="riquadro" id="v-sezioni-box">
-        <h2>Sezioni del documento</h2>
-        <p class="nota">Copertura secondo l'ultima valutazione di Claude (0-3).</p>
-        <ul id="v-sezioni" class="sezioni"></ul>
-        <p class="nota" id="v-valutazione"></p>
+      <section class="panel" id="v-sections-box">
+        <h2>Document sections</h2>
+        <p class="note">Coverage according to Claude's latest evaluation (0-3).</p>
+        <ul id="v-sections" class="sections"></ul>
+        <p class="note" id="v-evaluation"></p>
       </section>
-      <section class="riquadro">
-        <h2>Domande</h2>
-        <div id="v-domande"></div>
+      <section class="panel">
+        <h2>Questions</h2>
+        <div id="v-questions"></div>
       </section>
-      <section class="riquadro">
-        <h2>Attività</h2>
-        <ol id="v-attivita" class="attivita"></ol>
+      <section class="panel">
+        <h2>Activity</h2>
+        <ol id="v-activity" class="activity"></ol>
       </section>
     </div>
   </main>
 </div>
 
-<dialog id="impostazioni">
-  <form id="form-impostazioni" method="dialog">
-    <h2>Impostazioni</h2>
-    <label for="i-modello">Modello predefinito per domande e documento</label>
-    <select id="i-modello">
+<dialog id="settings">
+  <form id="form-settings" method="dialog">
+    <h2>Settings</h2>
+    <label for="s-model">Default model for questions and document</label>
+    <select id="s-model">
       <option value="haiku">Haiku</option><option value="sonnet">Sonnet</option><option value="opus">Opus</option>
     </select>
-    <div class="riga">
-      <label>Budget predefinito ($)<input id="i-budget" type="number" min="0.5" max="500" step="0.5"></label>
-      <label>Tempo predefinito (min)<input id="i-minuti" type="number" min="10" max="1440" step="10"></label>
+    <div class="row">
+      <label>Default budget ($)<input id="s-budget" type="number" min="0.5" max="500" step="0.5"></label>
+      <label>Default time (min)<input id="s-minutes" type="number" min="10" max="1440" step="10"></label>
     </div>
-    <label class="spunta"><input type="checkbox" id="i-senza-limiti"> Nessun limite, come scelta predefinita</label>
-    <label>Domande in parallelo<input id="i-parallelo" type="number" min="1" max="4" step="1"></label>
-    <h3>Avanzate: ogni domanda della catena</h3>
-    <label for="i-modello-catena">Modello che legge per la catena</label>
-    <select id="i-modello-catena">
+    <label class="check"><input type="checkbox" id="s-unlimited"> No limit, as the default choice</label>
+    <label>Questions in parallel<input id="s-parallel" type="number" min="1" max="4" step="1"></label>
+    <h3>Advanced: each question of the chain</h3>
+    <label for="s-chain-model">Model that reads for the chain</label>
+    <select id="s-chain-model">
       <option value="haiku">Haiku</option><option value="sonnet">Sonnet</option><option value="opus">Opus</option>
     </select>
-    <label for="i-modello-revisione">Modello che rivede la risposta cercando l'errore</label>
-    <select id="i-modello-revisione">
+    <label for="s-review-model">Model that reviews the answer looking for errors</label>
+    <select id="s-review-model">
       <option value="haiku">Haiku</option><option value="sonnet">Sonnet</option><option value="opus">Opus</option>
     </select>
-    <div class="riga">
-      <label>Budget ($)<input id="i-budget-domanda" type="number" min="0.05" max="5" step="0.05"></label>
-      <label>Pagine<input id="i-pagine-domanda" type="number" min="1" max="200" step="1"></label>
-      <label>Minuti<input id="i-minuti-domanda" type="number" min="5" max="180" step="1"></label>
+    <div class="row">
+      <label>Budget ($)<input id="s-question-budget" type="number" min="0.05" max="5" step="0.05"></label>
+      <label>Pages<input id="s-question-pages" type="number" min="1" max="200" step="1"></label>
+      <label>Minutes<input id="s-question-minutes" type="number" min="5" max="180" step="1"></label>
     </div>
-    <p class="nota">Le impostazioni valgono per le indagini nuove: quelle già create tengono le loro.</p>
+    <p class="note">Settings apply to new investigations: existing ones keep their own.</p>
     <h3>Wikipedia</h3>
-    <label class="spunta"><input type="checkbox" id="i-wiki-attivo"> Presentarsi a Wikipedia con un contatto</label>
-    <label for="i-wiki-contatto">Contatto (email o sito)</label>
-    <input id="i-wiki-contatto" type="text" autocomplete="off">
-    <p class="nota" id="i-wiki-nota">Wikipedia chiede un contatto a chi usa i suoi servizi: con il contatto la ricerca può fare 200 richieste al minuto, senza solo 10. Viene inviato solo a Wikipedia. Se il campo è vuoto si usa l'email del tuo account Claude.</p>
-    <div class="pulsanti">
-      <button type="submit" value="salva" id="i-salva">Salva</button>
-      <button type="submit" value="annulla" class="secondario" formnovalidate>Annulla</button>
+    <label class="check"><input type="checkbox" id="s-wiki-active"> Identify to Wikipedia with a contact</label>
+    <label for="s-wiki-contact">Contact (email or website)</label>
+    <input id="s-wiki-contact" type="text" autocomplete="off">
+    <p class="note" id="s-wiki-note">Wikipedia asks API users for a contact: with a contact the search can make 200 requests per minute, without one only 10. It is sent only to Wikipedia. If the field is empty, the email of your Claude account is used.</p>
+    <div class="buttons">
+      <button type="submit" value="save" id="s-save">Save</button>
+      <button type="submit" value="cancel" class="secondary" formnovalidate>Cancel</button>
     </div>
   </form>
 </dialog>
-<dialog id="riprendi">
-  <form id="form-riprendi" method="dialog">
-    <h2>Riprendi l'indagine</h2>
-    <div class="riga">
+<dialog id="resume">
+  <form id="form-resume" method="dialog">
+    <h2>Resume the investigation</h2>
+    <div class="row">
       <label>Budget ($)<input id="r-budget" type="number" min="0.5" max="500" step="0.5"></label>
-      <label>Tempo massimo (min)<input id="r-minuti" type="number" min="10" max="1440" step="10"></label>
+      <label>Time limit (min)<input id="r-minutes" type="number" min="10" max="1440" step="10"></label>
     </div>
-    <label class="spunta"><input type="checkbox" id="r-senza-limiti"> Nessun limite di spesa e di tempo</label>
-    <p class="nota">Si contano anche la spesa e il tempo già usati.</p>
-    <div class="pulsanti">
-      <button type="submit" value="riprendi" id="r-conferma">Riprendi</button>
-      <button type="submit" value="annulla" class="secondario" formnovalidate>Annulla</button>
+    <label class="check"><input type="checkbox" id="r-unlimited"> No spending or time limit</label>
+    <p class="note">The spending and time already used are counted too.</p>
+    <div class="buttons">
+      <button type="submit" value="resume" id="r-confirm">Resume</button>
+      <button type="submit" value="cancel" class="secondary" formnovalidate>Cancel</button>
     </div>
   </form>
 </dialog>
-<div id="avviso" class="avviso" role="status" hidden></div>
+<div id="notice" class="notice" role="status" hidden></div>
 </body>
 </html>

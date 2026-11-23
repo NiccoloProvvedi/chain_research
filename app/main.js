@@ -1,7 +1,7 @@
 "use strict";
-// Processo principale dell'app Ricerca a catena.
-// Avvia il server (Python, solo 127.0.0.1) con una chiave segreta casuale, la consegna alla finestra
-// tramite un cookie HttpOnly e apre l'interfaccia con tutte le protezioni di Electron attive.
+// Main process of the Chain Research app.
+// Starts the server (Python, 127.0.0.1 only) with a random secret key, hands it to the window
+// through an HttpOnly cookie and opens the interface with all of Electron's protections on.
 
 const { app, BrowserWindow, dialog, session, shell } = require("electron");
 const { spawn } = require("node:child_process");
@@ -9,79 +9,79 @@ const crypto = require("node:crypto");
 const path = require("node:path");
 const readline = require("node:readline");
 
-const PROGETTO = path.resolve(__dirname, "..");
-const PYTHON = path.join(PROGETTO, "venv", "bin", "python");
-const MODO_PROVA = process.env.CHAIN_TEST === "1"; // apre, fotografa la finestra in un file e chiude
+const PROJECT = path.resolve(__dirname, "..");
+const PYTHON = path.join(PROJECT, "venv", "bin", "python");
+const TEST_MODE = process.env.CHAIN_TEST === "1"; // opens, saves a screenshot of the window to a file and quits
 
 let server = null;
-let finestra = null;
+let appWindow = null;
 
-function avviaServer(token) {
+function startServer(token) {
   return new Promise((resolve, reject) => {
     server = spawn(PYTHON, ["-m", "chain_research.server"], {
-      cwd: PROGETTO,
+      cwd: PROJECT,
       env: { ...process.env, CHAIN_TOKEN: token },
       stdio: ["ignore", "pipe", "inherit"],
     });
-    const scadenza = setTimeout(() => reject(new Error("Il server non si è avviato entro 30 secondi.")), 30000);
-    server.once("error", (errore) => {
-      clearTimeout(scadenza);
-      reject(errore);
+    const timeout = setTimeout(() => reject(new Error("The server did not start within 30 seconds.")), 30000);
+    server.once("error", (error) => {
+      clearTimeout(timeout);
+      reject(error);
     });
-    server.once("exit", (codice) => {
-      clearTimeout(scadenza);
-      reject(new Error(`Il server si è chiuso (codice ${codice}).`));
+    server.once("exit", (code) => {
+      clearTimeout(timeout);
+      reject(new Error(`The server exited (code ${code}).`));
     });
-    readline.createInterface({ input: server.stdout }).once("line", (riga) => {
-      clearTimeout(scadenza);
+    readline.createInterface({ input: server.stdout }).once("line", (line) => {
+      clearTimeout(timeout);
       try {
-        resolve(JSON.parse(riga).porta);
+        resolve(JSON.parse(line).port);
       } catch {
-        reject(new Error("Risposta del server non valida."));
+        reject(new Error("Invalid response from the server."));
       }
     });
   });
 }
 
-function proteggi(origine) {
-  // Nessun permesso del browser (fotocamera, microfono, notifiche, posizione...).
-  session.defaultSession.setPermissionRequestHandler((_wc, _permesso, rispondi) => rispondi(false));
+function protect(origin) {
+  // No browser permissions (camera, microphone, notifications, location...).
+  session.defaultSession.setPermissionRequestHandler((_wc, _permission, respond) => respond(false));
   session.defaultSession.setPermissionCheckHandler(() => false);
-  app.on("web-contents-created", (_e, contenuti) => {
-    // La finestra non può navigare altrove né aprire altre finestre.
-    contenuti.on("will-navigate", (evento, url) => {
-      if (!url.startsWith(origine + "/")) evento.preventDefault();
+  app.on("web-contents-created", (_e, contents) => {
+    // The window cannot navigate elsewhere or open other windows.
+    contents.on("will-navigate", (event, url) => {
+      if (!url.startsWith(origin + "/")) event.preventDefault();
     });
-    contenuti.setWindowOpenHandler(({ url }) => {
-      if (url.startsWith("https://")) shell.openExternal(url); // link esterni nel browser di sistema
+    contents.setWindowOpenHandler(({ url }) => {
+      if (url.startsWith("https://")) shell.openExternal(url); // external links in the system browser
       return { action: "deny" };
     });
-    contenuti.on("will-attach-webview", (evento) => evento.preventDefault());
+    contents.on("will-attach-webview", (event) => event.preventDefault());
   });
 }
 
-async function apri() {
+async function openApp() {
   const token = crypto.randomBytes(32).toString("hex");
-  let origine;
+  let origin;
   try {
-    origine = `http://127.0.0.1:${await avviaServer(token)}`;
-  } catch (errore) {
-    dialog.showErrorBox("Ricerca a catena", `${errore.message}\n\nControlla che ${PYTHON} esista.`);
+    origin = `http://127.0.0.1:${await startServer(token)}`;
+  } catch (error) {
+    dialog.showErrorBox("Chain Research", `${error.message}\n\nCheck that ${PYTHON} exists.`);
     app.quit();
     return;
   }
-  proteggi(origine);
+  protect(origin);
   await session.defaultSession.cookies.set({
-    url: origine, name: "token", value: token, httpOnly: true, sameSite: "strict",
+    url: origin, name: "token", value: token, httpOnly: true, sameSite: "strict",
   });
-  finestra = new BrowserWindow({
+  appWindow = new BrowserWindow({
     width: 1280,
     height: 860,
     minWidth: 900,
     minHeight: 600,
-    title: "Ricerca a catena",
+    title: "Chain Research",
     autoHideMenuBar: true,
-    show: !MODO_PROVA,
+    show: !TEST_MODE,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -89,30 +89,30 @@ async function apri() {
       webSecurity: true,
       allowRunningInsecureContent: false,
       spellcheck: false,
-      offscreen: MODO_PROVA,
+      offscreen: TEST_MODE,
     },
   });
-  await finestra.loadURL(origine + "/");
-  if (MODO_PROVA) await prova();
+  await appWindow.loadURL(origin + "/");
+  if (TEST_MODE) await selfTest();
 }
 
-async function prova() {
-  // Verifica automatica: l'interfaccia risponde, il server accetta la chiave; fotografia della finestra.
+async function selfTest() {
+  // Automatic check: the interface answers, the server accepts the key; screenshot of the window.
   const fs = require("node:fs");
   await new Promise((r) => setTimeout(r, 2500));
-  const esito = await finestra.webContents.executeJavaScript(
-    `fetch("/api/impostazioni").then(r => r.json()).then(s => JSON.stringify({ok: true, modelli: s.modelli}))`,
+  const outcome = await appWindow.webContents.executeJavaScript(
+    `fetch("/api/settings").then(r => r.json()).then(s => JSON.stringify({ok: true, models: s.models}))`,
   );
-  console.log("PROVA " + esito);
-  const uscita = process.env.CHAIN_TEST_IMAGE;
-  if (uscita) {
-    const immagine = await finestra.webContents.capturePage();
-    fs.writeFileSync(uscita, immagine.toPNG());
+  console.log("TEST " + outcome);
+  const output = process.env.CHAIN_TEST_IMAGE;
+  if (output) {
+    const image = await appWindow.webContents.capturePage();
+    fs.writeFileSync(output, image.toPNG());
   }
   app.quit();
 }
 
-function chiudiServer() {
+function stopServer() {
   if (server && server.exitCode === null) {
     server.kill("SIGTERM");
     setTimeout(() => server?.exitCode === null && server.kill("SIGKILL"), 25000).unref();
@@ -123,14 +123,14 @@ if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   app.on("second-instance", () => {
-    if (finestra) {
-      if (finestra.isMinimized()) finestra.restore();
-      finestra.focus();
+    if (appWindow) {
+      if (appWindow.isMinimized()) appWindow.restore();
+      appWindow.focus();
     }
   });
-  app.whenReady().then(apri);
+  app.whenReady().then(openApp);
   app.on("window-all-closed", () => app.quit());
-  app.on("before-quit", chiudiServer);
+  app.on("before-quit", stopServer);
   process.on("SIGINT", () => app.quit());
   process.on("SIGTERM", () => app.quit());
 }

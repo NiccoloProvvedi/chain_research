@@ -1,1 +1,1 @@
-"""Pezzi di pagina salvati e grafo dei concetti di una domanda, con la loro provenienza."""
+"""Saved page pieces and the concept graph of a question, with their provenance."""

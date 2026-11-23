@@ -1,31 +1,31 @@
 #!/usr/bin/env bash
-# Corse del banco staccate dalla sessione: continuano anche se il terminale (o Claude Code) si chiude.
+# Bench runs detached from the session: they go on even if the terminal (or Claude Code) is closed.
 #
-# Uso: bench/run.sh <cartella del codice> <nome>[,<nome>...] [opzioni di banco.py]
-#   es. bench/run.sh ../ricerca-catena-banco-c controllo-c1,controllo-c2 --domande bench/questions_holdout.json
-# Le corse vanno una dopo l'altra, dalla cartella indicata (una copia ferma del codice: `git worktree add`), con
-# l'attesa del limite di sessione. Registro: risultati/bench/<nome>/run.log; processo: results/bench/runs.pid.
-# Una corsa interrotta riparte da dove era arrivata: basta rilanciare lo stesso comando. Per fermare:
+# Usage: bench/run.sh <code folder> <name>[,<name>...] [bench.py options]
+#   e.g. bench/run.sh ../ricerca-catena-bench-c control-c1,control-c2 --questions bench/questions_holdout.json
+# The runs go one after another, from the given folder (a frozen copy of the code: `git worktree add`), waiting for
+# the session limit. Log: results/bench/<name>/run.log; process: results/bench/runs.pid.
+# An interrupted run resumes from where it stopped: just relaunch the same command. To stop:
 #   kill -- -$(cat results/bench/runs.pid)
-# Con BASSA_PRIORITA=1 davanti al comando le corse non disturbano chi usa il computer.
-# Consuma l'abbonamento di Claude.
+# With LOW_PRIORITY=1 before the command the runs do not disturb whoever is using the computer.
+# Uses the Claude subscription.
 set -euo pipefail
-codice=$(cd "$1" && pwd); nomi=$2; shift 2
-radice=$(cd "$(dirname "$0")/.." && pwd)
-pid="$radice/results/bench/runs.pid"
+code=$(cd "$1" && pwd); names=$2; shift 2
+root=$(cd "$(dirname "$0")/.." && pwd)
+pid="$root/results/bench/runs.pid"
 if [ -f "$pid" ] && kill -0 "$(cat "$pid")" 2>/dev/null; then
-  echo "c'è già una corsa in esecuzione (processo $(cat "$pid"))" >&2; exit 1
+  echo "a run is already in progress (process $(cat "$pid"))" >&2; exit 1
 fi
-mkdir -p "$radice/risultati/banco"
-# BASSA_PRIORITA=1: il computer serve ad altro (CPU e disco alla priorità più bassa); di solito con --parallelo 1.
-prefisso=""
-[ -n "${BASSA_PRIORITA:-}" ] && prefisso="nice -n 19 ionice -c 3 "
-comando=""
-for nome in ${nomi//,/ }; do
-  mkdir -p "$radice/risultati/bench/$nome"
-  comando+="${prefisso}venv/bin/python bench/bench.py --nome $(printf %q "$nome") $(printf '%q ' "$@") >> $(printf %q "$radice/risultati/bench/$nome/run.log") 2>&1; "
+mkdir -p "$root/results/bench"
+# LOW_PRIORITY=1: the computer is needed for other things (CPU and disk at the lowest priority); usually with --parallel 1.
+prefix=""
+[ -n "${LOW_PRIORITY:-}" ] && prefix="nice -n 19 ionice -c 3 "
+cmd=""
+for name in ${names//,/ }; do
+  mkdir -p "$root/results/bench/$name"
+  cmd+="${prefix}venv/bin/python bench/bench.py --name $(printf %q "$name") $(printf '%q ' "$@") >> $(printf %q "$root/results/bench/$name/run.log") 2>&1; "
 done
-cd "$codice"
-CHAIN_WAIT_FOR_LIMIT=1 setsid nohup bash -c "$comando" > /dev/null 2>&1 < /dev/null &
+cd "$code"
+CHAIN_WAIT_FOR_LIMIT=1 setsid nohup bash -c "$cmd" > /dev/null 2>&1 < /dev/null &
 echo $! > "$pid"
-echo "corse $nomi avviate da $codice (processo $!); registro in risultati/bench/<nome>/run.log"
+echo "runs $names started from $code (process $!); log in results/bench/<name>/run.log"

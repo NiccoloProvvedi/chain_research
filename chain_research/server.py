@@ -1,8 +1,8 @@
-"""Server locale dell'app: API e pagina, solo da 127.0.0.1, con chiave segreta (cookie impostato da Electron).
+"""Local server of the app: API and page, only from 127.0.0.1, with a secret token (cookie set by Electron).
 
-Avvio: `python -m chain_research.server` (lo avvia l'app). Ascolta su una porta libera e la scrive su stdout come
-prima riga JSON ({"porta": 12345}); la chiave arriva da CHAIN_TOKEN. Un'indagine gira in un processo a sé
-(`python -m chain_research.investigation`); il server ne legge lo stato e gli eventi dai file della sua cartella.
+Start: `python -m chain_research.server` (the app starts it). It listens on a free port and writes it to stdout as the
+first JSON line ({"port": 12345}); the token comes from CHAIN_TOKEN. An investigation runs in its own process
+(`python -m chain_research.investigation`); the server reads its status and events from the files in its folder.
 """
 import asyncio
 import hmac
@@ -41,7 +41,7 @@ VALID_NAME = r"^[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4}-[a-z0-9-]{1,50}$"
 
 
 class Protection(BaseHTTPMiddleware):
-    """Accetta solo richieste a 127.0.0.1 con la chiave segreta."""
+    """Accepts only requests to 127.0.0.1 with the secret token."""
 
     def __init__(self, app: Any, token: str, port_number: Callable[[], int]) -> None:
         super().__init__(app)
@@ -51,11 +51,11 @@ class Protection(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
         host = request.headers.get("host", "")
         if host not in (f"127.0.0.1:{self.port_number()}", f"localhost:{self.port_number()}"):
-            return JSONResponse({"error": "Host non consentito."}, status_code=403)
+            return JSONResponse({"error": "Host not allowed."}, status_code=403)
         if not hmac.compare_digest(request.cookies.get("token", ""), self.token):
-            return JSONResponse({"error": "Accesso non autorizzato."}, status_code=403)
+            return JSONResponse({"error": "Unauthorized access."}, status_code=403)
         if request.method == "POST" and request.headers.get("origin") not in (None, f"http://{host}"):
-            return JSONResponse({"error": "Origine non consentita."}, status_code=403)
+            return JSONResponse({"error": "Origin not allowed."}, status_code=403)
         answer = await call_next(request)
         answer.headers["Content-Security-Policy"] = CSP
         answer.headers["X-Content-Type-Options"] = "nosniff"
@@ -64,7 +64,7 @@ class Protection(BaseHTTPMiddleware):
 
 
 class Manager:
-    """Le indagini sul disco e quella in corso (una alla volta: i profili del browser sono condivisi)."""
+    """The investigations on disk and the one in progress (one at a time: the browser profiles are shared)."""
 
     def __init__(self, folder: Path | None = None) -> None:
         self._folder = folder
@@ -77,7 +77,7 @@ class Manager:
 
     def path(self, ident: str) -> Path:
         if not re.match(VALID_NAME, ident or "") or not (self.folder / ident / "status.json").is_file():
-            raise ValueError("Indagine inesistente.")
+            raise ValueError("No such investigation.")
         return self.folder / ident
 
     def status(self, ident: str) -> dict:
@@ -95,12 +95,12 @@ class Manager:
                              "spent_usd": round(s.get("director_spent_usd", 0) + sum(d.get("cost_usd") or 0
                                                                                for d in questions), 2),
                              "pdf": bool((s.get("document") or {}).get("pdf"))})
-            except (ValueError, KeyError, TypeError):  # un file rovinato non deve nascondere le altre indagini
+            except (ValueError, KeyError, TypeError):  # a damaged file must not hide the other investigations
                 continue
         return articles
 
     def _true_status(self, s: dict) -> str:
-        """Un'indagine "in corso" sul disco ma senza processo è stata interrotta (app chiusa, computer spento)."""
+        """An investigation "in progress" on disk but without a process was interrupted (app closed, computer off)."""
         if s["status"] == "in_progress" and not self.in_execution(s["id"]):
             return "interrupted"
         return s["status"]
@@ -109,7 +109,7 @@ class Manager:
         return self.process is not None and self.process.poll() is None
 
     def in_execution(self, ident: str) -> bool:
-        """Anche un processo sopravvissuto a un server precedente: il blocco nella cartella lo dice."""
+        """Also a process that outlived a previous server: the lock in the folder tells."""
         return (self._active_mine() and self.in_progress == ident) or active_process(self.folder / ident) is not None
 
     def active(self) -> bool:
@@ -118,23 +118,23 @@ class Manager:
 
     def launch(self, ident: str, document_only: bool = False) -> None:
         if self.active():
-            raise ValueError("C'è già un'indagine in corso: fermala o aspetta che finisca.")
+            raise ValueError("An investigation is already running: stop it or wait for it to finish.")
         folder = self.path(ident)
         python = ROOT / "venv" / "bin" / "python"
         with (folder / "errors.log").open("a", encoding="utf-8") as errors:
             self.process = subprocess.Popen(
                 [str(python if python.exists() else sys.executable), "-m", "chain_research.investigation", str(folder)]
-                + (["--documento"] if document_only else []), cwd=ROOT, stdin=subprocess.DEVNULL,
+                + (["--document"] if document_only else []), cwd=ROOT, stdin=subprocess.DEVNULL,
                 stdout=subprocess.DEVNULL, stderr=errors, start_new_session=True)
         self.in_progress = ident
 
     def update_limits(self, ident: str, data: dict) -> None:
-        """Limiti nuovi per un'indagine ferma, prima di riprenderla (solo quelli indicati)."""
+        """New limits for a stopped investigation, before resuming it (only those given)."""
         if self.in_execution(ident):
-            raise ValueError("Questa indagine è già in corso.")
+            raise ValueError("This investigation is already running.")
         s = self.status(ident)
         budget = _number(data.get("budget_usd"), *configuration.INTERVALS["budget_usd"], "Budget")
-        minutes = _number(data.get("max_minutes"), *configuration.INTERVALS["max_minutes"], "Tempo massimo")
+        minutes = _number(data.get("max_minutes"), *configuration.INTERVALS["max_minutes"], "Maximum time")
         if budget is not None:
             s["limits"]["budget_usd"] = budget
         if minutes is not None:
@@ -147,9 +147,9 @@ class Manager:
         temporary.replace(file)
 
     def clean(self, ident: str) -> None:
-        """Toglie i pezzi di pagina letti: servono solo mentre le domande sono in corso."""
+        """Removes the page pieces read: they are only needed while the questions are running."""
         if self.in_execution(ident):
-            raise ValueError("Questa indagine è in corso.")
+            raise ValueError("This investigation is running.")
         shutil.rmtree(self.path(ident) / "pieces", ignore_errors=True)
 
     def stop(self, ident: str) -> None:
@@ -158,8 +158,8 @@ class Manager:
             return
         pid = active_process(self.path(ident))
         if not pid:
-            raise ValueError("Questa indagine non è in corso.")
-        os.kill(pid, signal.SIGTERM)  # sopravvissuta a un server precedente
+            raise ValueError("This investigation is not running.")
+        os.kill(pid, signal.SIGTERM)  # outlived a previous server
 
     def teardown(self) -> None:
         if self._active_mine():
@@ -189,8 +189,8 @@ def create_app(token: str, port_number: Callable[[], int], handler: Manager | No
         except ValueError as e:
             return JSONResponse({"error": str(e)}, status_code=400)
         except Exception as e:  # noqa: BLE001
-            log.exception("Errore nel server")
-            return JSONResponse({"error": f"Errore: {e}"}, status_code=500)
+            log.exception("Server error")
+            return JSONResponse({"error": f"Error: {e}"}, status_code=500)
 
     async def home(_request: Request) -> Response:
         return FileResponse(INTERFACE / "index.html")
@@ -207,10 +207,10 @@ def create_app(token: str, port_number: Callable[[], int], handler: Manager | No
 
             def fresh() -> dict:
                 if handler.active():
-                    raise ValueError("C'è già un'indagine in corso: fermala o aspetta che finisca.")
+                    raise ValueError("An investigation is already running: stop it or wait for it to finish.")
                 ind = Investigation.create(str(data.get("topic") or ""), director_model=data.get("director_model"),
                                     budget_usd=_number(data.get("budget_usd"), 0.5, 500, "Budget"),
-                                    max_minutes=_number(data.get("max_minutes"), 10, 24 * 60, "Tempo massimo"),
+                                    max_minutes=_number(data.get("max_minutes"), 10, 24 * 60, "Maximum time"),
                                     without_limits=bool(data.get("without_limits")), base_folder=handler.folder)
                 handler.launch(ind.folder.name)
                 return {"id": ind.folder.name}
@@ -231,39 +231,39 @@ def create_app(token: str, port_number: Callable[[], int], handler: Manager | No
         data = await body(request)
 
         def run() -> dict:
-            if name == "ferma":
+            if name == "stop":
                 handler.stop(ident)
-            elif name == "riprendi":
+            elif name == "resume":
                 if handler.active():
-                    raise ValueError("C'è già un'indagine in corso: fermala o aspetta che finisca.")
+                    raise ValueError("An investigation is already running: stop it or wait for it to finish.")
                 handler.update_limits(ident, data)
                 handler.launch(ident)
-            elif name == "pulisci":
+            elif name == "clean":
                 handler.clean(ident)
             elif name == "document":
                 handler.launch(ident, document_only=True)
-            elif name == "apri":
+            elif name == "open":
                 pdf = handler.path(ident) / "document.pdf"
                 if not pdf.is_file():
-                    raise ValueError("Il PDF non c'è ancora.")
+                    raise ValueError("The PDF is not there yet.")
                 subprocess.Popen(["xdg-open", str(pdf)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            elif name == "cartella":
+            elif name == "folder":
                 subprocess.Popen(["xdg-open", str(handler.path(ident))], stdout=subprocess.DEVNULL,
                                  stderr=subprocess.DEVNULL)
             else:
-                raise ValueError("Azione sconosciuta.")
+                raise ValueError("Unknown action.")
             return {"ok": True}
         return await protected(run)
 
     async def events(request: Request) -> Response:
-        """Gli eventi dell'indagine (SSE), dal file eventi.jsonl: prima quelli già scritti, poi i nuovi."""
+        """The events of the investigation (SSE), from events.jsonl: first those already written, then the new ones."""
         ident = request.path_params["ident"]
         try:
             file = handler.path(ident) / "events.jsonl"
         except ValueError as e:
             return JSONResponse({"error": str(e)}, status_code=400)
         try:
-            last = max(0, int(request.headers.get("last-event-id") or request.query_params.get("parent") or 0))
+            last = max(0, int(request.headers.get("last-event-id") or request.query_params.get("from") or 0))
         except ValueError:
             last = 0
 
@@ -274,13 +274,13 @@ def create_app(token: str, port_number: Callable[[], int], handler: Manager | No
                 for number in range(sent, len(rows)):
                     yield f"id: {number + 1}\ndata: {rows[number]}\n\n"
                 sent = max(sent, len(rows))
-                # Indagine conclusa e nessun processo al lavoro: il flusso finisce (l'app lo riapre se riprende).
-                if rows and '"tipo": "fine"' in rows[-1] and not handler.in_execution(ident):
-                    yield "event: chiuso\ndata: {}\n\n"  # solo questo chiude il flusso: un «fine» può essere di una corsa passata
+                # Investigation over and no process at work: the stream ends (the app reopens it if it resumes).
+                if rows and '"kind": "end"' in rows[-1] and not handler.in_execution(ident):
+                    yield "event: closed\ndata: {}\n\n"  # only this closes the stream: an "end" may be from a past run
                     break
                 rounds += 1
                 if rounds % 30 == 0:
-                    yield ": vivo\n\n"
+                    yield ": alive\n\n"
                 if await request.is_disconnected():
                     break
                 await asyncio.sleep(0.5)
@@ -288,17 +288,17 @@ def create_app(token: str, port_number: Callable[[], int], handler: Manager | No
 
     routes = [
         Route("/", home),
-        Route("/api/impostazioni", settings, methods=["GET", "POST"]),
-        Route("/api/indagini", investigations, methods=["GET", "POST"]),
-        Route("/api/indagini/{ident}", investigation),
-        Route("/api/indagini/{ident}/eventi", events),
-        Route("/api/indagini/{ident}/{azione}", action, methods=["POST"]),
-        Mount("/interfaccia", StaticFiles(directory=INTERFACE)),
+        Route("/api/settings", settings, methods=["GET", "POST"]),
+        Route("/api/investigations", investigations, methods=["GET", "POST"]),
+        Route("/api/investigations/{ident}", investigation),
+        Route("/api/investigations/{ident}/events", events),
+        Route("/api/investigations/{ident}/{action}", action, methods=["POST"]),
+        Mount("/ui", StaticFiles(directory=INTERFACE)),
     ]
     @asynccontextmanager
     async def life_cycle(_app: Starlette):
         yield
-        handler.teardown()  # l'app si chiude: l'indagine in corso si ferma (si potrà riprendere)
+        handler.teardown()  # the app closes: the running investigation stops (it can be resumed)
 
     app = Starlette(routes=routes, lifespan=life_cycle)
     app.add_middleware(Protection, token=token, port_number=port_number)
@@ -312,9 +312,9 @@ def _number(value: Any, minimum: float, maximum: float, name: str) -> float | No
     try:
         number = float(value)
     except (TypeError, ValueError):
-        raise ValueError(f"{name}: deve essere un numero.") from None
+        raise ValueError(f"{name}: must be a number.") from None
     if not minimum <= number <= maximum:
-        raise ValueError(f"{name}: deve essere tra {minimum:g} e {maximum:g}.")
+        raise ValueError(f"{name}: must be between {minimum:g} and {maximum:g}.")
     return number
 
 
@@ -338,11 +338,11 @@ def save_settings(data: dict) -> dict:
     for key in ("director_model", "chain_model", "review_model"):
         if key in data:
             if data[key] not in configuration.MODELS:
-                raise ValueError("Modello non valido.")
+                raise ValueError("Invalid model.")
             changes[key] = data[key]
-    for key, name in (("budget_usd", "Budget"), ("max_minutes", "Tempo"), ("parallel_questions", "Domande in parallelo"),
-                         ("question_budget_usd", "Budget per domanda"), ("question_pages", "Pagine per domanda"),
-                         ("question_minutes", "Minuti per domanda")):
+    for key, name in (("budget_usd", "Budget"), ("max_minutes", "Time"), ("parallel_questions", "Parallel questions"),
+                         ("question_budget_usd", "Budget per question"), ("question_pages", "Pages per question"),
+                         ("question_minutes", "Minutes per question")):
         if key in data:
             value = _number(data[key], *configuration.INTERVALS[key], name)
             if value is not None:
@@ -353,7 +353,7 @@ def save_settings(data: dict) -> dict:
     if isinstance(wiki, dict):
         contact = " ".join(str(wiki.get("contact") or "").split())
         if contact and not valid_contact(contact):
-            raise ValueError("Contatto per Wikipedia: un'email o un indirizzo web (http:// o https://), senza spazi.")
+            raise ValueError("Wikipedia contact: an email or a web address (http:// or https://), without spaces.")
         config_sources.save_secrets({"wikipedia_contact_active": bool(wiki.get("active", True)),
                                     "wikipedia_contact": contact})
     if changes:
@@ -365,7 +365,7 @@ def main() -> None:
     logging.basicConfig(stream=sys.stderr, level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
     token = os.environ.get("CHAIN_TOKEN", "")
     if len(token) < 32:
-        sys.exit("CHAIN_TOKEN mancante o troppo corto: il server va avviato dall'app.")
+        sys.exit("CHAIN_TOKEN missing or too short: the server must be started by the app.")
     listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     listener.bind(("127.0.0.1", 0))

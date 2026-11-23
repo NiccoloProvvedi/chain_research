@@ -1,10 +1,9 @@
-"""Chiamate a Claude: `claude -p` isolato, senza strumenti, con risposta JSON validata.
+"""Claude calls: isolated `claude -p`, without tools, with a validated JSON answer.
 
-Nessuno strumento (`--tools ""`), nessun server
-MCP, nessun hook, nessun CLAUDE.md, nessuna memoria automatica, cartella di lavoro vuota, istruzioni di sistema
-proprie, `--json-schema` per la risposta e `--max-budget-usd` come tetto della singola chiamata. Ogni chiamata,
-riuscita o no, scrive una riga in <cartella_log>/pensatore.jsonl con punto, modello, token (anche di cache), costo
-e durata. I campi della riga `result` sono quelli osservati il 13/10 (fixture test/fixtures/orchestratore).
+No tools (`--tools ""`), no MCP server, no hooks, no CLAUDE.md, no auto memory, empty working folder, own system
+instructions, `--json-schema` for the answer and `--max-budget-usd` as the cap of the single call. Every call,
+successful or not, writes a row in <log_folder>/thinker.jsonl with point, model, tokens (cache too), cost and
+duration. The fields of the `result` row are those observed on 13 Oct (fixture test/fixtures/orchestrator).
 """
 import json
 import re
@@ -23,28 +22,28 @@ from . import config as config_thinker
 
 
 class ClaudeError(RuntimeError):
-    """Claude non ha potuto rispondere (non collegato, tempo scaduto, budget, risposta non valida)."""
+    """Claude could not answer (not logged in, timeout, budget, invalid answer)."""
 
 
 class SessionLimit(ClaudeError):
-    """Il limite di sessione dell'abbonamento è finito: rispondere «non trovata» sarebbe falso, l'indagine si ferma."""
+    """The subscription's session limit ran out: answering "not found" would be false, the investigation stops."""
 
     def __init__(self, seconds: float) -> None:
-        super().__init__(f"Limite di sessione di Claude raggiunto: si rinnova tra circa {round(seconds / 60)} minuti.")
+        super().__init__(f"Claude session limit reached: it renews in about {round(seconds / 60)} minutes.")
         self.seconds = seconds
 
 
 class Interrupted(ClaudeError):
-    """L'utente ha fermato l'indagine mentre Claude stava rispondendo."""
+    """The user stopped the investigation while Claude was answering."""
 
 
-# Le chiamate in corso in questo processo, per fermarle (`interrompi`). Dizionario senza serrature: `interrompi` gira
-# dentro un gestore di segnale e una serratura presa dal thread principale lo bloccherebbe per sempre.
+# The calls running in this process, to stop them (`interrupt`). Dictionary without locks: `interrupt` runs inside a
+# signal handler and a lock held by the main thread would block it forever.
 _in_progress: dict[int, subprocess.Popen] = {}
 
 
 def interrupt() -> None:
-    """Chiude le chiamate in corso: chi le aspettava riceve Interrotta."""
+    """Closes the running calls: whoever waited for them gets Interrupted."""
     for process in list(_in_progress.values()):
         if process.poll() is None:
             process.interrupted = True
@@ -66,7 +65,7 @@ class Usage:
 
 
 def empty_folder() -> Path:
-    """Cartella di lavoro vuota per Claude, dentro il progetto."""
+    """Empty working folder for Claude, inside the project."""
     folder = ROOT / "browser" / "claude-empty"
     folder.mkdir(parents=True, exist_ok=True)
     return folder
@@ -91,7 +90,7 @@ def read_result(stdout: str) -> dict[str, Any] | None:
         except ValueError:
             continue
         if data.get("type") == "assistant" and "Not logged in" in json.dumps(data):
-            raise ClaudeError("Claude non è collegato al tuo account: esegui `claude` e fai l'accesso.")
+            raise ClaudeError("Claude is not logged in to your account: run `claude` and log in.")
         if data.get("type") == "result":
             result = data
     return result
@@ -113,34 +112,34 @@ def _run(rows: list[str], text: str, wait: float) -> str:
         process = subprocess.Popen(rows, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                                     cwd=empty_folder(), env={**os.environ, "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1"})
     except FileNotFoundError:
-        raise ClaudeError("Claude Code non è installato.") from None
+        raise ClaudeError("Claude Code is not installed.") from None
     _in_progress[id(process)] = process
     try:
         stdout, _ = process.communicate(json.dumps(message) + "\n", timeout=wait)
     except subprocess.TimeoutExpired:
         process.kill()
         process.communicate()
-        raise ClaudeError("Claude non ha risposto in tempo.") from None
+        raise ClaudeError("Claude did not answer in time.") from None
     finally:
         _in_progress.pop(id(process), None)
     if getattr(process, "interrupted", False):
-        raise Interrupted("Indagine fermata.")
+        raise Interrupted("Investigation stopped.")
     return stdout
 
 
-# Secondi passati ad aspettare il rinnovo del limite di sessione (in questo processo): i limiti di tempo delle
-# ricerche non li contano.
+# Seconds spent waiting for the session limit to renew (in this process): the time limits of the searches do not
+# count them.
 LIMIT_WAIT = {"seconds": 0.0}
 
 
-# «You've hit your session limit», «You've hit your 5-hour limit» (10/11), «Claude AI usage limit reached».
+# "You've hit your session limit", "You've hit your 5-hour limit" (10 Nov), "Claude AI usage limit reached".
 _LIMIT_MESSAGE = re.compile(r"hit your [\w -]*limit|usage limit", re.I)
 
 
 def seconds_to_renewal(stdout: str) -> float | None:
-    """Se Claude risponde che il limite di sessione è finito ("resets 12:50am"), i secondi fino al rinnovo (più un
-    minuto); altrimenti None. Senza un orario leggibile, 15 minuti. Conta solo una risposta di errore: il testo di una
-    risposta normale può parlare di limiti."""
+    """If Claude answers that the session limit ran out ("resets 12:50am"), the seconds until renewal (plus one
+    minute); otherwise None. Without a readable time, 15 minutes. Only an error answer counts: the text of a normal
+    answer may talk about limits."""
     result = None
     for row in stdout.splitlines():
         try:
@@ -168,8 +167,8 @@ def seconds_to_renewal(stdout: str) -> float | None:
 def ask(instructions: str, text: str, schema: dict | None, point: str, model: str | None = None,
            max_budget_usd: float | None = None, wait: float | None = None,
            plan: str = "") -> tuple[Any, Usage]:
-    """Una richiesta a Claude. Con `schema` restituisce il dict `structured_output`, senza il testo libero.
-    `max_budget_usd` è il tetto della chiamata (predefinito: `pensatore.max_chiamata_usd`)."""
+    """A request to Claude. With `schema` it returns the `structured_output` dict, without the free text.
+    `max_budget_usd` is the cap of the call (default: `thinker.max_call_usd`)."""
     cfg = config_thinker.load()
     model = model or cfg.claude_model(point)
     cap = max_budget_usd if max_budget_usd is not None else cfg.thinker.max_call_usd
@@ -182,18 +181,18 @@ def ask(instructions: str, text: str, schema: dict | None, point: str, model: st
             try:
                 stdout = replay.read(key)
             except replay.UnrecordedRequest:
-                # Scrittura e revisione vengono dopo la catena, una volta sola, e le loro istruzioni cambiano con i
-                # controlli: la risposta registrata vale anche se la richiesta è cambiata (rigioco.leggi_unica).
+                # Writing and review come after the chain, only once, and their instructions change with the checks:
+                # the recorded answer holds even if the request changed (replay.unique_read).
                 if point not in ("writing", "review"):
                     raise
                 stdout = replay.unique_read(point)
         else:
             stdout = _run(rows, text, wait or cfg.thinker.wait_s)
             while os.environ.get("CHAIN_WAIT_FOR_LIMIT") and (pause := seconds_to_renewal(stdout)) is not None:
-                # Prove lunghe (banco): con il limite di sessione dell'abbonamento si aspetta il rinnovo invece di
-                # far fallire le domande a metà (16/10, 23:45-00:50: "You've hit your session limit").
+                # Long runs (bench): with the subscription's session limit, wait for the renewal instead of failing
+                # the questions halfway (16 Oct, 23:45-00:50: "You've hit your session limit").
                 event_log.write("thinker", {"point": point, "model": model,
-                                              "outcome": f"limite di sessione: attendo {int(pause)} s"})
+                                              "outcome": f"session limit: waiting {int(pause)} s"})
                 time.sleep(pause)
                 LIMIT_WAIT["seconds"] += pause
                 stdout = _run(rows, text, wait or cfg.thinker.wait_s)
@@ -204,22 +203,22 @@ def ask(instructions: str, text: str, schema: dict | None, point: str, model: st
         if result:
             usage = usage_from(result, point, model, time.monotonic() - start)
         if not result or result.get("is_error"):
-            reason = (result or {}).get("subtype") or "nessuna risposta"
+            reason = (result or {}).get("subtype") or "no answer"
             detail = " ".join(str((result or {}).get("result") or "").split())[:200]
-            raise ClaudeError(f"Claude non ha dato una risposta valida ({reason}"
+            raise ClaudeError(f"Claude did not give a valid answer ({reason}"
                                + (f": {detail}" if detail else "") + ").")
         if schema is not None:
             data = result.get("structured_output")
             if not isinstance(data, dict):
-                raise ClaudeError("Claude non ha dato una risposta strutturata.")
+                raise ClaudeError("Claude did not give a structured answer.")
         else:
             data = str(result.get("result") or "").strip()
             if not data:
-                raise ClaudeError("Claude non ha scritto il testo.")
+                raise ClaudeError("Claude did not write the text.")
         return data, usage
     except ClaudeError as error:
         usage.outcome = str(error)[:200]
-        error.usage = usage  # anche una chiamata fallita può essere costata (per esempio oltre il tetto)
+        error.usage = usage  # a failed call may have cost money too (for example over the cap)
         raise
     finally:
         usage.seconds = round(time.monotonic() - start, 2)

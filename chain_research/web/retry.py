@@ -1,17 +1,17 @@
-"""Seconda ricerca indipendente per le risposte incerte.
+"""Second independent search for uncertain answers.
 
-La catena non è ripetibile sulle domande difficili: stessa domanda, altra strada, a volte altro valore. Sulle corse
-salvate (16/11, domande di controllo) una risposta `incerta` ritrovata uguale da un'altra corsa era giusta 28 volte su
-30; con un altro valore 14 su 51. Quindi una risposta incerta si cerca una seconda volta, da capo, con il budget e il
-tempo rimasti alla domanda: stesso valore → la risposta è sostenuta da due ricerche; altro valore → contestata, con
-tutti e due; nessun valore → resta incerta.
+The chain is not repeatable on hard questions: same question, another route, sometimes another value. On the saved
+runs (16 Nov, control questions) an `uncertain` answer found again identical by another run was right 28 times out of
+30; with another value 14 out of 51. So an uncertain answer is searched a second time, from scratch, with the budget
+and time left for the question: same value → the answer is supported by two searches; another value → contested,
+with both; no value → it stays uncertain.
 """
 from collections.abc import Callable
 from typing import Any
 
 from . import validation
 
-# Sotto questi resti la seconda ricerca non parte: finirebbe a metà.
+# Below these leftovers the second search does not start: it would stop halfway.
 MIN_BUDGET_USD = 0.15
 MIN_MINUTES = 8
 ORDER = {"verified": 3, "supported": 2, "contested": 1, "uncertain": 0}
@@ -23,8 +23,8 @@ def _in_short(outcome: dict, how: str) -> dict:
 
 
 def _with_status(outcome: dict, status: str, reasons: list[str]) -> dict:
-    """L'esito con lo stato e i motivi nuovi, anche dove li leggono l'indagine (catena.controlli) e chi legge la
-    risposta (la riga «Fiducia», scritta dal programma)."""
+    """The outcome with the new status and reasons, also where the investigation reads them (chain.checks) and where
+    the reader of the answer sees them (the "Confidence" line, written by the program)."""
     checks = {**((outcome.get("chain") or {}).get("checks") or {}), "status": status, "reasons": reasons,
                  "confirmed": status in ("verified", "supported")}
     return {**outcome, "status": status, "confirmed": checks["confirmed"],
@@ -33,24 +33,24 @@ def _with_status(outcome: dict, status: str, reasons: list[str]) -> dict:
 
 
 def merge(first: dict, second: dict) -> dict:
-    """La risposta della domanda dalle due ricerche. La risposta principale è quella con lo stato migliore (a parità la
-    prima); l'altra resta in breve in `riprova`. Costo e tempo sono la somma."""
+    """The question's answer from the two searches. The main answer is the one with the better status (the first on a
+    tie); the other is kept in short under `retry`. Cost and time are the sum."""
     def reasons_of(e: dict) -> list[str]:
         return list(((e.get("chain") or {}).get("checks") or {}).get("reasons") or [])
 
     if not second.get("value"):
-        merged = _with_status(first, first["status"], reasons_of(first) + ["una seconda ricerca non ha trovato un valore"])
+        merged = _with_status(first, first["status"], reasons_of(first) + ["a second search found no value"])
         merged["retry"] = _in_short(second, "no value")
     else:
         best_second = ORDER.get(second.get("status"), 0) > ORDER.get(first.get("status"), 0)
         main, another = (second, first) if best_second else (first, second)
         if validation.same_value(str(first["value"]), str(second["value"])):
             status = main["status"] if ORDER.get(main["status"], 0) >= ORDER["supported"] else "supported"
-            reasons = ["due ricerche indipendenti danno lo stesso valore"] + reasons_of(main)
+            reasons = ["two independent searches give the same value"] + reasons_of(main)
             merged = _with_status(main, status, reasons)
             merged["retry"] = _in_short(another, "same value")
         else:
-            reasons = [f"un'altra ricerca indipendente dà {another['value']}"] + reasons_of(main)
+            reasons = [f"another independent search gives {another['value']}"] + reasons_of(main)
             merged = _with_status(main, "contested", reasons)
             merged["retry"] = _in_short(another, "other value")
     merged["cost_usd"] = round(float(first.get("cost_usd") or 0) + float(second.get("cost_usd") or 0), 4)
@@ -59,8 +59,8 @@ def merge(first: dict, second: dict) -> dict:
 
 
 def with_retry(create: Callable[[dict], Any], options: dict, publish: Callable[[dict], None]) -> dict:
-    """La domanda con la catena creata da `crea(opzioni)`; se la risposta è incerta e restano budget e tempo, una
-    seconda ricerca da capo (`opzioni["seconda_ricerca"]`, accesa se non detto)."""
+    """The question with the chain created by `create(options)`; if the answer is uncertain and budget and time are
+    left, a second search from scratch (`options["second_research"]`, on unless stated)."""
     outcome = create(options).run()
     if not options.get("second_research", True) or outcome.get("status") != "uncertain" or not outcome.get("value"):
         return outcome
@@ -68,6 +68,6 @@ def with_retry(create: Callable[[dict], Any], options: dict, publish: Callable[[
     minutes = float(options.get("chain_minutes", 35)) - float(outcome.get("seconds") or 0) / 60
     if budget < MIN_BUDGET_USD or minutes < MIN_MINUTES:
         return outcome
-    publish({"kind": "phase", "text": "Risposta incerta: la cerco una seconda volta, da capo, per vedere se torna…"})
+    publish({"kind": "phase", "text": "Uncertain answer: searching a second time, from scratch, to see if it holds…"})
     second = create({**options, "budget_claude": budget, "chain_minutes": minutes}).run()
     return merge(outcome, second)

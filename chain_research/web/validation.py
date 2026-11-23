@@ -1,14 +1,14 @@
-"""Controlli del programma sui risultati della catena: decide il programma, il modello propone.
+"""Program checks on the chain's results: the program decides, the model proposes.
 
-Vedi docs/validation.md §4. Qui stanno i controlli senza modello: il valore scritto nella riga citata (G1),
-la strada senza entità ripetute (G3), il livello della fonte di una prova (G4), il registro dei disaccordi (G7).
-Le funzioni ricevono gli oggetti della catena (`Anello`, `Prova`) senza importarli.
+See docs/validation.md §4. This module holds the checks without a model: the value written in the cited row (G1),
+the route without repeated entities (G3), the source level of a proof (G4), the log of disagreements (G7).
+The functions receive the chain's objects (`Link`, `Proof`) without importing them.
 """
 import re
 import unicodedata
 from urllib.parse import urlsplit
 
-# I mesi per numero, nelle lingue delle voci lette (it, en, de, fr, es, pt) e nelle abbreviazioni inglesi.
+# Months by number, in the languages of the articles read (it, en, de, fr, es, pt) and in English abbreviations.
 _MONTHS = [
     "gennaio january jan januar janvier enero janeiro",
     "febbraio february feb februar fevrier febrero fevereiro",
@@ -26,7 +26,7 @@ _MONTHS = [
 MONTH = {name: number for number, names in enumerate(_MONTHS, start=1) for name in names.split()}
 _NUMBER = re.compile(r"\d(?:[\d.,   ]*\d)?")
 _STOP_WORDS = {"the", "del", "della", "dei", "di", "von", "van", "de", "la", "le", "il", "and"}
-SNIPPET = "[risultato di ricerca:"  # come catena.py segna gli estratti dei risultati (pagine non lette)
+SNIPPET = "[risultato di ricerca:"  # how chain.py marks search result snippets (pages not read)
 
 
 def _flat(text: str) -> str:
@@ -35,8 +35,8 @@ def _flat(text: str) -> str:
 
 
 def _numbers(text: str) -> set[str]:
-    """I numeri di un testo, come sole cifre: sia interi con i separatori («1 234» → 1234, «20,65» → 2065) sia i loro
-    gruppi («1», «234»), senza zeri davanti."""
+    """The numbers of a text, as digits only: both whole with their separators ("1 234" → 1234, "20,65" → 2065) and
+    their groups ("1", "234"), without leading zeros."""
     numbers = set()
     for piece in _NUMBER.findall(text):
         numbers.add(re.sub(r"\D", "", piece).lstrip("0") or "0")
@@ -49,24 +49,25 @@ def _months(text: str) -> set[int]:
 
 
 def value_in_row(value: str, row: str) -> bool:
-    """G1. Il valore dato dal modello è scritto nella riga che cita: ogni suo numero (anche con altri separatori), il
-    suo mese (in qualunque lingua o come numero: «1943-10-11») e, se non ha numeri, le sue parole. Il modello può
-    tradurre una data, non cambiarla (11/11, domande di controllo: il valore non era mai confrontato con la riga)."""
+    """G1. The value given by the model is written in the row it cites: each of its numbers (even with other
+    separators), its month (in any language or as a number: "1943-10-11") and, if it has no numbers, its words. The
+    model may translate a date, not change it (11 Nov, control questions: the value was never compared with the
+    row)."""
     value, row = str(value or "").strip(), str(row or "")
     if not value:
         return False
     pieces = _NUMBER.findall(value)
     if pieces:
         its = _numbers(row)
-        for piece in pieces:  # intero («1234» per «1 234») oppure gruppo per gruppo («21», «1886» per «21, 1886»)
+        for piece in pieces:  # whole ("1234" for "1 234") or group by group ("21", "1886" for "21, 1886")
             whole = re.sub(r"\D", "", piece).lstrip("0") or "0"
-            # a gruppi solo se nel valore sono staccati da uno spazio («21, 1886», «1 234»): «9,7» non è «9 … 7»
+            # by groups only if in the value they are separated by a space ("21, 1886", "1 234"): "9,7" is not "9 … 7"
             to_groups = bool(re.search(r"\s", piece)) and all(
                 (g.lstrip("0") or "0") in its for g in re.findall(r"\d+", piece))
             if whole not in its and not to_groups:
                 return False
-        # Il mese: lo stesso se la riga ne nomina uno; una riga senza mesi riconosciuti («1943-10-11», o una lingua
-        # che qui non c'è: «26 Ιουλίου 1985») non si può smentire, bastano giorno e anno.
+        # The month: the same if the row names one; a row without recognised months ("1943-10-11", or a language
+        # not listed here: "26 Ιουλίου 1985") cannot contradict it, day and year are enough.
         months, of_row = _months(value), _months(row)
         return not months or not of_row or bool(months & of_row)
     words = [p for p in re.findall(r"\w+", _flat(value)) if len(p) >= 3 and p not in _STOP_WORDS]
@@ -75,8 +76,8 @@ def value_in_row(value: str, row: str) -> bool:
 
 
 def level(proof) -> str:
-    """G4. A = voce di Wikipedia letta; B = un'altra pagina letta; C = estratto dei risultati di una ricerca (pagina
-    mai letta): può proporre un candidato, non confermare."""
+    """G4. A = Wikipedia article read; B = another page read; C = search result snippet (page never read): it can
+    propose a candidate, not confirm one."""
     if proof is None:
         return ""
     if str(proof.text).startswith(SNIPPET):
@@ -90,8 +91,8 @@ def _key(name: str) -> str:
 
 
 def _identity(a) -> set:
-    """Come riconoscere la stessa entità: il nome intero (con le parentesi: «I promessi sposi (Petrella)» non è «I
-    promessi sposi», «Solférino (Landes)» non è «Solferino»), il titolo e l'indirizzo delle sue voci di Wikipedia."""
+    """How to recognise the same entity: the full name (with parentheses: "I promessi sposi (Petrella)" is not "I
+    promessi sposi", "Solférino (Landes)" is not "Solferino"), the title and address of its Wikipedia articles."""
     marks = {_key(a.name)}
     if getattr(a, "title", None):
         marks.add(_key(a.title[1]))
@@ -100,8 +101,8 @@ def _identity(a) -> set:
 
 
 def repeats_ancestor(a, node) -> bool:
-    """G3. Il candidato è già nella strada che porta a `nodo` (lui compreso): una catena non torna su un'entità già
-    attraversata (11/11, C++: Stroustrup → Wheeler → … → Burrows → Wheeler, «relatore di» letto al contrario)."""
+    """G3. The candidate is already on the route leading to `node` (inclusive): a chain does not return to an entity
+    it already crossed (11 Nov, C++: Stroustrup → Wheeler → … → Burrows → Wheeler, "advisor of" read backwards)."""
     my = _identity(a)
     while node is not None:
         if my & _identity(node):
@@ -116,26 +117,26 @@ def _ties(a) -> list[dict]:
 
 
 def tie_only_from_snippets(a) -> bool:
-    """G4. Il legame con l'anello di prima è provato solo da estratti di ricerca (11/11, PostgreSQL: «born in Milton,
-    New Hampshire» nell'estratto di una pagina mai letta, anello «forte» a 0,9 contro il riquadro di Wikipedia)."""
+    """G4. The tie to the previous link is proven only by search snippets (11 Nov, PostgreSQL: "born in Milton, New
+    Hampshire" in the snippet of a page never read, a "strong" link at 0.9 against the Wikipedia infobox)."""
     ties = _ties(a)
     return a.parent is not None and bool(ties) and all(level(e["proof"]) == "C" for e in ties)
 
 
-_INFOBOX_ROW = re.compile(r"\[(?P<voce>[^\]]+)\]\s*[^.:\[\]]{1,40}:\s")
+_INFOBOX_ROW = re.compile(r"\[(?P<article>[^\]]+)\]\s*[^.:\[\]]{1,40}:\s")
 
 
 def _from_infobox(a) -> bool:
-    """La riga del legame è una riga «Etichetta: valore» della voce dell'anello di prima (il suo riquadro): la fonte
-    dice proprio «il luogo di nascita è questo». Una frase che nomina più candidati (derivati, allievi) o la voce del
-    candidato stesso non lo dice."""
+    """The tie row is a "Label: value" row of the previous link's article (its infobox): the source says exactly
+    "the place of birth is this". A sentence naming several candidates (derivatives, students) or the candidate's own
+    article does not say that."""
     found = _INFOBOX_ROW.match(str(a.tie_proof.text))
     return found is not None and _key(re.sub(r"\([^)]*\)", " ", a.parent.name)) in _key(found.group("article"))
 
 
 def disagreements(discarded: list, relation: str) -> list[dict]:
-    """G7. I candidati scartati dai controlli che il riquadro della voce di prima (livello A) indicava: la fonte dice
-    una cosa, gli indizi della domanda un'altra. Si registrano invece di perderli."""
+    """G7. The candidates discarded by the checks that the previous article's infobox (level A) pointed to: the
+    source says one thing, the question's clues another. They are logged instead of lost."""
     articles = []
     for a in discarded:
         if a.parent is None or a.tie_proof is None or level(a.tie_proof) != "A" or not _from_infobox(a):
@@ -152,10 +153,10 @@ def _strong_tie(a) -> bool:
 
 
 def disagreements_on_route(articles: list[dict], link) -> list[dict]:
-    """I disaccordi che toccano la strada della soluzione: dallo stesso anello di partenza una fonte di livello A
-    indicava un candidato, e la catena ne ha scelto un altro con una fonte più debole. Se anche lo scelto ha il legame
-    in una fonte di livello A sono solo fratelli (gli allievi di Galileo), non un disaccordo: sul rigioco delle 40
-    domande, senza questa condizione, 33 catene su 39 avevano «disaccordi»."""
+    """The disagreements that touch the solution's route: from the same starting link a level-A source pointed to
+    one candidate, and the chain chose another with a weaker source. If the chosen one also has its tie in a level-A
+    source they are just siblings (Galileo's students), not a disagreement: on the replay of the 40 questions,
+    without this condition, 33 chains out of 39 had "disagreements"."""
     route, a = [], link
     while a is not None:
         route.append(a)
@@ -164,21 +165,21 @@ def disagreements_on_route(articles: list[dict], link) -> list[dict]:
     return [x for x in articles if _key(x["parent"]) in weak_ones and weak_ones[_key(x["parent"])] != _key(x["name"])]
 
 
-# --- controlli con il modello: il modello propone, queste funzioni decidono ---------------------------------------
+# --- checks with the model: the model proposes, these functions decide -------------------------------------------
 
 _LESS = re.compile(r"(?<![\w.,])(?<!\d\s)[−–-]\s?\d|sotto il livello del mare|below sea level", re.I)
 
 
 def _whole(text: str) -> set[str]:
-    """I numeri di un valore, senza quelli attaccati a una lettera («km2») e senza unire «21, 1886»."""
+    """The numbers of a value, without those attached to a letter ("km2") and without joining "21, 1886"."""
     return {re.sub(r"\D", "", p).lstrip("0") or "0"
             for p in re.findall(r"(?<![^\W\d_])\d+(?:[.,]\d+)*", str(text or ""))}
 
 
 def same_value(a: str, b: str) -> bool:
-    """Due valori dicono la stessa cosa: stessi numeri, stesso segno e stesso mese (in qualunque lingua); senza numeri,
-    stesso testo. «56 m s.l.m.» = «56 metri»; «21 giugno 1886» = «June 21, 1886»; «−2 m» ≠ «2 m»."""
-    # Il valore è quello scritto prima di una nota («10 marzo 1682 (data di istituzione); alcune fonti…»).
+    """Two values say the same thing: same numbers, same sign and same month (in any language); without numbers,
+    same text. "56 m s.l.m." = "56 metri"; "21 giugno 1886" = "June 21, 1886"; "−2 m" ≠ "2 m"."""
+    # The value is what is written before a note ("10 marzo 1682 (data di istituzione); alcune fonti…").
     short_to, short_b = (re.split(r"\s*[(;]|\s+[—–-]\s+", str(x or "").strip(), maxsplit=1)[0] for x in (a, b))
     numbers_to, numbers_b = _whole(short_to), _whole(short_b)
     if numbers_to or numbers_b:
@@ -189,8 +190,8 @@ def same_value(a: str, b: str) -> bool:
 
 
 def examine_review(answer: dict, rows: list) -> dict:
-    """G6. Che cosa resta della revisione dopo il controllo del programma: un «no» o un «sì» valgono solo con il numero
-    di una riga data e parole che in quella riga ci sono davvero; altrimenti l'indizio è «non provato»."""
+    """G6. What is left of the review after the program's check: a "no" or a "yes" counts only with the number of a
+    given row and words that really are in that row; otherwise the clue is "unproven"."""
     from ..proofs.triples import present_quote
     objections, proven, unproven = [], 0, 0
     for clue in answer.get("clues") or []:
@@ -204,11 +205,11 @@ def examine_review(answer: dict, rows: list) -> dict:
             proven += 1
         else:
             unproven += 1
-    # La premessa della domanda: «falsa» solo con le parole di una riga data, come gli indizi.
+    # The question's premise: "refuted" only with the words of a given row, like the clues.
     said = answer.get("premise") or {}
     number = said.get("row")
     row = rows[number - 1] if isinstance(number, int) and 1 <= number <= len(rows) else None
-    # «assente»: la revisione non ha parlato della premessa (revisioni registrate prima del 13/11): non si sa.
+    # "absent": the review did not address the premise (reviews recorded before 13 Nov): unknown.
     premise = {"outcome": said.get("outcome") if said.get("outcome") in ("holds", "refuted", "unproven") else "absent"}
     if premise["outcome"] == "refuted":
         if row is not None and present_quote(str(said.get("quote") or ""), row.text):
@@ -223,62 +224,63 @@ def examine_review(answer: dict, rows: list) -> dict:
 
 
 def refuted_premise(exams: dict | None) -> dict | None:
-    """La premessa della domanda smentita dalla revisione con una riga (13/11, domande senza risposta: la catena dava
-    un valore in 15 casi su 20, seguendo una strada «abbastanza simile»): allora il valore non si dà."""
+    """The question's premise refuted by the review with a row (13 Nov, questions without an answer: the chain gave a
+    value in 15 cases out of 20, following a "similar enough" route): then no value is given."""
     premise = ((exams or {}).get("review") or {}).get("premise") or {}
     return premise if premise.get("outcome") == "refuted" else None
 
 
 STATUSES = ("verified", "supported", "contested", "uncertain", "not found")
-CONFIDENCE = {"verified": "alta", "supported": "media", "contested": "bassa", "uncertain": "bassa"}
+CONFIDENCE = {"verified": "high", "supported": "medium", "contested": "low", "uncertain": "low"}
 
 
 def status(c: dict) -> tuple[str, list[str]]:
-    """Lo stato della risposta dagli esiti dei controlli (docs/validation.md §4) e i motivi, in parole."""
+    """The answer's status from the outcomes of the checks (docs/validation.md §4) and the reasons, in words."""
     if not c.get("value"):
         return "not found", []
     exams = c.get("exams") or {}
     reading, corroboration, review = (exams.get(k) or {} for k in ("second_reading", "corroboration", "review"))
     uncertain, contested, limits = [], [], []
-    # Un anello debole (controlli non tutti provati) porta a «incerta», a meno che la revisione della catena intera
-    # regga senza obiezioni: allora resta un limite e la risposta è al massimo «sostenuta» (taratura del 13/11 sulle
-    # 40 domande: debole con revisione che regge 6 giuste e 0 sbagliate; debole senza, 16 e 6).
+    # A weak link (checks not all proven) leads to "uncertain", unless the review of the whole chain holds with no
+    # objections: then it stays a limitation and the answer is at most "supported" (calibration of 13 Nov on the 40
+    # questions: weak with a review that holds, 6 right and 0 wrong; weak without, 16 and 6).
     holds = review.get("outcome") == "done" and review.get("holds") == "yes" and not review.get("objections")
     if c.get("weak_links") and holds:
-        limits.append(f"{c['weak_links']} anelli con controlli non tutti provati, ma la catena intera regge alla revisione")
+        limits.append(f"{c['weak_links']} links with checks not all proven, but the whole chain holds up under review")
     elif c.get("weak_links"):
-        uncertain.append(f"{c['weak_links']} anelli della catena non confermati")
+        uncertain.append(f"{c['weak_links']} chain links not confirmed")
     if c.get("value_source") == "C":
-        uncertain.append("il valore viene dall'estratto di una ricerca, da una pagina non letta")
+        uncertain.append("the value comes from a search snippet, from a page not read")
     for o in review.get("objections") or []:
-        uncertain.append(f"la revisione smentisce «{o['clue']}» («{o['quote']}»)")
+        uncertain.append(f"the review refutes \"{o['clue']}\" (\"{o['quote']}\")")
     for d in c.get("disagreements") or []:
-        contested.append(f"per «{d['relation']}» la voce di {d['parent']} indica {d['name']}")
+        contested.append(f"for \"{d['relation']}\" the article on {d['parent']} gives {d['name']}")
     if reading.get("outcome") == "disagree":
-        contested.append(f"una seconda lettura delle stesse righe dà {reading.get('value')}")
+        contested.append(f"a second reading of the same rows gives {reading.get('value')}")
     if corroboration.get("outcome") == "disagree":
-        contested.append(f"un'altra fonte dà {corroboration.get('value')}")
+        contested.append(f"another source gives {corroboration.get('value')}")
     if uncertain:
         return "uncertain", uncertain + contested
     if contested:
         return "contested", contested
     if not exams:
-        return "supported", limits + ["controlli con il modello non fatti"]
+        return "supported", limits + ["model checks not done"]
     if reading.get("outcome") not in ("agree", "not needed"):
-        limits.append("la seconda lettura non ha ritrovato il valore")
+        limits.append("the second reading did not find the value again")
     if corroboration.get("outcome") != "agree":
-        limits.append("il valore viene da una sola fonte")
+        limits.append("the value comes from a single source")
     if review.get("outcome") != "done":
-        limits.append("revisione non fatta")
+        limits.append("review not done")
     elif review.get("holds") != "yes":
-        limits.append(f"la revisione non trova provati {review.get('unproven', 0)} indizi della domanda")
+        limits.append(f"the review does not find {review.get('unproven', 0)} clues of the question proven")
     return ("supported", limits) if limits else ("verified", [])
 
 
 def rejected_route(exams: dict | None, weak_links: int) -> dict | None:
-    """Tre cose che non tornano insieme: la revisione ha un'obiezione con riga, non trova provata la premessa della
-    domanda, e la strada ha un anello non confermato. Allora il valore non si dà (restituisce l'obiezione). Con la
-    premessa che regge la domanda ha senso e la risposta resta «incerta» (taratura del 13/11: 0 giuste perse)."""
+    """Three things that do not add up together: the review has an objection with a row, does not find the
+    question's premise proven, and the route has an unconfirmed link. Then no value is given (returns the objection).
+    With a premise that holds the question makes sense and the answer stays "uncertain" (calibration of 13 Nov: 0
+    right answers lost)."""
     review = (exams or {}).get("review") or {}
     objections = review.get("objections") or []
     if not weak_links or not objections or (review.get("premise") or {}).get("outcome") != "unproven":
@@ -290,9 +292,9 @@ _SEVERITY = {"yes": 0, "unproven": 1, "no": 2}
 
 
 def merge_reviews(reviews: list[dict]) -> dict:
-    """Di più revisioni della stessa catena vale la più severa (15/11: ripetendo le domande lo stato cambiava in 17
-    casi su 36, perché una revisione sola oscilla tra «regge» e «non provato»): il giudizio peggiore, tutte le
-    obiezioni con riga, la premessa «regge» solo se regge per tutte."""
+    """Of several reviews of the same chain the strictest counts (15 Nov: repeating the questions the status changed
+    in 17 cases out of 36, because a single review swings between "holds" and "unproven"): the worst verdict, all the
+    objections with a row, the premise "holds" only if it holds for all."""
     done = [r for r in reviews if r.get("outcome") == "done"]
     if not done:
         return {"outcome": "not done"}
@@ -310,10 +312,10 @@ def merge_reviews(reviews: list[dict]) -> dict:
 
 
 def missing_name(name: str, question: str, texts: list[str]) -> list[str]:
-    """Le parole con la maiuscola del nome con cui la domanda chiama la sua partenza che non stanno in nessuna pagina
-    letta. Solo se il nome è copiato dalla domanda. Con più parole la prima non conta («Battaglia di Hastings» letta
-    in inglese: «Battle of Hastings»). 13/11, domande senza risposta: per 8 entità inventate su 8 la catena aveva dato
-    un valore, partendo da un'entità vicina; «Zorvex» o «Aurelia» non stanno in nessuna pagina."""
+    """The capitalised words of the name the question uses for its starting point that are in no page read. Only if
+    the name is copied from the question. With several words the first does not count ("Battaglia di Hastings" read
+    in English: "Battle of Hastings"). 13 Nov, questions without an answer: for 8 invented entities out of 8 the
+    chain had given a value, starting from a nearby entity; "Zorvex" or "Aurelia" are in no page."""
     name = " ".join(str(name or "").split())
     if not name or name not in " ".join(str(question or "").split()):
         return []
@@ -325,11 +327,12 @@ def missing_name(name: str, question: str, texts: list[str]) -> list[str]:
 
 
 def with_confidence(text: str, status: str, reasons: list[str]) -> str:
-    """Il testo della risposta con la riga **Fiducia:** scritta dal programma dallo stato dei controlli."""
+    """The answer text with the **Confidence:** line written by the program from the status of the checks. An old
+    **Fiducia:** line (answers saved in Italian) is replaced too."""
     if status not in CONFIDENCE:
         return text
-    row = (f"**Fiducia:** {CONFIDENCE[status]} — risposta {status}"
+    row = (f"**Confidence:** {CONFIDENCE[status]} — {status} answer"
             + (": " + "; ".join(reasons[:4]) if reasons else
-               ": valore letto due volte, ritrovato in un'altra fonte, catena riletta senza obiezioni") + ".")
-    found = re.search(r"\*\*Fiducia:?\*\*:?[^\n]*", text)
+               ": value read twice, found again in another source, chain reread with no objections") + ".")
+    found = re.search(r"\*\*(?:Confidence|Fiducia):?\*\*:?[^\n]*", text)
     return text[:found.start()] + row + text[found.end():] if found else f"{text}\n\n{row}"

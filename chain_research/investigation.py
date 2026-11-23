@@ -1,14 +1,14 @@
-"""Indagine su un argomento: Claude prepara le domande, la catena risponde, il ciclo si ripete, alla fine il PDF.
+"""Investigation of a topic: Claude prepares the questions, the chain answers, the cycle repeats, finally the PDF.
 
-1. Piano (regia): titolo, obiettivo, sezioni del documento e le prime domande, ognuna un dato preciso.
-2. Risposte: ogni domanda va alla catena in un processo a sé (`python -m chain_research.question`), alcune in
-   parallelo, ognuna con il suo browser.
-3. Valutazione (regia): copertura di ogni sezione, se la conoscenza è solida, nuove domande sui buchi e sui nomi
-   emersi. Si torna al punto 2 finché la regia non la ritiene solida, o finiscono budget, tempo o giri.
-4. Documento (documento.py): sezioni scritte dalle risposte con le fonti, sintesi, appendice, PDF.
+1. Plan (director): title, goal, sections of the document and the first questions, each about one precise fact.
+2. Answers: each question goes to the chain in its own process (`python -m chain_research.question`), some in
+   parallel, each with its own browser.
+3. Evaluation (director): coverage of each section, whether the knowledge is solid, new questions on the gaps and on
+   the names that emerged. Back to step 2 until the director deems it solid, or budget, time or rounds run out.
+4. Document (document.py): sections written from the answers with the sources, summary, appendix, PDF.
 
-Tutto lo stato sta in `indagini/<cartella>/stato.json` (si riprende dopo un'interruzione) e gli eventi in
-`eventi.jsonl` (l'app li mostra). Uso: `python -m chain_research.investigation <cartella>` (riprende o avvia).
+All the state is in `investigations/<folder>/status.json` (resumable after an interruption) and the events in
+`events.jsonl` (the app shows them). Usage: `python -m chain_research.investigation <folder>` (resumes or starts).
 """
 import fcntl
 import json
@@ -33,17 +33,17 @@ from .model import query as duplicates_query
 from .model.thinker import errors_schema, instructions
 from .web.sources.wikipedia_graph import interval_per
 
-MAX_ROUNDS = 12               # anche senza limiti: oltre, le domande nuove aggiungono poco
-QUESTION_ESTIMATE_USD = 0.20        # prima di avere costi osservati (banco: media 0,14 $, sbagliate 0,34 $)
-COSTS_PER_ESTIMATE = 5          # da quante domande finite vale il 75° percentile dei costi osservati
-DOCUMENT_RESERVE_MINUTES = 5    # indagini del 1-2/11: una sezione costa circa 15 secondi
-MIN_QUESTION_MINUTES = 10      # sotto, una domanda non fa in tempo (mediana 5 minuti, media 6,6)
-GUARD_MARGIN_S = 600         # oltre i minuti della domanda (per scrivere la risposta): poi il processo si chiude
-MIN_IMPROVEMENT = 0.05     # copertura media (0-3) che un giro deve aggiungere perché ne serva un altro
+MAX_ROUNDS = 12               # even without limits: beyond this, new questions add little
+QUESTION_ESTIMATE_USD = 0.20        # before observed costs exist (bench: mean $0.14, wrong ones $0.34)
+COSTS_PER_ESTIMATE = 5          # finished questions needed before the 75th percentile of observed costs is used
+DOCUMENT_RESERVE_MINUTES = 5    # investigations of 1-2 Nov: a section takes about 15 seconds
+MIN_QUESTION_MINUTES = 10      # below this, a question has no time to finish (median 5 minutes, mean 6.6)
+GUARD_MARGIN_S = 600         # on top of the question minutes (to write the answer): then the process is closed
+MIN_IMPROVEMENT = 0.05     # mean coverage (0-3) a round must add for another round to be worth it
 LOCK_FILE = "process.lock"
 RUN_SETTINGS = ("parallel_questions", "question_budget_usd", "question_pages", "question_minutes",
                             "review_model")
-# Costo stimato di una chiamata di scrittura del documento per modello (una per sezione, più la cornice).
+# Estimated cost of one document writing call per model (one per section, plus the frame).
 WRITING_ESTIMATE_USD = {"haiku": 0.03, "sonnet": 0.06, "opus": 0.40}
 QUESTIONS_SCHEMA = {"type": "array", "maxItems": 16, "items": {
     "type": "object", "additionalProperties": False, "required": ["section", "question", "reason"],
@@ -79,19 +79,19 @@ def _hour() -> str:
 
 
 def folder_name(topic: str) -> str:
-    base = re.sub(r"[^a-z0-9]+", "-", topic.lower())[:50].strip("-") or "indagine"
+    base = re.sub(r"[^a-z0-9]+", "-", topic.lower())[:50].strip("-") or "investigation"
     return f"{datetime.now():%Y-%m-%d-%H%M}-{base}"
 
 
 def row(text: str, label: str) -> str:
-    """Il contenuto di una riga «**Etichetta:** …» della risposta della catena ("" se manca)."""
+    """The content of a "**Label:** …" line of the chain's answer ("" if missing)."""
     found = re.search(rf"\*\*{label}:?\*\*:?\s*(.+)", text or "")
     return found.group(1).strip() if found else ""
 
 
 def acquire_lock(folder: Path) -> Any | None:
-    """Il blocco dell'indagine, tenuto dal suo processo finché vive (anche se muore di colpo il sistema lo rilascia), o
-    None se un altro processo la sta già eseguendo."""
+    """The investigation lock, held by its process while it lives (the system releases it even on a sudden death), or
+    None if another process is already running the investigation."""
     file = (folder / LOCK_FILE).open("a+", encoding="utf-8")
     try:
         fcntl.flock(file, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -106,7 +106,7 @@ def acquire_lock(folder: Path) -> Any | None:
 
 
 def active_process(folder: Path) -> int | None:
-    """Il pid del processo che sta eseguendo l'indagine (0 se non ancora scritto), None se non ce n'è nessuno."""
+    """The pid of the process running the investigation (0 if not written yet), None if there is none."""
     path = folder / LOCK_FILE
     if not path.is_file():
         return None
@@ -122,7 +122,7 @@ def active_process(folder: Path) -> int | None:
 
 
 class Director:
-    """Le decisioni dell'indagine e la scrittura del documento, con il modello scelto dall'utente."""
+    """The decisions of the investigation and the writing of the document, with the model chosen by the user."""
 
     def __init__(self, model: str, to_cost: Callable[[float], None],
                  stopped: Callable[[], bool] = lambda: False,
@@ -134,13 +134,13 @@ class Director:
 
     def ask(self, point: str, obj: Any, schema: dict | None, cap_usd: float = 2.0,
                wait: float = 900, rules: str | None = None) -> Any:
-        """Una chiamata con schema (validato, una correzione) o di testo libero. Solleva ErroreClaude."""
+        """A call with a schema (validated, one correction) or with free text. Raises ClaudeError."""
         rules = rules or instructions(point)
         text = cleaning.data(obj)
         request = text
         for attempt in (1, 2):
             if self.stopped():
-                raise claude_json.Interrupted("Indagine fermata.")
+                raise claude_json.Interrupted("Investigation stopped.")
             try:
                 data, usage = claude_json.ask(rules, request, schema, point, model=self.model,
                                                    max_budget_usd=cap_usd, wait=wait)
@@ -157,8 +157,8 @@ class Director:
             problems = errors_schema(data, schema) if schema is not None else []
             if not problems:
                 return data
-            request = f"{text}\n\nLA RISPOSTA PRECEDENTE NON ERA VALIDA:\n- " + "\n- ".join(problems)
-        raise claude_json.ClaudeError(f"{point}: risposta non valida dopo la correzione")
+            request = f"{text}\n\nTHE PREVIOUS ANSWER WAS NOT VALID:\n- " + "\n- ".join(problems)
+        raise claude_json.ClaudeError(f"{point}: answer not valid after the correction")
 
 
 class Investigation:
@@ -167,15 +167,15 @@ class Investigation:
         self.status_file = self.folder / "status.json"
         self.status: dict = json.loads(self.status_file.read_text(encoding="utf-8"))
         self.publish = publish or (lambda e: None)
-        self._mutex = threading.RLock()  # lo stato si cambia da più thread (una domanda per thread)
+        self._mutex = threading.RLock()  # the status is changed from several threads (one question per thread)
         self._stopped = threading.Event()
         self._processes: dict[str, subprocess.Popen] = {}
         self._start = time.monotonic() - float(self.status.get("seconds", 0))
-        self._session_limit = ""  # il messaggio, se l'abbonamento ha finito il limite durante la corsa
+        self._session_limit = ""  # the message, if the subscription hit its limit during the run
         self.director = Director(self.status["director_model"], self._add_cost_director, self._stopped.is_set,
                            self._add_model)
 
-    # --- creazione e stato --------------------------------------------------------------------------------------
+    # --- creation and status ------------------------------------------------------------------------------------------
 
     @classmethod
     def create(cls, topic: str, *, director_model: str | None = None, budget_usd: float | None = None,
@@ -184,16 +184,16 @@ class Investigation:
         settings = configuration.load()
         topic = " ".join(topic.split())
         if not 3 <= len(topic) <= 4000:
-            raise ValueError("Scrivi l'argomento della ricerca (da 3 a 4000 caratteri).")
+            raise ValueError("Write the topic of the research (3 to 4000 characters).")
         model = director_model or settings["director_model"]
         if model not in configuration.MODELS:
-            raise ValueError(f"Modello non valido: {model}")
+            raise ValueError(f"Invalid model: {model}")
         base = base_folder or configuration.folder("investigations_folder")
         folder = base / folder_name(topic)
         try:
             folder.mkdir(parents=True, exist_ok=False)
         except FileExistsError:
-            raise ValueError("Hai appena avviato un'indagine sullo stesso argomento: riprova tra un minuto.") from None
+            raise ValueError("You have just started an investigation on the same topic: try again in a minute.") from None
         status = {
             "id": folder.name, "topic": topic, "created": _hour(), "status": "waiting", "phase": "",
             "director_model": model, "chain_model": settings["chain_model"],
@@ -236,7 +236,7 @@ class Investigation:
             self.status["director_models"] = sorted(known | {m.strip() for m in models.split(",") if m.strip()})
 
     def _imp(self) -> dict[str, Any]:
-        """Le impostazioni di questa corsa: quelle fissate alla creazione, anche se poi l'utente le cambia."""
+        """The settings of this run: those fixed at creation, even if the user changes them later."""
         return {**configuration.load(), **(self.status.get("settings") or {})}
 
     def spent(self) -> float:
@@ -245,7 +245,7 @@ class Investigation:
     def elapsed(self) -> float:
         return time.monotonic() - self._start
 
-    # --- limiti -------------------------------------------------------------------------------------------------
+    # --- limits -------------------------------------------------------------------------------------------------------
 
     def _question_estimate(self) -> float:
         costs = sorted(d["cost_usd"] for d in self.status["questions"] if d.get("cost_usd"))
@@ -258,21 +258,21 @@ class Investigation:
         return WRITING_ESTIMATE_USD.get(self.status["director_model"], 0.25) * (sections + 2)
 
     def can_start(self, in_progress: int) -> str:
-        """"" se un'altra domanda può partire, altrimenti il motivo per cui no."""
+        """"" if another question can start, otherwise the reason why not."""
         if self._stopped.is_set():
-            return "indagine fermata"
+            return "investigation stopped"
         limits = self.status["limits"]
         if limits["without_limits"]:
             return ""
         busy = self.spent() + (in_progress + 1) * self._question_estimate() + self.document_reserve()
         if busy > limits["budget_usd"]:
-            return f"budget di {limits['budget_usd']:.2f} $ quasi raggiunto (speso {self.spent():.2f} $)"
+            return f"budget of ${limits['budget_usd']:.2f} almost reached (spent ${self.spent():.2f})"
         if limits["max_minutes"] - DOCUMENT_RESERVE_MINUTES - self.elapsed() / 60 < MIN_QUESTION_MINUTES:
-            return f"tempo massimo di {limits['max_minutes']:.0f} minuti quasi raggiunto"
+            return f"maximum time of {limits['max_minutes']:.0f} minutes almost reached"
         return ""
 
     def _question_minutes(self) -> float:
-        """Minuti massimi per la prossima domanda: quelli della catena, o meno se il tempo dell'indagine finisce."""
+        """Maximum minutes for the next question: those of the chain, or fewer if the investigation's time runs out."""
         maximum = float(self._imp()["question_minutes"])
         limits = self.status["limits"]
         if limits["without_limits"]:
@@ -281,20 +281,20 @@ class Investigation:
         return max(MIN_QUESTION_MINUTES, min(maximum, rest))
 
     def stop(self) -> None:
-        """Ferma l'indagine: nessuna nuova domanda, quelle in corso si chiudono, come le chiamate della regia."""
+        """Stops the investigation: no new questions; running questions and director calls are closed."""
         self._stopped.set()
         for process in list(self._processes.values()):
             if process.poll() is None:
                 process.terminate()
         claude_json.interrupt()
 
-    # --- svolgimento --------------------------------------------------------------------------------------------
+    # --- execution ----------------------------------------------------------------------------------------------------
 
     def run(self, document_only: bool = False) -> None:
-        """Avvia o riprende l'indagine fino al documento."""
+        """Starts or resumes the investigation up to the document."""
         from . import document
         for d in self.status["questions"]:
-            if d["status"] == "in_progress" or (d["status"] == "error" and not document_only):  # si rifà
+            if d["status"] == "in_progress" or (d["status"] == "error" and not document_only):  # redone
                 d["status"] = "waiting"
             if d["status"] == "waiting":
                 d.pop("error", None)
@@ -312,7 +312,7 @@ class Investigation:
             if self._stopped.is_set() and not document_only:
                 self._conclude_stopped()
                 return
-            self._phase("Scrivo il documento…")
+            self._phase("Writing the document…")
             self.status["document"] = document.write(self)
             self.status["status"] = "finished"
             self.save()
@@ -323,7 +323,7 @@ class Investigation:
             self._conclude_stopped()
         except claude_json.Interrupted:
             self._conclude_stopped()
-        except Exception as error:  # noqa: BLE001 - lo stato resta salvato: l'indagine si può riprendere
+        except Exception as error:  # noqa: BLE001 - the status stays saved: the investigation can be resumed
             self.status["status"] = "error"
             self.status["end_reason"] = f"{type(error).__name__}: {error}"[:500]
             self.save()
@@ -333,14 +333,14 @@ class Investigation:
     def _conclude_stopped(self) -> None:
         self.status["status"] = "stopped"
         if self._session_limit:
-            self.status["end_reason"] = f"{self._session_limit} Riprendi l'indagine dopo il rinnovo."
+            self.status["end_reason"] = f"{self._session_limit} Resume the investigation after the renewal."
         else:
-            self.status["end_reason"] = self.status["end_reason"] or "fermata dall'utente"
+            self.status["end_reason"] = self.status["end_reason"] or "stopped by the user"
         self.save()
         self.event({"kind": "end", "status": "stopped", "reason": self.status["end_reason"]})
 
     def _make_plan(self) -> None:
-        self._phase("Claude prepara il piano e le prime domande…")
+        self._phase("Claude is preparing the plan and the first questions…")
         plan = self.director.ask("plan_director", {"topic": self.status["topic"],
                                                   "today": f"{datetime.now():%Y-%m-%d}"}, PLAN_SCHEMA)
         self.status["plan"] = {k: plan[k] for k in ("title", "goal", "sections")}
@@ -351,7 +351,7 @@ class Investigation:
                      "spent_usd": self.spent()})
 
     def _add_questions(self, questions: list[dict], round_no: int) -> list[dict]:
-        """Nuove domande, senza i doppioni di quelle già fatte (stessa domanda o quasi: Jaccard ≥ 0,7)."""
+        """New questions, without duplicates of those already asked (same question or nearly: Jaccard ≥ 0.7)."""
         sections = {s["id"] for s in self.status["plan"]["sections"]}
         done = [d["question"] for d in self.status["questions"]]
         added = []
@@ -371,16 +371,16 @@ class Investigation:
         while not self._stopped.is_set():
             waiting = [d for d in self.status["questions"] if d["status"] == "waiting"]
             if waiting:
-                self._phase(f"Giro {self.status['round']}: {len(waiting)} domande alla catena…")
+                self._phase(f"Round {self.status['round']}: {len(waiting)} questions to the chain…")
                 reason = self._answer_questions(waiting)
                 if reason:
                     self.status["end_reason"] = reason
                     break
                 continue
             if self.status["round"] >= MAX_ROUNDS:
-                self.status["end_reason"] = f"raggiunti {MAX_ROUNDS} giri di domande"
+                self.status["end_reason"] = f"reached {MAX_ROUNDS} rounds of questions"
                 break
-            if self.can_start(0):  # niente budget per un altro giro: si scrive con quello che c'è
+            if self.can_start(0):  # no budget for another round: write with what there is
                 self.status["end_reason"] = self.can_start(0)
                 break
             if self._evaluate():
@@ -388,8 +388,8 @@ class Investigation:
         self.save()
 
     def _evaluate(self) -> bool:
-        """La regia valuta la conoscenza; True se basta (o non ci sono domande nuove)."""
-        self._phase(f"Claude valuta cosa si sa dopo il giro {self.status['round']}…")
+        """The director evaluates the knowledge; True if it is enough (or there are no new questions)."""
+        self._phase(f"Claude is evaluating what is known after round {self.status['round']}…")
         evaluation = self.director.ask("director_evaluate", {
             "plan": self.status["plan"], "today": f"{datetime.now():%Y-%m-%d}",
             "questions": [self.in_short(d) for d in self.status["questions"]]}, EVALUATION_SCHEMA)
@@ -409,9 +409,9 @@ class Investigation:
                      "solid_knowledge": evaluation["solid_knowledge"], "reason": evaluation["reason"],
                      "questions": added, "spent_usd": self.spent()})
         if evaluation["solid_knowledge"] or not added:
-            self.status["end_reason"] = ("Claude ritiene la conoscenza solida: " if evaluation["solid_knowledge"]
-                                         else "la copertura non cresce più: " if stop
-                                         else "nessuna domanda nuova utile: ") + evaluation["reason"]
+            self.status["end_reason"] = ("Claude deems the knowledge solid: " if evaluation["solid_knowledge"]
+                                         else "coverage no longer grows: " if stop
+                                         else "no useful new question: ") + evaluation["reason"]
             return True
         return False
 
@@ -421,7 +421,7 @@ class Investigation:
         return sum(coverages) / len(coverages) if coverages else 0.0
 
     def _how_many_more(self) -> int | None:
-        """Quante domande si possono ancora finire con budget e tempo rimasti (None: nessun limite)."""
+        """How many questions can still be finished with the budget and time left (None: no limits)."""
         limits = self.status["limits"]
         if limits["without_limits"]:
             return None
@@ -434,31 +434,31 @@ class Investigation:
         return max(1, int(min(per_budget, per_time)))
 
     def _new_choices(self, evaluation: dict) -> list[dict]:
-        """Le nuove domande, prima quelle delle sezioni meno coperte, solo quante si possono finire."""
+        """The new questions, those of the least covered sections first, only as many as can be finished."""
         coverage = {s["id"]: s["coverage"] for s in evaluation["sections"]}
         sorted_items = sorted(evaluation["new_questions"], key=lambda d: coverage.get(d["section"], 0))
         return sorted_items[:self._how_many_more()]
 
     @staticmethod
     def in_short(d: dict) -> dict:
-        """Una domanda e la sua risposta in breve, per la regia (il testo viene dal web: ripulito)."""
+        """A question and its answer in short, for the director (the text comes from the web: cleaned)."""
         answer = d.get("answer") or ""
         outcome = {"answer": "found", "not_found": "not found"}.get(d["status"], d["status"])
-        # Lo stato lo decidono i controlli del programma (web/validazione.py), non la «Fiducia» scritta dal modello.
+        # The status is decided by the program's checks (web/validation.py), not by the "Confidence" written by the model.
         return {"id": d["id"], "section": d["section"], "question": d["question"], "outcome": outcome,
-                "answer": cleaning.text(row(answer, "Risposta"), origin="answer")[:400],
-                "explanation": cleaning.text(row(answer, "Spiegazione"), origin="answer")[:400],
+                "answer": cleaning.text(row(answer, "Answer"), origin="answer")[:400],
+                "explanation": cleaning.text(row(answer, "Explanation"), origin="answer")[:400],
                 "status": status_of(d) or outcome,
                 "checks_limits": [cleaning.text(str(m), origin="answer")[:200]
                                          for m in (d.get("status_reasons") or [])[:4]],
                 "sources": len(d.get("sources") or [])}
 
-    # --- risposte con la catena ---------------------------------------------------------------------------------
+    # --- answers with the chain ---------------------------------------------------------------------------------------
 
     def _answer_questions(self, questions: list[dict]) -> str:
-        """Risponde alle domande in parallelo; "" se tutte fatte, altrimenti il motivo per cui ci si è fermati."""
+        """Answers the questions in parallel; "" if all done, otherwise the reason for stopping."""
         parallel = max(1, int(self._imp()["parallel_questions"]))
-        profiles = [f"profilo_{i + 1}" for i in range(parallel)]
+        profiles = [f"profile_{i + 1}" for i in range(parallel)]
         free = list(profiles)
         mutex = threading.Lock()
         reason = {"text": ""}
@@ -469,7 +469,7 @@ class Investigation:
         def work(d: dict, profile: str) -> None:
             try:
                 self._one_question(d, profile, parallel)
-            except Exception as error:  # noqa: BLE001 - un errore qui non deve lasciare la domanda «in corso»
+            except Exception as error:  # noqa: BLE001 - an error here must not leave the question "in progress"
                 with self._mutex:
                     d.update(status="error", error=f"{type(error).__name__}: {error}"[:500], finished=_hour())
                 self.save()
@@ -515,7 +515,7 @@ class Investigation:
                                  "budget_claude": float(settings["question_budget_usd"]),
                                  "chain_pages": int(settings["question_pages"]),
                                  "chain_minutes": minutes,
-                                 # Limiti di Wikimedia, per tutte le domande insieme.
+                                 # Wikimedia limits, for all the questions together.
                                  "wikipedia_interval": interval_per(parallel)}}
         with (self.folder / "errors.log").open("a", encoding="utf-8") as errors_log:
             process = subprocess.Popen(self._question_command(), cwd=ROOT, stdin=subprocess.PIPE,
@@ -557,17 +557,17 @@ class Investigation:
         finally:
             guard.cancel()
             self._processes.pop(d["id"], None)
-        if limit is not None:  # le altre domande troverebbero lo stesso limite: ci si ferma, «non trovata» sarebbe falso
+        if limit is not None:  # the other questions would hit the same limit: stop, "not found" would be false
             self._session_limit = error
             self.stop()
-        if outcome is None and spent:  # la domanda è costata anche se non è finita; il totale la conta come spesa a parte
+        if outcome is None and spent:  # the question cost money even if unfinished; the total counts it as a separate expense
             self._add_cost_director(spent)
         with self._mutex:
             if outcome is None:
                 d["status"] = "waiting" if self._stopped.is_set() else "error"
-                d["error"] = error or ("tempo massimo della domanda superato" if expired.is_set() else
+                d["error"] = error or ("maximum time of the question exceeded" if expired.is_set() else
                                          "stopped" if self._stopped.is_set() else
-                                         f"processo chiuso ({process.returncode})")
+                                         f"process closed ({process.returncode})")
             else:
                 d.update(status="answer" if outcome.get("found") else "not_found", answer=outcome["answer"],
                          value=outcome.get("value"), sources=outcome["sources"], cost_usd=outcome["cost_usd"],
@@ -581,11 +581,11 @@ class Investigation:
             d["finished"] = _hour()
         self.save()
         self.event({"kind": "question", "id": d["id"], "status": d["status"], "question": d["question"],
-                     "answer": row(d.get("answer") or "", "Risposta")[:300], "error": d.get("error"),
+                     "answer": row(d.get("answer") or "", "Answer")[:300], "error": d.get("error"),
                      "cost_usd": d.get("cost_usd"), "seconds": d.get("seconds"), "spent_usd": self.spent()})
 
     def _question_event(self, d: dict, event: dict) -> None:
-        """Solo gli eventi utili all'app: fasi della catena e pagine lette."""
+        """Only the events useful to the app: chain phases and pages read."""
         if event.get("kind") == "phase":
             self.event({"kind": "question_phase", "id": d["id"], "text": str(event.get("text"))[:200]})
         elif event.get("kind") == "page" and event.get("status") == "read":
@@ -594,18 +594,18 @@ class Investigation:
 
 
 def main() -> int:
-    """`python -m chain_research.investigation <cartella> [--documento]`: avvia o riprende l'indagine."""
+    """`python -m chain_research.investigation <folder> [--document]`: starts or resumes the investigation."""
     folder = Path(sys.argv[1])
     block = acquire_lock(folder)
     if block is None:
-        print("Questa indagine è già in esecuzione in un altro processo.", file=sys.stderr)
+        print("This investigation is already running in another process.", file=sys.stderr)
         return 2
     investigation = Investigation(folder)
     signal.signal(signal.SIGTERM, lambda *_: investigation.stop())
     signal.signal(signal.SIGINT, lambda *_: investigation.stop())
     try:
-        investigation.run(document_only="--documento" in sys.argv[2:])
-    except Exception:  # noqa: BLE001 - già registrato nello stato
+        investigation.run(document_only="--document" in sys.argv[2:])
+    except Exception:  # noqa: BLE001 - already recorded in the status
         return 1
     return 0
 

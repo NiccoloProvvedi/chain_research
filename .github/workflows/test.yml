@@ -12,17 +12,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Dipendenze
+      - name: Dependencies
         run: |
           python -m venv venv
           venv/bin/pip install -r requirements-dev.txt
-          PLAYWRIGHT_BROWSERS_PATH=browser/motori venv/bin/playwright install --with-deps chromium
-      - name: Controlli statici
+          PLAYWRIGHT_BROWSERS_PATH=browser/engines venv/bin/playwright install --with-deps chromium
+      - name: Static checks
         run: |
           venv/bin/ruff check chain_research bench test
           node --check app/main.js
           node --check app/ui/app.js
-      - name: Test senza Internet e senza Claude
+      - name: Tests without Internet and without Claude
         run: |
           venv/bin/coverage run -m pytest -q -m "not network and not claude"
           venv/bin/coverage report

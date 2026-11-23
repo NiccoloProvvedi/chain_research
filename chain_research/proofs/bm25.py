@@ -1,6 +1,6 @@
-"""BM25 (Okapi) per la prima scrematura delle triple candidate (Fase D, Parte 8.5 punto 3): scritto qui, niente
-dipendenze (decisione B5). Le parole sono quelle del filtro delle query (minuscole, senza accenti né parole vuote,
-identificativi tecnici interi)."""
+"""BM25 (Okapi) for the first screening of candidate triples (Phase D, Part 8.5 point 3): written here, no
+dependencies (decision B5). The words are those of the query filter (lowercase, without accents or stop words,
+technical identifiers kept whole)."""
 import math
 from collections import Counter
 
@@ -33,11 +33,11 @@ class Bm25:
         return result
 
     def best(self, question: str, how_many: int) -> list[int]:
-        """Indici dei documenti migliori, in ordine (a parità l'ordine originale)."""
+        """Indices of the best documents, in order (ties keep the original order)."""
         scores = self.scores(question)
         return sorted(range(len(scores)), key=lambda i: (-scores[i], i))[:how_many]
 
 
 def _items_words(text: str) -> list[str]:
-    # `parole` restituisce un insieme: per BM25 servono le ripetizioni, quindi si contano parola per parola.
+    # `words` returns a set: BM25 needs repetitions, so words are counted one by one.
     return [p for piece in str(text).split() for p in words(piece)]

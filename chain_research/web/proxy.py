@@ -1,9 +1,9 @@
-"""Proxy locale del browser: l'unico punto da cui passa tutto il suo traffico (pagine, redirect, WebSocket).
+"""The browser's local proxy: the single point all its traffic goes through (pages, redirects, WebSockets).
 
-`context.route` di Playwright non vede i redirect né i WebSocket: il controllo delle reti vietate deve stare dove nasce
-la connessione. Qui il nome si risolve, si rifiuta il collegamento se UNO qualsiasi degli indirizzi è vietato e ci si
-collega proprio all'indirizzo controllato, come fa `fonti/http.py` per il client HTTP (niente DNS rebinding). HTTPS e
-WebSocket passano con CONNECT, cifrati: il proxy non li legge.
+Playwright's `context.route` sees neither redirects nor WebSockets: the check on forbidden networks must sit where the
+connection is made. Here the name is resolved, the connection is refused if ANY of the addresses is forbidden, and
+the connection goes to exactly the checked address, as `sources/http.py` does for the HTTP client (no DNS rebinding).
+HTTPS and WebSockets go through CONNECT, encrypted: the proxy does not read them.
 """
 import selectors
 import socket
@@ -21,11 +21,11 @@ _HEAD_END = b"\r\n\r\n"
 
 
 class ForbiddenAddress(OSError):
-    """Il nome porta al computer stesso o alla rete di casa."""
+    """The name leads to the computer itself or to the home network."""
 
 
 def connect(host: str, port_number: int, local_allow: bool = False) -> socket.socket:
-    """Una connessione verso `host`, solo se tutti i suoi indirizzi sono permessi."""
+    """A connection to `host`, only if all its addresses are allowed."""
     if not local_allow and network.local_name(host):
         raise ForbiddenAddress(host)
     addresses = list(dict.fromkeys(i[4][0] for i in socket.getaddrinfo(host, port_number, type=socket.SOCK_STREAM)))
@@ -37,23 +37,23 @@ def connect(host: str, port_number: int, local_allow: bool = False) -> socket.so
             return socket.create_connection((ip, port_number), timeout=CONNECT_TIMEOUT)
         except OSError as error:
             last = error
-    raise last or OSError(f"connessione non riuscita: {host}")
+    raise last or OSError(f"connection failed: {host}")
 
 
 def _read_head(listener: socket.socket) -> tuple[bytes, bytes]:
-    """Le intestazioni della richiesta (fino alla riga vuota esclusa) e i byte già arrivati dopo di esse."""
+    """The request headers (up to the blank line, excluded) and the bytes already received after them."""
     data = b""
     while _HEAD_END not in data:
         piece = listener.recv(8192)
         if not piece or len(data) > HEAD_LIMIT:
-            raise ConnectionError("intestazioni mancanti o troppo lunghe")
+            raise ConnectionError("headers missing or too long")
         data += piece
     head, _, rest = data.partition(_HEAD_END)
     return head, rest
 
 
 def _teardown_after_answer(head: bytes) -> bytes:
-    """Una connessione verso il proxy serve un solo sito: il browser non deve riusarla per un altro."""
+    """A connection to the proxy serves a single site: the browser must not reuse it for another."""
     rows = [r for r in head.split(b"\r\n")
              if not r.lower().startswith((b"connection:", b"proxy-connection:", b"keep-alive:"))]
     return b"\r\n".join([*rows, b"Connection: close"]) + _HEAD_END
@@ -61,7 +61,7 @@ def _teardown_after_answer(head: bytes) -> bytes:
 
 def _pour(client: socket.socket, remote: socket.socket,
              head_filter: Callable[[bytes], bytes] | None = None) -> None:
-    """Copia i byte nei due sensi finché entrambi hanno finito; `filtro_testa` riscrive le intestazioni della risposta."""
+    """Copies bytes both ways until both sides are done; `head_filter` rewrites the response headers."""
     client.setblocking(True)
     remote.setblocking(True)
     in_pending = b""
@@ -75,7 +75,7 @@ def _pour(client: socket.socket, remote: socket.socket,
                 return
             for key, _ in events:
                 piece = key.fileobj.recv(65_536)
-                destination = key.date
+                destination = key.data
                 if not piece:
                     selector.unregister(key.fileobj)
                     pending -= 1
@@ -161,12 +161,12 @@ class _Server(socketserver.ThreadingTCPServer):
         self.local_allow = local_allow
         super().__init__(("127.0.0.1", 0), _Handler)
 
-    def handle_error(self, request, client_address) -> None:  # noqa: ANN001 - una connessione caduta non è un errore
+    def handle_error(self, request, client_address) -> None:  # noqa: ANN001 - a dropped connection is not an error
         pass
 
 
 class SafeProxy:
-    """Il proxy in un thread a sé, su una porta libera di 127.0.0.1."""
+    """The proxy in its own thread, on a free port of 127.0.0.1."""
 
     def __init__(self, local_allow: bool = False) -> None:
         self._server = _Server(local_allow)

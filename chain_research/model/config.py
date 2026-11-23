@@ -1,7 +1,7 @@
-"""Configurazione delle chiamate a Claude: tetti, attese, modello per punto e cartella dei registri.
+"""Configuration of the Claude calls: caps, waits, model per point and log folder.
 
-Il modello di ogni punto, se non indicato da chi chiama, è `modello_catena` delle impostazioni. La cartella dei
-registri si cambia con CHAIN_LOG (usato dai test)."""
+The model of each point, unless the caller gives one, is `chain_model` from the settings. The log folder can be
+changed with CHAIN_LOG (used by the tests)."""
 import os
 from pathlib import Path
 
@@ -18,13 +18,13 @@ class _Base(BaseModel):
 
 
 class Thinker(_Base):
-    # Tetto di ogni singola chiamata (--max-budget-usd), oltre al budget della domanda.
+    # Cap of each single call (--max-budget-usd), on top of the question budget.
     max_call_usd: float = Field(0.50, gt=0)
     wait_s: float = Field(180, gt=0)
 
 
 class Query(_Base):
-    # Una query troppo simile (Jaccard) a una già fatta non parte.
+    # A query too similar (Jaccard) to one already made is not sent.
     duplicate_threshold: float = Field(0.6, ge=0, le=1)
 
 

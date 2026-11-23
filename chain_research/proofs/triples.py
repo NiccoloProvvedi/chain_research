@@ -1,10 +1,10 @@
-"""Triple estratte dalle pagine (Fase D, Parte 8.2 del piano): validazione e controllo della citazione.
+"""Triples extracted from pages (Phase D, Part 8.2 of the plan): validation and quote check.
 
-Il lettore restituisce per ogni segmento al massimo 8 triple
-`{soggetto, relazione, oggetto, tipo_oggetto, forza, citazione, segmento}`. Il controllo più importante contro le
-invenzioni del modello piccolo: la `citazione` deve comparire **davvero** nel segmento indicato (dopo aver normalizzato
-spazi, virgolette e trattini). Se no, la tripla si scarta e si conta. Le triple che passano hanno origine `estratta`;
-solo queste contano come prove.
+For each segment the reader returns at most 8 triples
+`{subject, relation, object, object_kind, force, quote, segment}`. The most important check against the small
+model's inventions: the `quote` must **really** appear in the given segment (after normalizing spaces, quotation marks
+and dashes). If not, the triple is discarded and counted. Triples that pass have origin `extracted`; only these count
+as proofs.
 """
 import re
 import unicodedata
@@ -43,7 +43,7 @@ def _per_comparison(text: str) -> str:
 
 
 def present_quote(quote: str, segment: str) -> bool:
-    """La citazione compare nel testo del segmento (spazi, virgolette, trattini e maiuscole normalizzati)."""
+    """The quote appears in the segment text (spaces, quotation marks, dashes and case normalized)."""
     searched = _per_comparison(quote).strip(" .…")
     return len(searched) >= 3 and searched in _per_comparison(segment)
 
@@ -56,7 +56,7 @@ def segment_number(value: str) -> int | None:
 @dataclass
 class Outcome:
     valid: list[dict]
-    discarded: list[dict]  # ognuna con il campo "motivo"
+    discarded: list[dict]  # each with the "reason" field
 
     @property
     def discarded_share(self) -> float:
@@ -65,8 +65,8 @@ class Outcome:
 
 
 def is_valid(triples: list[dict[str, Any]], segments: dict[int, str]) -> Outcome:
-    """Controlla le triple del lettore contro i segmenti letti ({numero: testo}). Le valide ricevono origine 'estratta'
-    e il numero di segmento; al massimo 8 per segmento (le altre si scartano)."""
+    """Check the reader's triples against the segments read ({number: text}). Valid ones get origin 'extracted'
+    and the segment number; at most 8 per segment (the others are discarded)."""
     valid: list[dict] = []
     discarded: list[dict] = []
     per_segment: dict[int, int] = {}
@@ -74,15 +74,15 @@ def is_valid(triples: list[dict[str, Any]], segments: dict[int, str]) -> Outcome
         k = segment_number(triple.get("segment", ""))
         reason = ""
         if k is None or k not in segments:
-            reason = "segmento inesistente"
+            reason = "segment does not exist"
         elif triple.get("force") not in FORCES or triple.get("object_kind") not in OBJECT_TYPES:
-            reason = "forza o tipo non validi"
+            reason = "invalid force or kind"
         elif not all(str(triple.get(c, "")).strip() for c in ("subject", "relation", "object")):
-            reason = "campo vuoto"
+            reason = "empty field"
         elif not present_quote(triple.get("quote", ""), segments[k]):
-            reason = "citazione non trovata nel segmento"
+            reason = "quote not found in the segment"
         elif per_segment.get(k, 0) >= MAX_PER_SEGMENT:
-            reason = "oltre 8 triple per segmento"
+            reason = "more than 8 triples per segment"
         if reason:
             discarded.append({**triple, "reason": reason})
             continue

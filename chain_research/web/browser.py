@@ -1,8 +1,8 @@
-"""Browser separato per leggere le pagine (Chromium di Playwright, profilo dentro il progetto, senza i tuoi
-account) che non può raggiungere il computer né la rete di casa.
+"""Separate browser for reading pages (Playwright's Chromium, profile inside the project, without your accounts)
+that cannot reach the computer or the home network.
 
-Adattato da jev_ultrafast/browser.py (MIT, vedi LICENZA_JEV_ULTRAFAST.txt): al posto di
-Browser Harness, che si collega al Chrome dell'utente, si avvia un Chromium dedicato.
+Adapted from jev_ultrafast/browser.py (MIT, see LICENSE_JEV_ULTRAFAST.txt): instead of Browser Harness, which
+connects to the user's Chrome, a dedicated Chromium is started.
 """
 import os
 import shutil
@@ -14,18 +14,18 @@ from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import sync_playwright
 
 from .proxy import SafeProxy
-from .network import forbidden_host, safe_address  # noqa: F401 - usati anche da altri moduli
+from .network import forbidden_host, safe_address  # noqa: F401 - also used by other modules
 
 WIDTH, HEIGHT = 1120, 780
 
 
 class StalePage(RuntimeError):
-    """La pagina è cambiata mentre si valutava lo script."""
+    """The page changed while the script was being evaluated."""
 
 
 def _remove_abandoned_lockfile(profile_folder: Path) -> None:
-    """Chromium rifiuta un profilo "in uso" se un browser precedente è stato chiuso di colpo (spegnimento del
-    container, crash). Se il proprietario del lucchetto non esiste più, il lucchetto viene tolto."""
+    """Chromium refuses a profile "in use" if a previous browser was closed abruptly (container shutdown, crash). If
+    the lock's owner no longer exists, the lock is removed."""
     lockfile = profile_folder / "SingletonLock"
     try:
         owner = os.readlink(lockfile)
@@ -48,8 +48,8 @@ def _remove_abandoned_lockfile(profile_folder: Path) -> None:
 
 
 def _empty_profile(profile_folder: Path) -> None:
-    """Ogni domanda parte da un profilo vuoto (niente cookie o service worker delle pagine di prima, niente disco che
-    cresce). Un profilo con un lucchetto ancora vivo è in uso: non si tocca."""
+    """Every question starts from an empty profile (no cookies or service workers from earlier pages, no growing
+    disk usage). A profile with a lock that is still alive is in use: it is left alone."""
     if not os.path.lexists(profile_folder / "SingletonLock"):
         shutil.rmtree(profile_folder, ignore_errors=True)
 
@@ -67,24 +67,24 @@ class Browser:
         self._proxy = None if local_allow else SafeProxy()
         self._pw = sync_playwright().start()
         try:
-            # channel="chromium": Chromium completo in modalità headless moderna (molti siti, come DuckDuckGo,
-            # bloccano la versione "headless shell"). Tutto il traffico passa dal proxy: `route` non vede redirect e
-            # WebSocket; i service worker sono spenti perché sfuggono a `route`.
+            # channel="chromium": full Chromium in modern headless mode (many sites, like DuckDuckGo, block the
+            # "headless shell" build). All traffic goes through the proxy: `route` does not see redirects and
+            # WebSockets; service workers are off because they escape `route`.
             self._context = self._pw.chromium.launch_persistent_context(
                 str(profile_folder), headless=headless, channel="chromium",
-                viewport={"width": WIDTH, "height": HEIGHT}, locale="it-IT", service_workers="block",
+                viewport={"width": WIDTH, "height": HEIGHT}, locale="en-US", service_workers="block",
                 **({"proxy": {"server": self._proxy.address}} if self._proxy else {}),
             )
             if not local_allow:
-                # Il browser del navigatore non può raggiungere il computer né la rete di casa (primo filtro, rapido).
+                # The navigator's browser cannot reach the computer or the home network (first, fast filter).
                 self._context.route("**/*", self._filter_request)
             self.page = self._context.pages[0] if self._context.pages else self._context.new_page()
             self.session = self._context.new_cdp_session(self.page)
             self.call("Emulation.setFocusEmulationEnabled", enabled=True)
             identity = self.evaluate("navigator.userAgent").replace("HeadlessChrome", "Chrome")
-            self.call("Emulation.setUserAgentOverride", userAgent=identity, acceptLanguage="it-IT,it;q=0.9,en;q=0.8")
+            self.call("Emulation.setUserAgentOverride", userAgent=identity, acceptLanguage="en-US,en;q=0.9")
             if not local_allow and url != "about:blank" and not safe_address(url):
-                raise ValueError("Indirizzo non consentito: il navigatore non può aprire il computer o la rete di casa.")
+                raise ValueError("Address not allowed: the navigator cannot open the computer or the home network.")
             self.page.goto(url, wait_until="load", timeout=30_000)
         except Exception:
             self.close()
@@ -120,7 +120,7 @@ class Browser:
             try:
                 if teardown:
                     teardown()
-            except Exception:  # noqa: BLE001 - chiusura best effort
+            except Exception:  # noqa: BLE001 - best-effort close
                 pass
         proxy, self._proxy = getattr(self, "_proxy", None), None
         if proxy is not None:

@@ -1,11 +1,11 @@
-"""Prova delle istruzioni della revisione sulle corse salvate: si rifà solo la revisione, non la domanda.
+"""Probe of the review instructions on saved runs: only the review is redone, not the question.
 
-Per ogni risposta con un valore di una corsa salvata (dal 12/11: l'esito ha le righe della soluzione) si chiede di
-nuovo la revisione, con le istruzioni di adesso, e si guarda che cosa direbbe della premessa. Costa circa 2 centesimi
-a risposta; non misura le righe delle altre voci (non sono salvate): prima di fidarsi serve una corsa vera.
+For each answer with a value in a saved run (since 12 Nov the outcome has the rows of the solution) the review is asked
+again, with the current instructions, to see what it would say about the premise. It costs about 2 cents per answer;
+it does not measure the rows of the other articles (they are not saved): a real run is needed before trusting it.
 
-Uso: venv/bin/python bench/review_probe.py <corsa> [<corsa> ...] [--parallelo 3]
-Le revisioni restano in risultati/bench/<corsa>/prova_revisione.json.
+Usage: venv/bin/python bench/review_probe.py <run> [<run> ...] [--parallel 3]
+The reviews are kept in results/bench/<run>/review_probe.json.
 """
 import argparse
 import json
@@ -28,9 +28,10 @@ from chain_research.web import validation  # noqa: E402
 
 
 def request(article: dict) -> tuple[dict, list]:
-    """I dati per la revisione ricostruiti dall'esito salvato: la strada è la riga «Spiegazione» della risposta."""
+    """The review data rebuilt from the saved outcome: the route is the "Explanation" line of the answer ("Spiegazione"
+    in runs saved before the translation)."""
     rows = [SimpleNamespace(text=p["row"], url=p["url"]) for p in article["chain"]["proofs"]]
-    explanation = re.search(r"\*\*Spiegazione:?\*\*:?\s*(.+)", article.get("answer") or "")
+    explanation = re.search(r"\*\*(?:Explanation|Spiegazione):?\*\*:?\s*(.+)", article.get("answer") or "")
     value = article.get("value") or article["chain"].get("discarded_value")
     return {"question": article["question"][:1500], "route": (explanation.group(1) if explanation else "")[:800],
             "answer": str(value), "rows": "\n".join(f"[{i}] {r.text[:700]}" for i, r in enumerate(rows, start=1))}, rows
@@ -48,7 +49,7 @@ def _one(data: dict, rows: list) -> dict:
 
 
 def review(article: dict) -> dict | None:
-    """Due revisioni, come nella catena: quella unita (la più severa) e, in `singole`, il giudizio di ognuna."""
+    """Two reviews, as in the chain: the merged one (the strictest) and, in `single`, the verdict of each."""
     data, rows = request(article)
     single = [_one(data, rows) for _ in range(2)]
     unit = validation.merge_reviews(single)
@@ -73,13 +74,13 @@ def main() -> None:
             ensure_ascii=False, indent=1), encoding="utf-8")
         counts: dict[tuple, int] = {}
         for key, exam in outcomes.items():
-            premise = (exam or {}).get("premise", {}).get("outcome", "revisione fallita")
+            premise = (exam or {}).get("premise", {}).get("outcome", "review failed")
             right = bool(articles[key]["correct"]) and bool(articles[key].get("value"))
             counts[(premise, right)] = counts.get((premise, right), 0) + 1
             if premise == "refuted":
-                print(f"  {'GIUSTA PERSA' if right else 'sbagliata fermata'} {key}: «{exam['premise']['what']}» "
-                      f"(«{exam['premise']['quote'][:90]}»)", flush=True)
-        print(f"{run}: " + ", ".join(f"premessa {p}, risposta {'giusta' if g else 'sbagliata'}: {n}"
+                print(f"  {'RIGHT ANSWER LOST' if right else 'wrong answer stopped'} {key}: \"{exam['premise']['what']}\" "
+                      f"(\"{exam['premise']['quote'][:90]}\")", flush=True)
+        print(f"{run}: " + ", ".join(f"premise {p}, answer {'right' if g else 'wrong'}: {n}"
                                         for (p, g), n in sorted(counts.items(), key=str)), flush=True)
 
 
