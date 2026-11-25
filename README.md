@@ -225,3 +225,7 @@ venv/bin/python bench/report.py <baseline run> trial   # comparison, precision p
   version). Its figures are measured on the questions used to tune it and are therefore higher than those on new
   questions.
 - [`bench/LOG.md`](bench/LOG.md): log of every test bench run.
+
+## License
+
+[MIT](LICENSE).
