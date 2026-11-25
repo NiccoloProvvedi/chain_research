@@ -81,16 +81,19 @@ Before an answer becomes a fact in the document, it goes through program checks 
 
 ### Measurements
 
-The figures below were measured in November 2026 on the **Italian version** of the tool, on questions never used to
-tune it, with expected answers checked against Wikipedia. The English version is being re-measured; this table will be
-updated with its results.
+Measured in November 2026 on questions never used to tune the tool, with expected answers checked against
+Wikipedia. The English version was measured once on each question set (24 Nov); the Italian figures are the last runs
+before the translation.
 
-| Measure | Result |
-|---|---|
-| Answers stated as fact (verified or supported) that are correct | **54 of 55** over the last three runs |
-| Correct answers overall | 70% to 96% depending on the run, about 85% on average |
-| Unanswerable questions (invented entities or relations) ending in "not found" | 19 of 20 in the last run; no invented value stated as fact |
-| Document sentences fully supported by the answers | 89% |
+| Measure | English version | Italian version |
+|---|---|---|
+| Answers stated as fact (verified or supported) that are correct | **33 of 33** (holdout and confirmation) | 54 of 55 over three holdout runs |
+| Correct answers, holdout questions | 23 of 27 (85%) | 26 of 27; 70% to 96% across runs |
+| Unanswerable questions (invented entities or relations) ending in "not found" | 15 of 20; one sourced but wrong value stated as fact | 19 of 20; none stated as fact |
+| Document sentences fully supported by the answers | not measured yet | 89% |
+
+The differences between the two versions are within the run-to-run variation of the search (none is statistically
+significant on these samples).
 
 Method, test plan and the results of every run are in [`docs/validation.md`](docs/validation.md); each run has a line
 in [`bench/LOG.md`](bench/LOG.md).

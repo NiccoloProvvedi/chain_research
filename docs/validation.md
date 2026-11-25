@@ -1,7 +1,7 @@
 # Robustness and validation of the results
 
-> All measurements in this document were taken on the Italian version of the tool (before 24 Nov 2026); the English
-> version is being re-measured.
+> The measurements up to 17 Nov 2026 were taken on the Italian version of the tool. The English version (24 Nov 2026)
+> was measured again on all four question sets: see [English version](#english-version-2425-nov-2026) at the end.
 
 Review of 11 Nov 2026 (branch `revisione-correzioni-e-test`). The previous review fixed the lifecycle, security,
 settings and tests. This document is about the next layer: what the tool *claims* and what it has actually
@@ -605,3 +605,44 @@ Low-priority runs (`control-h1`, `unanswerable-4`):
 questions: 54 out of 55; invented values on the unanswerable questions 1 out of 20, never as fact (10% target: met in
 this run); document sentences supported 89% (95% target: not met); same status on repetition: to be measured again
 with the second search. Total spending on runs: about $75.
+
+### English version (24–25 Nov 2026)
+
+The whole tool was translated: code, prompts, output (always English), question sets (questions, seeds and expected
+answers in English, seeds as English Wikipedia titles). The four sets were run once each, at low priority, from the
+frozen copy at `8638dce` (`calibration-en`, `control-en1`, `unanswerable-en1`, `confirmation-en1`; $18.4 in all).
+Comparison with the last Italian run of each set:
+
+| Set | Italian | English | McNemar p |
+|---|---|---|---|
+| Holdout, good expected answers | 26 out of 27 (`control-h1`) | 23 out of 27 | 0.38 |
+| Holdout, answers given as fact that are correct | 17 out of 17 | **22 out of 22** (6 verified, 16 supported) | |
+| Confirmation (not independent any more) | 19 out of 23 (`confirmation-2`) | 21 out of 23 | 0.69 |
+| Confirmation, answers given as fact that are correct | 10 out of 10 | **11 out of 11** | |
+| Unanswerable: “not found” | 19 out of 20 (`unanswerable-4`) | 15 out of 20 | 0.22 |
+| Unanswerable: invented value given as fact | 0 | **1** (`supported`) | |
+| Tuned 40 (calibration, older code in Italian) | 33 out of 40 (`calibration-1`, 13 Nov) | 28 out of 40 | 0.27 |
+
+- **Answers given as fact on never-tuned questions: 33 correct out of 33** (holdout and confirmation); with the
+  unanswerable set, 33 out of 34.
+- None of the differences is beyond noise; the chain takes a different route from one run to the next, and the
+  lost questions are of that kind (another date read on another page, another link chosen), not words the English
+  code no longer recognises.
+- Unanswerable questions, the five values given: four `uncertain` (they reach the document only as open points; the
+  written answer itself says the premise is not confirmed), one `supported`. Causes: the invented name “Zorvex” is
+  the name of a real Estonian company, so the “name in no page read” rule cannot fire; two questions ran out of the
+  question budget before the review; one review objected but no link was weak, so the chain was not rejected. The
+  `supported` value is the postal code of Sklave (Bulgaria), a village that local sources call the birthplace of
+  Spartacus: sourced, but the bench counts it as an invented fact. This set is not used to tune the chain: these
+  cases are recorded, not fixed.
+- Reviews skipped for the budget: 4 out of 119 questions, as in Italian (3 out of 119).
+- The 40 tuned questions were recorded again (`results/replay/`, 40 chains); the 39 Italian recordings are kept in
+  `results/replay-italian/`. Replaying them showed a defect: the two reviews run in parallel and were merged in the
+  order they finished, so the objection cited in the reason could change between runs. Fixed (merged in a fixed
+  order, with a test and a sabotage); two recordings marked `to_record.txt` because they cite the other objection.
+
+**Assessment (25 Nov):** the English version keeps the property that matters: what is given as fact is correct
+(33 out of 33 on new questions). The share of correct answers is within the noise of the Italian runs. On the
+unanswerable questions it did worse in this run (15 out of 20, one invented value as fact); a second run is needed to
+tell noise from a real change. Total spending on runs: about $94.
+

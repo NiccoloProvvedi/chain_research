@@ -4,6 +4,7 @@ See docs/validation.md §4. This module holds the checks without a model: the va
 the route without repeated entities (G3), the source level of a proof (G4), the log of disagreements (G7).
 The functions receive the chain's objects (`Link`, `Proof`) without importing them.
 """
+import json
 import re
 import unicodedata
 from urllib.parse import urlsplit
@@ -295,7 +296,9 @@ def merge_reviews(reviews: list[dict]) -> dict:
     """Of several reviews of the same chain the strictest counts (15 Nov: repeating the questions the status changed
     in 17 cases out of 36, because a single review swings between "holds" and "unproven"): the worst verdict, all the
     objections with a row, the premise "holds" only if it holds for all."""
-    done = [r for r in reviews if r.get("outcome") == "done"]
+    # In a fixed order: the reviews run in parallel and finish in either order (24 Nov, replay of TeX).
+    done = sorted((r for r in reviews if r.get("outcome") == "done"),
+                  key=lambda r: json.dumps(r, sort_keys=True, ensure_ascii=False))
     if not done:
         return {"outcome": "not done"}
     worst = max(done, key=lambda r: _SEVERITY.get(r.get("holds"), 1))

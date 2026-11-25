@@ -186,3 +186,8 @@
 | 2026-11-16 11:31 | confirmation set rerun (no longer independent) (6b25bdb) | 6b25bdb | 23 questions | 19/23 | 5.0 | 2.458 | 0 | 10/10 | 3 |
 | 2026-11-16 22:43 | holdout questions: second search for uncertain answers (47ed0dc) | 47ed0dc | 36 questions | 26/27 | 9.1 | 4.954 | 0 | 17/17 | 0 |
 | 2026-11-17 03:17 | 20 unanswerable questions: second search for uncertain answers (47ed0dc) | 47ed0dc | 20 questions | 19/20 | 13.7 | 4.326 | 0 | 0/0 | 0 |
+| 2026-11-24 00:40 | smoke-en-h | 8638dce6 | 1 questions | 0/0 | 0.0 | 0 | 0 | 0/0 | 0 |
+| 2026-11-24 08:47 | calibration-en | 8638dce6 | 40 questions | 28/40 | 3.4 | 7.36 | 0 | 11/12 | 10 |
+| 2026-11-24 12:43 | control-en1 | 8638dce6 | 36 questions | 23/27 | 6.2 | 3.675 | 0 | 22/22 | 2 |
+| 2026-11-24 16:32 | unanswerable-en1 | 8638dce6 | 20 questions | 15/20 | 11.5 | 3.878 | 0 | 0/1 | 0 |
+| 2026-11-24 19:34 | confirmation-en1 | 8638dce6 | 23 questions | 21/23 | 7.8 | 3.436 | 0 | 11/11 | 2 |

@@ -131,6 +131,9 @@ SABOTAGES = [
      "    return value or extract(", "    return extract("),
     ("duration including the session-limit waits", "chain_research/web/collector.py",
      "\"seconds\": round(self._elapsed())", "\"seconds\": round(time.monotonic() - self._start)"),
+    ("the reviews are merged in the order they finish", "chain_research/web/validation.py",
+     "                  key=lambda r: json.dumps(r, sort_keys=True, ensure_ascii=False))",
+     "                  key=lambda r: 0)"),
 ]
 
 

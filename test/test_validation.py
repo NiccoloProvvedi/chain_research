@@ -322,9 +322,9 @@ def test_rejected_route(review: dict, weak_ones: int, rejected: bool) -> None:
 
 # --- 15 Nov: two reviews (the strictest wins) and the name the question uses for its starting point ---------------
 
-def _rev(holds: str, objections=(), premise="holds", name="", proven=3, unproven=0) -> dict:
+def _rev(holds: str, objections=(), premise="holds", name="", proven=3, unproven=0, reason_="") -> dict:
     return {"outcome": "done", "holds": holds, "objections": list(objections), "proven": proven, "unproven": unproven,
-            "premise": {"outcome": premise}, "starting_point_name": name, "reason": holds}
+            "premise": {"outcome": premise}, "starting_point_name": name, "reason": reason_ or holds}
 
 
 def test_strictest_of_two_reviews_wins() -> None:
@@ -342,6 +342,15 @@ def test_strictest_of_two_reviews_wins() -> None:
     # a single successful review: it counts; none: not done
     assert v.merge_reviews([{"outcome": "not done"}, _rev("yes")])["holds"] == "yes"
     assert v.merge_reviews([{"outcome": "not done"}, {"outcome": "not done"}]) == {"outcome": "not done"}
+
+
+def test_merged_reviews_do_not_depend_on_their_order() -> None:
+    """24 Nov, replay of TeX: the two reviews run in parallel and finish in either order; the objection cited in the
+    reason changed with the order (same clue, two quotes)."""
+    a = {"clue": "episode", "quote": "intitolato Fuorilegge", "url": "u"}
+    b = {"clue": "episode", "quote": "nell'albo n. 3 della collana di Tex gigante, intitolato Fuorilegge", "url": "u"}
+    one, two = _rev("no", [a], premise="unproven", name="Tex"), _rev("no", [b], premise="unproven", reason_="other")
+    assert v.merge_reviews([one, two]) == v.merge_reviews([two, one])
 
 
 @pytest.mark.parametrize("name,question,texts,missing", [
